@@ -1,0 +1,17 @@
+.DS_Store
+
+# Go
+backend/accounting-server
+cli/accounting
+coverage.out
+
+# Frontend
+web/dist/
+web/node_modules/
+web/*.tsbuildinfo
+web/vite.config.d.ts
+web/vite.config.js
+
+# Local environment
+.env
+.env.*

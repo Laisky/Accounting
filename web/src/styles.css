@@ -1,0 +1,163 @@
+:root {
+  color: oklch(23% 0.04 250);
+  background: oklch(96% 0.018 92);
+  font-family:
+    "Aptos",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  font-synthesis: none;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+.shell {
+  min-height: 100vh;
+  padding: clamp(24px, 4vw, 56px);
+}
+
+.workspace {
+  display: grid;
+  gap: clamp(20px, 3vw, 36px);
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 20px;
+  align-items: start;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: oklch(41% 0.11 174);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1 {
+  max-width: 780px;
+  margin: 0;
+  color: oklch(19% 0.045 248);
+  font-size: clamp(2.3rem, 6vw, 5.8rem);
+  letter-spacing: 0;
+  line-height: 0.94;
+}
+
+.iconButton,
+.quickGrid button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid oklch(80% 0.04 93);
+  background: oklch(99% 0.008 92);
+  color: oklch(22% 0.04 250);
+  cursor: pointer;
+}
+
+.iconButton {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+
+.balancePanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: clamp(20px, 4vw, 52px);
+  align-items: end;
+  padding: clamp(24px, 5vw, 56px);
+  border: 1px solid oklch(82% 0.055 92);
+  background:
+    linear-gradient(135deg, oklch(98% 0.025 96), oklch(94% 0.035 145)),
+    oklch(97% 0.02 98);
+  border-radius: 8px;
+}
+
+.balanceCopy {
+  display: grid;
+  gap: 8px;
+}
+
+.balanceCopy span,
+dt {
+  color: oklch(43% 0.05 248);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.balanceCopy strong {
+  color: oklch(28% 0.13 145);
+  font-size: clamp(3rem, 8vw, 7rem);
+  letter-spacing: 0;
+  line-height: 0.9;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+dd {
+  margin: 6px 0 0;
+  color: oklch(22% 0.04 250);
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.quickGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quickGrid button {
+  min-height: 64px;
+  gap: 10px;
+  justify-content: flex-start;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.quickGrid button:hover,
+.iconButton:hover {
+  border-color: oklch(57% 0.11 174);
+}
+
+@media (max-width: 720px) {
+  .balancePanel,
+  .quickGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .masthead {
+    grid-template-columns: 1fr;
+  }
+
+  .iconButton {
+    justify-self: start;
+  }
+}

@@ -1,0 +1,41 @@
+# Agent Instructions
+
+- **English only:** Always output **English** for all code, comments, chat, documents, logs, and UI text regardless of input language.
+- **Sensitive local info:** Local tools and debugging sensitive information is stored in `.github/instructions/laisky.instructions.md`; treat it as sensitive and never leak it.
+- **File length limits:** No manually written code file may exceed **800 lines**; for Go prefer files ≤**600 lines**; split by responsibility when needed; generated files are exempt.
+- **Build and test checks:** After code changes run `make lint` and `go test -race -cover ./...` in both `backend/` and `cli/`. Add narrower checks when they exist, but do not skip these final gates.
+- **Debug logging discipline:** Add targeted DEBUG logs to aid diagnosis, keep useful logs after debugging, and **never** include secrets (API keys, passwords, tokens) in logs or outputs.
+- **Global logger and request context:** Provide a global logger foundation; middleware must attach a context-aware logger; business logic must pull the context-aware logger from `context.Context` rather than using a global logger.
+- **Request-scoped logger usage:** For request paths use `gmw.GetLogger(c)` (not global logger); call it **once per function** and store locally.
+- **Structured logging:** Use structured Zap logging and `zap.Error(err)` for errors; avoid `fmt.Sprintf` for log messages.
+- **Multiple agents:** Multiple agents may edit code concurrently; **preserve others’ changes**, avoid overwriting, and only halt and notify when an irreconcilable conflict occurs.
+- **Task tracking:** Use the TODOs tool to track tasks and progress; keep TODOs current and actionable.
+- **Secrets handling:** Treat any API keys or secrets in repo/instructions as sensitive; never echo, log, commit, or expose them.
+- **Security—constant time:** Use constant‑time comparisons for sensitive values (tokens, signatures, etc.).
+- **Security—password hashing:** Follow OWASP recommendations for password hashing; use at least **10,000** iterations in this context.
+- **Security—input handling:** Never use untrusted user input directly to build DB queries or allocate memory; always **validate and sanitize** inputs to prevent SQL injection and DoS.
+- **Time handling:** Use **UTC** for all server, database, and API time handling.
+- **Date-range semantics:** Date‑range queries must include the entire final day; queries should end **just before 00:00 of the next day**.
+- **Testing policy:** Create and update unit tests for new features and bug fixes; avoid one‑off scripts; continuously improve test coverage.
+- **Test assertions:** Use `github.com/stretchr/testify/require` for assertions in tests.
+- **Comments requirement:** Every function and interface must have a comment that starts with the function/interface name and describes purpose, parameters, and return values in complete sentences.
+- **Go version and style:** Target **Go 1.26.4**; use modern Go syntax and features where appropriate.
+- **Context propagation:** Thread `context.Context` through call chains whenever feasible to manage lifecycles and cancellations.
+- **Error handling—proximity:** Handle errors as close to their source as possible; never ignore errors.
+- **Error handling—avoid `err == nil` pitfalls:** Avoid patterns that risk shadowing; be explicit and clear when checking errors.
+- **Error wrapping library:** Use `github.com/Laisky/errors/v2` for wrapping; never return bare errors—wrap with `errors.Wrap`, `errors.Wrapf`, or `errors.WithStack`.
+- **Error single-processing rule:** Each error must be processed exactly once—either **returned** or **logged**, but never both.
+- **DB performance philosophy:** Minimize DB pressure: prefer explicit SQL for complex read conditions and joins; use ORM convenience for modifications.
+- **Never swallow errors:** Always return or log errors; do not silently ignore failures.
+- **Documentation consistency:** Keep manuals, architecture notes, and examples synchronized with shipped CLI and server behavior. Prefer one fail-closed noninteractive secret-input path over multiple ad-hoc examples.
+- **Preserve CI expectations:** Any change must respect CI and linting rules; fix tests or implementation as needed, but do not bypass checks.
+- **Planning discipline (pre-action):** Before any action, independently plan: check policy constraints and prerequisites, reorder operations if needed, and ensure required info/tools are available.
+- **Risk assessment:** Evaluate consequences of actions and prefer calling tools with available info rather than blocking on optional details unless required by dependencies.
+- **Hypothesis exploration:** When debugging, generate and prioritize hypotheses, test the most likely causes first, and iterate if disproven.
+- **Outcome adaptability:** If observations disprove hypotheses, update the plan and generate new hypotheses.
+- **Information sources:** Use all applicable sources: tools, policies, history, and user-provided info; ask the user only when missing info is required for the next step.
+- **Precision and grounding:** Be precise and ground claims in exact applicable instructions or evidence when referencing rules.
+- **Completeness:** Exhaustively incorporate requirements and options; resolve conflicts by rule priority and avoid premature conclusions.
+- **Persistence and retries:** Persist intelligently; retry transient errors until a reasonable limit, and change strategy for non‑transient failures.
+- **Action finality:** Only take actions after completing the above reasoning; actions are final once executed.
+- **Sub Agents:** Actively use sub-agents for **parallelism** (dispatch independent subtasks concurrently in a single batch, not sequentially) and **context isolation** (offload searches/sweeps/lookups so their intermediate context never pollutes the main thread); each must follow the same instructions, stay scoped to a well-defined subtask, and return only the **distilled key information** for integration — not raw tool output or full file dumps.
