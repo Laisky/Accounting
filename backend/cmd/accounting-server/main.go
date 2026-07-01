@@ -3,18 +3,19 @@ package main
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/Laisky/errors/v2"
 	"github.com/Laisky/zap"
 
 	"github.com/Laisky/Accounting/backend/internal/config"
+	"github.com/Laisky/Accounting/backend/internal/diagnostics"
 	"github.com/Laisky/Accounting/backend/internal/httpserver"
 	"github.com/Laisky/Accounting/backend/internal/logger"
+	"github.com/Laisky/Accounting/backend/internal/telemetry"
 )
 
 // main loads runtime dependencies, starts the HTTP server, and exits after graceful shutdown.
@@ -24,11 +25,25 @@ func main() {
 
 	cfg := config.LoadFromEnv()
 	log := logger.Setup(cfg.Debug)
+	log = logger.SetupEnhanced(ctx, cfg)
 	log.Info("accounting backend starting", zap.String("addr", cfg.Addr))
+
+	telemetryProviders, err := telemetry.Init(ctx, cfg.Telemetry)
+	if err != nil {
+		log.Fatal("initialize telemetry", zap.Error(err))
+	}
 
 	server, err := httpserver.NewServer(cfg, log)
 	if err != nil {
 		log.Fatal("create http server", zap.Error(err))
+	}
+
+	var pprofServer *http.Server
+	if cfg.Pprof.Enabled {
+		pprofServer, err = diagnostics.StartPprofServer(cfg.Pprof.Listen, log)
+		if err != nil {
+			log.Fatal("start pprof server", zap.Error(err))
+		}
 	}
 
 	errCh := make(chan error, 1)
@@ -38,10 +53,20 @@ func main() {
 
 	select {
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Shutdown.Timeout)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			log.Fatal("shutdown http server", zap.Error(err))
+		}
+		if pprofServer != nil {
+			if err := pprofServer.Shutdown(shutdownCtx); err != nil {
+				log.Fatal("shutdown pprof server", zap.Error(err))
+			}
+		}
+		if telemetryProviders != nil {
+			if err := telemetryProviders.Shutdown(shutdownCtx); err != nil {
+				log.Fatal("shutdown telemetry", zap.Error(err))
+			}
 		}
 		log.Info("accounting backend stopped")
 	case err := <-errCh:

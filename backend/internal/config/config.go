@@ -5,14 +5,20 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config contains runtime settings for the backend process.
 type Config struct {
-	Addr       string
-	Debug      bool
-	Frontend   FrontendConfig
-	ServerName string
+	Addr        string
+	AlertPusher AlertPusherConfig
+	Auth        AuthConfig
+	Debug       bool
+	Frontend    FrontendConfig
+	Pprof       PprofConfig
+	ServerName  string
+	Shutdown    ShutdownConfig
+	Telemetry   TelemetryConfig
 }
 
 // FrontendConfig contains settings for serving the built React application.
@@ -21,15 +27,141 @@ type FrontendConfig struct {
 	DevURL  string
 }
 
+// AlertPusherConfig contains optional settings for pushing error-level logs to an alert backend.
+type AlertPusherConfig struct {
+	API   string
+	Token string
+	Type  string
+}
+
+// AuthConfig contains authentication, email, Turnstile, TOTP, and passkey settings.
+type AuthConfig struct {
+	Email     EmailAuthConfig
+	Passkey   PasskeyConfig
+	TOTP      TOTPConfig
+	Turnstile TurnstileConfig
+}
+
+// EmailAuthConfig contains email/password authentication and SMTP settings.
+type EmailAuthConfig struct {
+	ForceSMTPVerifyTLS         bool
+	LoginEnabled               bool
+	RegisterEnabled            bool
+	SMTPFrom                   string
+	SMTPHost                   string
+	SMTPPassword               string
+	SMTPPort                   int
+	SMTPUsername               string
+	VerificationRequired       bool
+	VerificationTTL            time.Duration
+	AllowedRegistrationDomains []string
+}
+
+// PasskeyConfig contains WebAuthn passkey settings.
+type PasskeyConfig struct {
+	Enabled       bool
+	RPDisplayName string
+	RPID          string
+	RPOrigin      string
+}
+
+// PprofConfig contains settings for the dedicated net/http/pprof listener.
+type PprofConfig struct {
+	Enabled bool
+	Listen  string
+}
+
+// ShutdownConfig contains process shutdown timing settings.
+type ShutdownConfig struct {
+	Timeout time.Duration
+}
+
+// TelemetryConfig contains OpenTelemetry tracing exporter settings.
+type TelemetryConfig struct {
+	Enabled     bool
+	Endpoint    string
+	Environment string
+	Insecure    bool
+	ServiceName string
+}
+
+// TOTPConfig contains time-based one-time password settings.
+type TOTPConfig struct {
+	Enabled             bool
+	Issuer              string
+	ReplayCacheDuration time.Duration
+}
+
+// TurnstileConfig contains Cloudflare Turnstile bot protection settings.
+type TurnstileConfig struct {
+	Enabled   bool
+	LoginMode string
+	SecretKey string
+	SiteKey   string
+	VerifyURL string
+}
+
 // LoadFromEnv reads environment variables and returns a complete runtime configuration.
 func LoadFromEnv() Config {
 	return Config{
 		Addr:       readString("ACCOUNTING_ADDR", ":8080"),
 		Debug:      readBool("ACCOUNTING_DEBUG", false),
 		ServerName: readString("ACCOUNTING_SERVER_NAME", "accounting"),
+		AlertPusher: AlertPusherConfig{
+			API:   readString("ACCOUNTING_LOG_PUSH_API", ""),
+			Token: readString("ACCOUNTING_LOG_PUSH_TOKEN", ""),
+			Type:  readString("ACCOUNTING_LOG_PUSH_TYPE", ""),
+		},
+		Auth: AuthConfig{
+			Email: EmailAuthConfig{
+				AllowedRegistrationDomains: readCSV("ACCOUNTING_AUTH_EMAIL_ALLOWED_DOMAINS", ""),
+				ForceSMTPVerifyTLS:         readBool("ACCOUNTING_AUTH_EMAIL_FORCE_SMTP_TLS_VERIFY", true),
+				LoginEnabled:               readBool("ACCOUNTING_AUTH_EMAIL_LOGIN_ENABLED", true),
+				RegisterEnabled:            readBool("ACCOUNTING_AUTH_EMAIL_REGISTER_ENABLED", true),
+				SMTPFrom:                   readString("ACCOUNTING_AUTH_EMAIL_SMTP_FROM", ""),
+				SMTPHost:                   readString("ACCOUNTING_AUTH_EMAIL_SMTP_HOST", ""),
+				SMTPPassword:               readString("ACCOUNTING_AUTH_EMAIL_SMTP_PASSWORD", ""),
+				SMTPPort:                   readInt("ACCOUNTING_AUTH_EMAIL_SMTP_PORT", 587),
+				SMTPUsername:               readString("ACCOUNTING_AUTH_EMAIL_SMTP_USERNAME", ""),
+				VerificationRequired:       readBool("ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED", true),
+				VerificationTTL:            readDuration("ACCOUNTING_AUTH_EMAIL_VERIFICATION_TTL", 10*time.Minute),
+			},
+			Passkey: PasskeyConfig{
+				Enabled:       readBool("ACCOUNTING_AUTH_PASSKEY_ENABLED", true),
+				RPDisplayName: readString("ACCOUNTING_AUTH_PASSKEY_RP_DISPLAY_NAME", "Accounting"),
+				RPID:          readString("ACCOUNTING_AUTH_PASSKEY_RP_ID", "localhost"),
+				RPOrigin:      readString("ACCOUNTING_AUTH_PASSKEY_RP_ORIGIN", "http://localhost:5173"),
+			},
+			TOTP: TOTPConfig{
+				Enabled:             readBool("ACCOUNTING_AUTH_TOTP_ENABLED", true),
+				Issuer:              readString("ACCOUNTING_AUTH_TOTP_ISSUER", "Accounting"),
+				ReplayCacheDuration: readDuration("ACCOUNTING_AUTH_TOTP_REPLAY_CACHE_DURATION", 30*time.Second),
+			},
+			Turnstile: TurnstileConfig{
+				Enabled:   readBool("ACCOUNTING_AUTH_TURNSTILE_ENABLED", false),
+				LoginMode: readString("ACCOUNTING_AUTH_TURNSTILE_LOGIN_MODE", "always"),
+				SecretKey: readString("ACCOUNTING_AUTH_TURNSTILE_SECRET_KEY", ""),
+				SiteKey:   readString("ACCOUNTING_AUTH_TURNSTILE_SITE_KEY", ""),
+				VerifyURL: readString("ACCOUNTING_AUTH_TURNSTILE_VERIFY_URL", "https://challenges.cloudflare.com/turnstile/v0/siteverify"),
+			},
+		},
 		Frontend: FrontendConfig{
 			DistDir: readString("ACCOUNTING_WEB_DIST_DIR", "../web/dist"),
 			DevURL:  readString("ACCOUNTING_WEB_DEV_URL", ""),
+		},
+		Pprof: PprofConfig{
+			Enabled: readBool("ACCOUNTING_ENABLE_PPROF", false),
+			Listen:  readString("ACCOUNTING_PPROF_LISTEN", "localhost:6060"),
+		},
+		Shutdown: ShutdownConfig{
+			Timeout: readDuration("ACCOUNTING_SHUTDOWN_TIMEOUT", 10*time.Second),
+		},
+		Telemetry: TelemetryConfig{
+			Enabled:     readBool("ACCOUNTING_OTEL_ENABLED", false),
+			Endpoint:    normalizeOTLPEndpoint(readString("ACCOUNTING_OTEL_EXPORTER_OTLP_ENDPOINT", "")),
+			Environment: readString("ACCOUNTING_OTEL_ENVIRONMENT", "debug"),
+			Insecure:    readBool("ACCOUNTING_OTEL_EXPORTER_OTLP_INSECURE", true),
+			ServiceName: readString("ACCOUNTING_OTEL_SERVICE_NAME", "accounting"),
 		},
 	}
 }
@@ -57,4 +189,61 @@ func readBool(key string, fallback bool) bool {
 	}
 
 	return parsed
+}
+
+// readCSV returns a trimmed comma-separated environment value for key or an empty slice.
+func readCSV(key string, fallback string) []string {
+	value := readString(key, fallback)
+	if value == "" {
+		return nil
+	}
+
+	parts := strings.Split(value, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			values = append(values, part)
+		}
+	}
+
+	return values
+}
+
+// readDuration returns the parsed duration environment value for key or fallback when unset or invalid.
+func readDuration(key string, fallback time.Duration) time.Duration {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
+}
+
+// readInt returns the parsed integer environment value for key or fallback when unset or invalid.
+func readInt(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
+}
+
+// normalizeOTLPEndpoint returns an OTLP endpoint without a URL scheme for the OTLP HTTP exporter.
+func normalizeOTLPEndpoint(endpoint string) string {
+	endpoint = strings.TrimSpace(endpoint)
+	endpoint = strings.TrimPrefix(endpoint, "http://")
+	endpoint = strings.TrimPrefix(endpoint, "https://")
+	return endpoint
 }

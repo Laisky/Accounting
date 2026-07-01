@@ -10,6 +10,7 @@ import (
 	glog "github.com/Laisky/go-utils/v6/log"
 	"github.com/Laisky/zap"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/Laisky/Accounting/backend/internal/config"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
@@ -26,14 +27,20 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	}
 
 	router := gin.New()
-	router.Use(
+	middlewares := []gin.HandlerFunc{
 		gin.Recovery(),
+	}
+	if cfg.Telemetry.Enabled {
+		middlewares = append(middlewares, otelgin.Middleware(cfg.Telemetry.ServiceName))
+	}
+	middlewares = append(middlewares,
 		gmw.NewLoggerMiddleware(
-			gmw.WithLogger(log),
+			gmw.WithLogger(log.Named("gin")),
 			gmw.WithLevel(log.Level().String()),
 		),
 		securityHeaders,
 	)
+	router.Use(middlewares...)
 
 	service := ledger.NewService()
 	RegisterRoutes(router, cfg, service)
