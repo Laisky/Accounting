@@ -20,6 +20,11 @@ type Config struct {
 	ServerName  string
 	Shutdown    ShutdownConfig
 	Telemetry   TelemetryConfig
+	// TrustedProxies lists CIDR ranges or IPs of front proxies whose
+	// X-Forwarded-For may be trusted for client-IP resolution. Empty (the
+	// default) trusts no proxy, so ClientIP falls back to the direct RemoteAddr
+	// and spoofed forwarded headers cannot defeat IP-keyed rate limiting.
+	TrustedProxies []string
 }
 
 // PersistenceConfig contains process storage backend settings.
@@ -223,6 +228,7 @@ func LoadFromEnv() Config {
 			Insecure:    readBool("ACCOUNTING_OTEL_EXPORTER_OTLP_INSECURE", true),
 			ServiceName: readString("ACCOUNTING_OTEL_SERVICE_NAME", "accounting"),
 		},
+		TrustedProxies: readCSV("ACCOUNTING_TRUSTED_PROXIES", ""),
 	}
 }
 

@@ -50,6 +50,26 @@ func (s *FileStore) SaveBatch(ctx context.Context, batch Batch) (Batch, error) {
 	return stored, nil
 }
 
+// SaveBatchIfAbsent atomically stores a new batch and persists the snapshot only
+// when no batch already exists for the same owner/source/hash.
+func (s *FileStore) SaveBatchIfAbsent(ctx context.Context, batch Batch) (Batch, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	stored, created, err := s.memory.SaveBatchIfAbsent(ctx, batch)
+	if err != nil {
+		return Batch{}, false, err
+	}
+	if !created {
+		return stored, false, nil
+	}
+	if err := persistence.SaveJSONAtomic(s.path, s.memory.Snapshot()); err != nil {
+		return Batch{}, false, errors.Wrap(err, "persist imports file store")
+	}
+
+	return stored, true, nil
+}
+
 // Batch receives owner and batch id values and returns the matching batch.
 func (s *FileStore) Batch(ctx context.Context, userID string, batchID string) (Batch, error) {
 	s.mu.Lock()

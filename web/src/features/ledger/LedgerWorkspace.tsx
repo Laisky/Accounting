@@ -98,10 +98,15 @@ export function LedgerWorkspace({ onEntryCreated, onLedgerChanged }: LedgerWorks
 
   // loadBookContext receives a book id and loads categories plus transaction review entries.
   const loadBookContext = useCallback(
-    async (bookId: string) => {
+    async (bookId: string, isActive: () => boolean = () => true) => {
       await runLedgerAction(
         async () => {
           const [loadedCategories, loadedEntries] = await Promise.all([fetchCategories(bookId), fetchEntries(bookId)]);
+          if (!isActive()) {
+            // A newer book selection superseded this request; drop the stale
+            // response so it cannot overwrite the current book's categories/entries.
+            return;
+          }
           setCategories(loadedCategories);
           setEntries(loadedEntries.entries);
           setTotalEntries(loadedEntries.total);
@@ -123,7 +128,11 @@ export function LedgerWorkspace({ onEntryCreated, onLedgerChanged }: LedgerWorks
       setTotalEntries(0);
       return;
     }
-    void loadBookContext(selectedBookId);
+    let isActive = true;
+    void loadBookContext(selectedBookId, () => isActive);
+    return () => {
+      isActive = false;
+    };
   }, [loadBookContext, selectedBookId]);
 
   useEffect(() => {

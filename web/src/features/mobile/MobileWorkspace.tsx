@@ -138,8 +138,13 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     setSelectedBookId((current) => current || books[0]?.id || '');
   }, []);
 
-  const loadBookContext = useCallback(async (bookId: string) => {
+  const loadBookContext = useCallback(async (bookId: string, isActive: () => boolean = () => true) => {
     const [categories, entryList, members] = await Promise.all([fetchCategories(bookId), fetchEntries(bookId), fetchBookMembers(bookId)]);
+    if (!isActive()) {
+      // A newer book selection superseded this request; drop the stale response
+      // so it cannot overwrite the currently selected book's data.
+      return;
+    }
     setSnapshot((current) => ({
       ...current,
       categories,
@@ -170,7 +175,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
 
     let isActive = true;
-    loadBookContext(selectedBookId).catch(() => {
+    loadBookContext(selectedBookId, () => isActive).catch(() => {
       if (isActive) {
         setError(t('mobile.error.entriesFailed'));
       }

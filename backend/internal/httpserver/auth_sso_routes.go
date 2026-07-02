@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"crypto/subtle"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -104,6 +105,15 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 func buildSSOCallbackURL(request *http.Request, cfg config.Config, state string) (string, error) {
 	rawCallbackURL := strings.TrimSpace(cfg.Auth.External.CallbackURL)
 	if rawCallbackURL == "" {
+		// No explicit callback URL is configured, so we would have to derive one
+		// from the request Host. The Host header is client-controlled, and this
+		// URL becomes the provider's redirect_to that carries the one-time
+		// sso_token, so trusting an arbitrary Host would let an attacker redirect
+		// the token to a host they control. Only fall back for loopback origins
+		// (development); any real deployment must set an explicit callback URL.
+		if !isLoopbackRequestHost(request.Host) {
+			return "", errors.WithStack(errors.New("external sso callback url must be configured for non-loopback hosts"))
+		}
 		rawCallbackURL = requestOrigin(request) + ssoCallbackPath
 	}
 
@@ -160,6 +170,29 @@ func externalSSOStartPath(cfg config.Config) string {
 	}
 
 	return ssoStartPath
+}
+
+// isLoopbackRequestHost reports whether the request Host refers to a loopback
+// address, for which deriving the SSO callback URL from the client-controlled
+// Host header is not exploitable (the token would only redirect to the caller's
+// own machine).
+func isLoopbackRequestHost(host string) bool {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return false
+	}
+	if parsed, _, err := net.SplitHostPort(host); err == nil {
+		host = parsed
+	}
+	host = strings.Trim(host, "[]")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+
+	return false
 }
 
 // requestOrigin receives an HTTP request and returns the externally visible request origin.

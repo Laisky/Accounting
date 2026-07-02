@@ -10,6 +10,7 @@ import (
 // Store defines import preview persistence operations required by the service layer.
 type Store interface {
 	SaveBatch(ctx context.Context, batch Batch) (Batch, error)
+	SaveBatchIfAbsent(ctx context.Context, batch Batch) (Batch, bool, error)
 	Batch(ctx context.Context, userID string, batchID string) (Batch, error)
 	BatchByHash(ctx context.Context, userID string, source string, sourceHash string) (Batch, error)
 }
@@ -64,6 +65,25 @@ func (s *MemoryStore) SaveBatch(_ context.Context, batch Batch) (Batch, error) {
 	s.byHash[batchHashKey(batch.UserID, batch.Source, batch.SourceHash)] = batch.ID
 
 	return cloneBatch(batch), nil
+}
+
+// SaveBatchIfAbsent atomically stores a batch only when no batch already exists
+// for the same owner/source/hash, returning the existing batch otherwise. This
+// closes the check-then-save race where two concurrent identical uploads would
+// each create a batch and orphan one under the hash index.
+func (s *MemoryStore) SaveBatchIfAbsent(_ context.Context, batch Batch) (Batch, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	key := batchHashKey(batch.UserID, batch.Source, batch.SourceHash)
+	if existingID, ok := s.byHash[key]; ok {
+		return cloneBatch(s.batches[existingID]), false, nil
+	}
+	batch = cloneBatch(batch)
+	s.batches[batch.ID] = batch
+	s.byHash[key] = batch.ID
+
+	return cloneBatch(batch), true, nil
 }
 
 // Batch receives owner and batch id values and returns the matching batch.

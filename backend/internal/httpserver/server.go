@@ -32,6 +32,13 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	}
 
 	router := gin.New()
+	// Trust only the configured front proxies for client-IP resolution. With the
+	// default (empty) list Gin trusts no proxy and ClientIP uses the direct
+	// RemoteAddr, so a spoofed X-Forwarded-For cannot mint a fresh rate-limit
+	// bucket per request and defeat brute-force protection.
+	if err := router.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		return nil, errors.Wrap(err, "set trusted proxies")
+	}
 	middlewares := []gin.HandlerFunc{
 		gin.Recovery(),
 	}

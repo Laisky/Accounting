@@ -83,12 +83,15 @@ func (s *Service) PreviewWacaiCSV(ctx context.Context, request PreviewRequest) (
 		UpdatedAt:      now,
 	}
 
-	created, err := s.store.SaveBatch(ctx, batch)
+	// Store atomically by source hash so two concurrent identical uploads resolve
+	// to one batch instead of racing between the BatchByHash check above and this
+	// write (which would orphan a batch under the hash index).
+	stored, _, err := s.store.SaveBatchIfAbsent(ctx, batch)
 	if err != nil {
 		return Batch{}, errors.Wrap(err, "save import batch")
 	}
 
-	return created, nil
+	return stored, nil
 }
 
 // Batch receives an actor and batch id, verifies ownership, and returns the stored import batch.

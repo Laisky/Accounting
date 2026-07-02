@@ -575,11 +575,15 @@ function precedence(operator: string): number {
 
 // toDateTimeLocalValue receives a date and returns a datetime-local input value.
 function toDateTimeLocalValue(value: Date): string {
-  const year = value.getUTCFullYear();
-  const month = String(value.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(value.getUTCDate()).padStart(2, '0');
-  const hour = String(value.getUTCHours()).padStart(2, '0');
-  const minute = String(value.getUTCMinutes()).padStart(2, '0');
+  // Use local wall-clock components. A datetime-local input is interpreted as
+  // local time, and toSafeISOString parses it back with new Date(value) as local
+  // time, so building the default from getUTC* would shift occurredAt by the
+  // timezone offset (e.g. wrong day/month for users east of UTC).
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  const hour = String(value.getHours()).padStart(2, '0');
+  const minute = String(value.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day}T${hour}:${minute}`;
 }
 
