@@ -3,6 +3,7 @@ package httpserver
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/auth"
 	"github.com/Laisky/Accounting/backend/internal/config"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
+	"github.com/Laisky/Accounting/backend/internal/persistence"
 )
 
 // NewServer builds an HTTP server with API routes, middleware, and SPA fallback.
@@ -54,7 +56,11 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	)
 	router.Use(middlewares...)
 
-	ledgerStore, err := newLedgerStore(cfg)
+	db, dialect, err := openPersistenceDB(cfg)
+	if err != nil {
+		return nil, err
+	}
+	ledgerStore, err := newLedgerStore(cfg, db, dialect)
 	if err != nil {
 		return nil, err
 	}
@@ -62,12 +68,12 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	if gin.Mode() != gin.TestMode {
 		ledgerService.StartDailyExchangeRateUpdater(context.Background(), ledger.NewECBExchangeRateFetcher())
 	}
-	auditStore, err := newAuditStore(cfg)
+	auditStore, err := newAuditStore(cfg, db, dialect)
 	if err != nil {
 		return nil, err
 	}
 	auditService := audit.NewService(auditStore)
-	authStore, err := newAuthStore(cfg)
+	authStore, err := newAuthStore(cfg, db, dialect)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +81,7 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	importService, err := newDefaultImportService(cfg)
+	importService, err := newDefaultImportService(cfg, db, dialect)
 	if err != nil {
 		return nil, err
 	}
@@ -85,18 +91,43 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 		log.Info("spa disabled", zap.Error(err))
 	}
 
-	return &http.Server{
+	server := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       120 * time.Second,
-	}, nil
+	}
+	if db != nil {
+		server.RegisterOnShutdown(func() {
+			_ = db.Close()
+		})
+	}
+	return server, nil
+}
+
+// openPersistenceDB opens the shared database pool when a SQL driver is selected,
+// or returns (nil, "") for the in-memory and file drivers.
+func openPersistenceDB(cfg config.Config) (*sql.DB, string, error) {
+	driver := strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver))
+	switch driver {
+	case "", "memory", "file":
+		return nil, "", nil
+	case "postgres", "postgresql", "sqlite":
+	default:
+		return nil, "", errors.Errorf("unsupported persistence driver %q", cfg.Persistence.Driver)
+	}
+	db, dialect, err := persistence.OpenSQL(driver, cfg.Persistence.DatabaseURL, cfg.Persistence.Dir)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "open persistence database")
+	}
+
+	return db, dialect, nil
 }
 
 // newLedgerStore receives runtime config and returns the selected ledger store.
-func newLedgerStore(cfg config.Config) (ledger.Store, error) {
+func newLedgerStore(cfg config.Config, db *sql.DB, dialect string) (ledger.Store, error) {
 	switch strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver)) {
 	case "", "memory":
 		return ledger.NewMemoryStore(ledger.DemoSeedData()), nil
@@ -106,13 +137,28 @@ func newLedgerStore(cfg config.Config) (ledger.Store, error) {
 			return nil, errors.Wrap(err, "create ledger file store")
 		}
 		return store, nil
+	case "postgres", "postgresql":
+		store, err := ledger.NewPostgresStore(db, ledger.DemoSeedData())
+		if err != nil {
+			return nil, errors.Wrap(err, "create ledger postgres store")
+		}
+		return store, nil
+	case "sqlite":
+		if dialect != persistence.DialectSQLite {
+			return nil, errors.Errorf("unexpected sqlite dialect %q", dialect)
+		}
+		store, err := ledger.NewSQLiteStore(db, ledger.DemoSeedData())
+		if err != nil {
+			return nil, errors.Wrap(err, "create ledger sqlite store")
+		}
+		return store, nil
 	default:
 		return nil, errors.Errorf("unsupported persistence driver %q", cfg.Persistence.Driver)
 	}
 }
 
 // newAuditStore receives runtime config and returns the selected audit store.
-func newAuditStore(cfg config.Config) (audit.Store, error) {
+func newAuditStore(cfg config.Config, db *sql.DB, dialect string) (audit.Store, error) {
 	switch strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver)) {
 	case "", "memory":
 		return audit.NewMemoryStore(), nil
@@ -122,13 +168,28 @@ func newAuditStore(cfg config.Config) (audit.Store, error) {
 			return nil, errors.Wrap(err, "create audit file store")
 		}
 		return store, nil
+	case "postgres", "postgresql":
+		store, err := audit.NewPostgresStore(db)
+		if err != nil {
+			return nil, errors.Wrap(err, "create audit postgres store")
+		}
+		return store, nil
+	case "sqlite":
+		if dialect != persistence.DialectSQLite {
+			return nil, errors.Errorf("unexpected sqlite dialect %q", dialect)
+		}
+		store, err := audit.NewSQLiteStore(db)
+		if err != nil {
+			return nil, errors.Wrap(err, "create audit sqlite store")
+		}
+		return store, nil
 	default:
 		return nil, errors.Errorf("unsupported persistence driver %q", cfg.Persistence.Driver)
 	}
 }
 
 // newAuthStore receives runtime config and returns the selected auth store.
-func newAuthStore(cfg config.Config) (auth.Store, error) {
+func newAuthStore(cfg config.Config, db *sql.DB, dialect string) (auth.Store, error) {
 	switch strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver)) {
 	case "", "memory":
 		return auth.NewMemoryStore(), nil
@@ -136,6 +197,21 @@ func newAuthStore(cfg config.Config) (auth.Store, error) {
 		store, err := auth.NewFileStore(filepath.Join(cfg.Persistence.Dir, "auth.json"))
 		if err != nil {
 			return nil, errors.Wrap(err, "create auth file store")
+		}
+		return store, nil
+	case "postgres", "postgresql":
+		store, err := auth.NewPostgresStore(db)
+		if err != nil {
+			return nil, errors.Wrap(err, "create auth postgres store")
+		}
+		return store, nil
+	case "sqlite":
+		if dialect != persistence.DialectSQLite {
+			return nil, errors.Errorf("unexpected sqlite dialect %q", dialect)
+		}
+		store, err := auth.NewSQLiteStore(db)
+		if err != nil {
+			return nil, errors.Wrap(err, "create auth sqlite store")
 		}
 		return store, nil
 	default:

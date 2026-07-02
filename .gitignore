@@ -22,3 +22,4 @@ web/vite.config.js
 .github/instructions/laisky.instructions.md
 /backend/cmd/accounting-server/__debug_*
 /.vscode/
+/ref/wacai/import/*

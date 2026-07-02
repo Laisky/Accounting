@@ -31,6 +31,10 @@ type Config struct {
 type PersistenceConfig struct {
 	Driver string
 	Dir    string
+	// DatabaseURL is the SQL connection string used when Driver is "postgres",
+	// "postgresql", or "sqlite". SQLite accepts an empty value and then stores
+	// accounting.sqlite3 under Dir.
+	DatabaseURL string
 }
 
 // FrontendConfig contains settings for serving the built React application.
@@ -211,8 +215,9 @@ func LoadFromEnv() Config {
 			DevURL:  readString("ACCOUNTING_WEB_DEV_URL", ""),
 		},
 		Persistence: PersistenceConfig{
-			Driver: readString("ACCOUNTING_PERSISTENCE_DRIVER", "memory"),
-			Dir:    readString("ACCOUNTING_PERSISTENCE_DIR", "./var/accounting"),
+			Driver:      readString("ACCOUNTING_PERSISTENCE_DRIVER", "memory"),
+			Dir:         readString("ACCOUNTING_PERSISTENCE_DIR", "./var/accounting"),
+			DatabaseURL: readString("ACCOUNTING_DATABASE_URL", readString("DATABASE_URL", "")),
 		},
 		Pprof: PprofConfig{
 			Enabled: readBool("ACCOUNTING_ENABLE_PPROF", false),

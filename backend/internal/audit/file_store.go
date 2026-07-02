@@ -14,28 +14,34 @@ type Snapshot struct {
 	Events []Event `json:"events"`
 }
 
-// FileStore persists audit events to an atomic JSON snapshot file.
-type FileStore struct {
+// SnapshotStore persists audit events by writing the whole in-memory snapshot to
+// an atomic JSON file after each write.
+type SnapshotStore struct {
 	mu     sync.Mutex
-	path   string
+	sink   persistence.SnapshotSink
 	memory *MemoryStore
 }
 
 // NewFileStore receives a JSON path, loads existing events, and returns a durable audit store.
-func NewFileStore(path string) (*FileStore, error) {
+func NewFileStore(path string) (*SnapshotStore, error) {
+	return newSnapshotStore(persistence.NewFileSink(path))
+}
+
+// newSnapshotStore loads the current snapshot from sink and returns a durable audit store.
+func newSnapshotStore(sink persistence.SnapshotSink) (*SnapshotStore, error) {
 	var snapshot Snapshot
-	if err := persistence.LoadJSON(path, &snapshot); err != nil {
-		return nil, errors.Wrap(err, "load audit file store")
+	if err := sink.Load(&snapshot); err != nil {
+		return nil, errors.Wrap(err, "load audit store")
 	}
 
-	return &FileStore{
-		path:   path,
+	return &SnapshotStore{
+		sink:   sink,
 		memory: NewMemoryStoreFromSnapshot(snapshot),
 	}, nil
 }
 
 // SaveEvent receives an event, stores it, and persists the snapshot.
-func (s *FileStore) SaveEvent(ctx context.Context, event Event) (Event, error) {
+func (s *SnapshotStore) SaveEvent(ctx context.Context, event Event) (Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -43,15 +49,15 @@ func (s *FileStore) SaveEvent(ctx context.Context, event Event) (Event, error) {
 	if err != nil {
 		return Event{}, err
 	}
-	if err := persistence.SaveJSONAtomic(s.path, s.memory.Snapshot()); err != nil {
-		return Event{}, errors.Wrap(err, "persist audit file store")
+	if err := s.sink.Save(s.memory.Snapshot()); err != nil {
+		return Event{}, errors.Wrap(err, "persist audit store")
 	}
 
 	return stored, nil
 }
 
 // EventsByActor receives an actor id and returns matching events newest first.
-func (s *FileStore) EventsByActor(ctx context.Context, actorID string) ([]Event, error) {
+func (s *SnapshotStore) EventsByActor(ctx context.Context, actorID string) ([]Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

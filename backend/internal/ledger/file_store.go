@@ -9,48 +9,55 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/persistence"
 )
 
-// FileStore persists ledger data to an atomic JSON snapshot file.
-type FileStore struct {
+// SnapshotStore persists ledger data by writing the whole in-memory snapshot to
+// an atomic JSON file after each write.
+type SnapshotStore struct {
 	mu     sync.Mutex
-	path   string
+	sink   persistence.SnapshotSink
 	memory *MemoryStore
 }
 
 // NewFileStore receives a JSON path and fallback seed and returns a durable ledger store.
-func NewFileStore(path string, fallback SeedData) (*FileStore, error) {
+func NewFileStore(path string, fallback SeedData) (*SnapshotStore, error) {
+	return newSnapshotStore(persistence.NewFileSink(path), fallback)
+}
+
+// newSnapshotStore loads the current snapshot from sink (or the fallback seed when
+// none is stored) and returns a durable ledger store.
+func newSnapshotStore(sink persistence.SnapshotSink, fallback SeedData) (*SnapshotStore, error) {
 	snapshot := fallback
-	if err := persistence.LoadJSON(path, &snapshot); err != nil {
-		return nil, errors.Wrap(err, "load ledger file store")
+	if err := sink.Load(&snapshot); err != nil {
+		return nil, errors.Wrap(err, "load ledger store")
 	}
 
-	return &FileStore{
-		path:   path,
+	return &SnapshotStore{
+		sink:   sink,
 		memory: NewMemoryStore(snapshot),
 	}, nil
 }
 
 // Book receives a book id and returns the matching book or an error when it does not exist.
-func (s *FileStore) Book(ctx context.Context, bookID string) (Book, error) {
+func (s *SnapshotStore) Book(ctx context.Context, bookID string) (Book, error) {
 	return s.memory.Book(ctx, bookID)
 }
 
-// Books returns every book known to the file-backed store.
-func (s *FileStore) Books(ctx context.Context) ([]Book, error) {
+// Books returns every book known to the store.
+func (s *SnapshotStore) Books(ctx context.Context) ([]Book, error) {
 	return s.memory.Books(ctx)
 }
 
 // BookMemberships receives a user id and returns every explicit book membership for that user.
-func (s *FileStore) BookMemberships(ctx context.Context, userID string) ([]BookMember, error) {
+func (s *SnapshotStore) BookMemberships(ctx context.Context, userID string) ([]BookMember, error) {
 	return s.memory.BookMemberships(ctx, userID)
 }
 
 // BookMembers receives a book id and returns every explicit member of that book.
-func (s *FileStore) BookMembers(ctx context.Context, bookID string) ([]BookMember, error) {
+func (s *SnapshotStore) BookMembers(ctx context.Context, bookID string) ([]BookMember, error) {
 	return s.memory.BookMembers(ctx, bookID)
 }
 
 // CreateBook receives a book and owner membership, stores them, and persists the snapshot.
-func (s *FileStore) CreateBook(ctx context.Context, book Book, owner BookMember) (Book, BookMember, error) {
+func (s *SnapshotStore) CreateBook(ctx context.Context, book Book, owner BookMember) (Book, BookMember, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -66,7 +73,7 @@ func (s *FileStore) CreateBook(ctx context.Context, book Book, owner BookMember)
 }
 
 // UpdateBook receives a book, updates it, and persists the snapshot.
-func (s *FileStore) UpdateBook(ctx context.Context, book Book) (Book, error) {
+func (s *SnapshotStore) UpdateBook(ctx context.Context, book Book) (Book, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -82,22 +89,22 @@ func (s *FileStore) UpdateBook(ctx context.Context, book Book) (Book, error) {
 }
 
 // Member receives a book id and user id and returns the explicit membership relationship.
-func (s *FileStore) Member(ctx context.Context, bookID string, userID string) (BookMember, error) {
+func (s *SnapshotStore) Member(ctx context.Context, bookID string, userID string) (BookMember, error) {
 	return s.memory.Member(ctx, bookID, userID)
 }
 
 // Entry receives a book id and entry id and returns the matching entry.
-func (s *FileStore) Entry(ctx context.Context, bookID string, entryID string) (Entry, error) {
+func (s *SnapshotStore) Entry(ctx context.Context, bookID string, entryID string) (Entry, error) {
 	return s.memory.Entry(ctx, bookID, entryID)
 }
 
 // Entries receives a book id and returns entries belonging to that book.
-func (s *FileStore) Entries(ctx context.Context, bookID string) ([]Entry, error) {
+func (s *SnapshotStore) Entries(ctx context.Context, bookID string) ([]Entry, error) {
 	return s.memory.Entries(ctx, bookID)
 }
 
 // CreateEntry receives an entry, stores it, and persists the snapshot.
-func (s *FileStore) CreateEntry(ctx context.Context, entry Entry) (Entry, error) {
+func (s *SnapshotStore) CreateEntry(ctx context.Context, entry Entry) (Entry, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -113,7 +120,7 @@ func (s *FileStore) CreateEntry(ctx context.Context, entry Entry) (Entry, error)
 }
 
 // UpdateEntry receives an entry, updates it, and persists the snapshot.
-func (s *FileStore) UpdateEntry(ctx context.Context, entry Entry) (Entry, error) {
+func (s *SnapshotStore) UpdateEntry(ctx context.Context, entry Entry) (Entry, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -129,7 +136,7 @@ func (s *FileStore) UpdateEntry(ctx context.Context, entry Entry) (Entry, error)
 }
 
 // DeleteEntry receives entry identity, deletes it, and persists the snapshot.
-func (s *FileStore) DeleteEntry(ctx context.Context, bookID string, entryID string) error {
+func (s *SnapshotStore) DeleteEntry(ctx context.Context, bookID string, entryID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -140,12 +147,12 @@ func (s *FileStore) DeleteEntry(ctx context.Context, bookID string, entryID stri
 }
 
 // Categories receives a book id and returns categories belonging to that book.
-func (s *FileStore) Categories(ctx context.Context, bookID string) ([]Category, error) {
+func (s *SnapshotStore) Categories(ctx context.Context, bookID string) ([]Category, error) {
 	return s.memory.Categories(ctx, bookID)
 }
 
 // CreateCategory receives a category, stores it, and persists the snapshot.
-func (s *FileStore) CreateCategory(ctx context.Context, category Category) (Category, error) {
+func (s *SnapshotStore) CreateCategory(ctx context.Context, category Category) (Category, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -161,7 +168,7 @@ func (s *FileStore) CreateCategory(ctx context.Context, category Category) (Cate
 }
 
 // UpdateCategory receives a category, updates it, and persists the snapshot.
-func (s *FileStore) UpdateCategory(ctx context.Context, category Category) (Category, error) {
+func (s *SnapshotStore) UpdateCategory(ctx context.Context, category Category) (Category, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -176,13 +183,13 @@ func (s *FileStore) UpdateCategory(ctx context.Context, category Category) (Cate
 	return updated, nil
 }
 
-// AccountGroups returns every account group known to the file-backed store.
-func (s *FileStore) AccountGroups(ctx context.Context) ([]AccountGroup, error) {
+// AccountGroups returns every account group known to the store.
+func (s *SnapshotStore) AccountGroups(ctx context.Context) ([]AccountGroup, error) {
 	return s.memory.AccountGroups(ctx)
 }
 
 // CreateAccountGroup receives an account group, stores it, and persists the snapshot.
-func (s *FileStore) CreateAccountGroup(ctx context.Context, group AccountGroup) (AccountGroup, error) {
+func (s *SnapshotStore) CreateAccountGroup(ctx context.Context, group AccountGroup) (AccountGroup, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -198,7 +205,7 @@ func (s *FileStore) CreateAccountGroup(ctx context.Context, group AccountGroup) 
 }
 
 // UpdateAccountGroup receives an account group, updates it, and persists the snapshot.
-func (s *FileStore) UpdateAccountGroup(ctx context.Context, group AccountGroup) (AccountGroup, error) {
+func (s *SnapshotStore) UpdateAccountGroup(ctx context.Context, group AccountGroup) (AccountGroup, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -213,13 +220,13 @@ func (s *FileStore) UpdateAccountGroup(ctx context.Context, group AccountGroup) 
 	return updated, nil
 }
 
-// Accounts returns every account known to the file-backed store.
-func (s *FileStore) Accounts(ctx context.Context) ([]Account, error) {
+// Accounts returns every account known to the store.
+func (s *SnapshotStore) Accounts(ctx context.Context) ([]Account, error) {
 	return s.memory.Accounts(ctx)
 }
 
 // CreateAccount receives an account, stores it, and persists the snapshot.
-func (s *FileStore) CreateAccount(ctx context.Context, account Account) (Account, error) {
+func (s *SnapshotStore) CreateAccount(ctx context.Context, account Account) (Account, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -234,13 +241,13 @@ func (s *FileStore) CreateAccount(ctx context.Context, account Account) (Account
 	return created, nil
 }
 
-// ExchangeRates returns every exchange rate known to the file-backed store.
-func (s *FileStore) ExchangeRates(ctx context.Context) ([]ExchangeRate, error) {
+// ExchangeRates returns every exchange rate known to the store.
+func (s *SnapshotStore) ExchangeRates(ctx context.Context) ([]ExchangeRate, error) {
 	return s.memory.ExchangeRates(ctx)
 }
 
 // ReplaceExchangeRates receives a rate table, stores it, and persists the snapshot.
-func (s *FileStore) ReplaceExchangeRates(ctx context.Context, rates []ExchangeRate) error {
+func (s *SnapshotStore) ReplaceExchangeRates(ctx context.Context, rates []ExchangeRate) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -250,10 +257,10 @@ func (s *FileStore) ReplaceExchangeRates(ctx context.Context, rates []ExchangeRa
 	return s.persist()
 }
 
-// persist writes the current memory snapshot to the configured JSON path.
-func (s *FileStore) persist() error {
-	if err := persistence.SaveJSONAtomic(s.path, s.memory.Snapshot()); err != nil {
-		return errors.Wrap(err, "persist ledger file store")
+// persist writes the current memory snapshot to the configured sink.
+func (s *SnapshotStore) persist() error {
+	if err := s.sink.Save(s.memory.Snapshot()); err != nil {
+		return errors.Wrap(err, "persist ledger store")
 	}
 
 	return nil

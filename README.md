@@ -32,7 +32,7 @@ Most personal finance tools are either polished but closed, powerful but account
 | Backend | Go 1.26.4, Gin, Zap-style structured logging, OpenTelemetry hooks |
 | Frontend | React 19, TypeScript 6, Vite 8, i18next, lucide-react |
 | Auth | HttpOnly sessions, PBKDF2-SHA256, TOTP, WebAuthn passkeys, optional SSO |
-| Storage | In-memory and JSON-file stores for local development; persistence boundary under `backend/internal/persistence` |
+| Storage | In-memory and JSON-file stores for local development; direct SQLite/PostgreSQL stores under `backend/internal/persistence` |
 | Testing | Go race tests with coverage, Vitest, Testing Library, Playwright E2E |
 
 ## Quick Start
@@ -128,8 +128,9 @@ The backend is environment-configured. Important local and deployment settings i
 | --- | --- |
 | `ACCOUNTING_ADDR` | Backend listen address. Defaults to `:8080`. |
 | `ACCOUNTING_WEB_DIST_DIR` | Built frontend directory served by the Go server. |
-| `ACCOUNTING_PERSISTENCE_DRIVER` | Storage driver. Defaults to `memory`. |
-| `ACCOUNTING_PERSISTENCE_DIR` | JSON-file persistence directory. |
+| `ACCOUNTING_PERSISTENCE_DRIVER` | Storage driver: `memory`, `file`, `sqlite`, `postgres`, or `postgresql`. Defaults to `memory`. |
+| `ACCOUNTING_PERSISTENCE_DIR` | JSON-file persistence directory and default SQLite database directory. |
+| `ACCOUNTING_DATABASE_URL` | PostgreSQL URL or optional SQLite path/`sqlite://` URL. Falls back to `DATABASE_URL`. |
 | `ACCOUNTING_AUTH_SESSION_COOKIE_SECURE` | Must be `true` behind HTTPS in production. |
 | `ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED` | Require verified email before active use. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED` | Enable configured external SSO login. |
@@ -146,7 +147,7 @@ The repo is designed to keep changes shippable:
 
 ## Roadmap
 
-- Expand durable persistence beyond local JSON-file storage.
+- Expand the SQL schema from JSON-backed records into relational accounting tables as reporting and double-entry invariants mature.
 - Add invite flows and richer member management.
 - Complete Wacai spreadsheet import mapping and import commit workflows.
 - Add budget, recurring entry, refund, reimbursement, borrowing, and transfer workflows.

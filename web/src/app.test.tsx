@@ -396,8 +396,9 @@ describe('App', () => {
     expect(screen.getByText('Credit cards')).toBeInTheDocument();
     expect(screen.getByText('Savings and IOUs')).toBeInTheDocument();
     expect(screen.getByText('cash / USD')).toBeInTheDocument();
-    expect(await screen.findByRole('article', { name: 'Book members' })).toHaveTextContent('Person');
-    expect(screen.getByRole('article', { name: 'Book members' })).toHaveTextContent('owner');
+    const membersPanel = await screen.findByRole('article', { name: 'Book members' });
+    await waitFor(() => expect(membersPanel).toHaveTextContent('Person'));
+    expect(membersPanel).toHaveTextContent('owner');
     expect(fetch).toHaveBeenCalledWith('/api/books/book-1/members?page=1&page_size=50');
 
     fireEvent.change(screen.getByLabelText('Book name'), { target: { value: 'Household 2026' } });

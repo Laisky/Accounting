@@ -345,7 +345,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
   const postTotpNav = page.getByRole('navigation', { name: 'Main navigation' });
   await postTotpNav.getByRole('button', { name: 'Me' }).click();
-  await page.getByLabel('TOTP code').fill(generateTotpCode(otpauth, -30000));
+  await page.getByLabel('TOTP code').fill(generateTotpCode(otpauth, 30000));
   await page.getByRole('button', { name: 'Disable TOTP' }).click();
   await expect(page.getByText('TOTP disabled.')).toBeVisible();
   await page.getByRole('button', { name: 'Load activity' }).click();

@@ -342,9 +342,21 @@ The future double-entry layer can model:
 - Posting: one debit or credit line within a journal entry.
 - Reconciliation: statement-period matching, balance checks, and lock records.
 
-The first persistent store is hidden behind repository interfaces owned by the relevant domain package. The default `memory` driver is for local development. The `file` driver stores atomic JSON snapshots for auth, ledger, audit, and import-preview state under `ACCOUNTING_PERSISTENCE_DIR`; files are written with owner-only permissions because they contain password hashes, TOTP secrets, session hashes, and other server-side state. This single-node file driver is a durable bootstrap path, not the final multi-process database layer.
+Persistent storage is hidden behind repository interfaces owned by the relevant domain package. The default `memory` driver is for local development. The `file` driver stores atomic JSON snapshots for auth, ledger, audit, and import-preview state under `ACCOUNTING_PERSISTENCE_DIR`; files are written with owner-only permissions because they contain password hashes, TOTP secrets, session hashes, and other server-side state. This single-node file driver is a durable bootstrap path.
 
-Controllers must not build SQL directly. Future SQL repositories must validate untrusted inputs, bind query parameters, and avoid building queries from raw user-provided strings.
+The `sqlite` and `postgres`/`postgresql` drivers are direct SQL drivers. They do not load domain snapshots into process memory and later flush them; each create, update, delete, counter increment, and idempotent import-batch claim writes SQL rows synchronously before returning success. Reads query SQL rows through the domain store. The first SQL schema uses a shared `accounting_records` table keyed by namespace, primary key, parent key, owner key, and optional unique secondary key, with each domain object encoded as JSON. This keeps the current API behavior and store contracts stable while moving durability and concurrency control to the database. A later relational migration can split high-value accounting tables once reporting and double-entry invariants require database-native joins and constraints.
+
+PostgreSQL uses `database/sql` through pgx stdlib, stores JSON as `jsonb`, and sets the session time zone to UTC on startup. SQLite uses the `mattn/go-sqlite3` `database/sql` driver with WAL, foreign keys, a busy timeout, `synchronous=NORMAL`, and immediate write transactions; the SQLite pool is serialized with one open connection until a broader concurrent-write design is tested. These choices follow the current Go `database/sql` contract, pgx stdlib driver documentation, PostgreSQL timestamp/transaction guidance, and SQLite WAL/foreign-key/transaction guidance.
+
+Durable source references for future persistence work:
+
+- Go `database/sql`: https://pkg.go.dev/database/sql
+- pgx stdlib: https://pkg.go.dev/github.com/jackc/pgx/v5/stdlib
+- PostgreSQL date/time types and transaction isolation: https://www.postgresql.org/docs/current/datatype-datetime.html and https://www.postgresql.org/docs/current/transaction-iso.html
+- SQLite WAL, foreign keys, pragmas, and transactions: https://sqlite.org/wal.html, https://sqlite.org/foreignkeys.html, https://sqlite.org/pragma.html, and https://sqlite.org/lang_transaction.html
+- mattn SQLite driver: https://pkg.go.dev/github.com/mattn/go-sqlite3
+
+Controllers must not build SQL directly. SQL repositories must validate untrusted inputs, bind query parameters, and avoid building queries from raw user-provided strings.
 
 ## Configuration
 
@@ -357,8 +369,9 @@ Current backend environment variables:
 | `ACCOUNTING_SERVER_NAME` | `accounting` | Public server label returned in runtime config. |
 | `ACCOUNTING_WEB_DIST_DIR` | `../web/dist` | Built SPA directory served by the Go process. |
 | `ACCOUNTING_WEB_DEV_URL` | empty | Optional reverse proxy target for non-API frontend routes. |
-| `ACCOUNTING_PERSISTENCE_DRIVER` | `memory` | Storage driver: `memory` for process-local state or `file` for atomic JSON snapshots. |
-| `ACCOUNTING_PERSISTENCE_DIR` | `./var/accounting` | Directory for file-backed auth, ledger, audit, and import-preview snapshots. |
+| `ACCOUNTING_PERSISTENCE_DRIVER` | `memory` | Storage driver: `memory`, `file`, `sqlite`, `postgres`, or `postgresql`. |
+| `ACCOUNTING_PERSISTENCE_DIR` | `./var/accounting` | Directory for file-backed snapshots and the default SQLite file. |
+| `ACCOUNTING_DATABASE_URL` | empty | SQL database URL. PostgreSQL requires a pgx-compatible URL. SQLite may use an empty value for `ACCOUNTING_PERSISTENCE_DIR/accounting.sqlite3`, a plain path, or `sqlite://` URL. Falls back to `DATABASE_URL`. |
 | `ACCOUNTING_AUTH_EMAIL_REGISTER_ENABLED` | `true` | Enables self-service email/password registration. |
 | `ACCOUNTING_AUTH_EMAIL_LOGIN_ENABLED` | `true` | Enables email/password login for existing users. |
 | `ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED` | `true` | Requires email verification during registration. |

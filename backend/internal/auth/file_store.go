@@ -10,28 +10,34 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/persistence"
 )
 
-// FileStore persists authentication data to an atomic JSON snapshot file.
-type FileStore struct {
+// SnapshotStore persists authentication data by writing the whole in-memory
+// snapshot to an atomic JSON file.
+type SnapshotStore struct {
 	mu     sync.Mutex
-	path   string
+	sink   persistence.SnapshotSink
 	memory *MemoryStore
 }
 
 // NewFileStore receives a JSON path, loads existing authentication state, and returns a durable store.
-func NewFileStore(path string) (*FileStore, error) {
+func NewFileStore(path string) (*SnapshotStore, error) {
+	return newSnapshotStore(persistence.NewFileSink(path))
+}
+
+// newSnapshotStore loads the current snapshot from sink and returns a durable auth store.
+func newSnapshotStore(sink persistence.SnapshotSink) (*SnapshotStore, error) {
 	var snapshot Snapshot
-	if err := persistence.LoadJSON(path, &snapshot); err != nil {
-		return nil, errors.Wrap(err, "load auth file store")
+	if err := sink.Load(&snapshot); err != nil {
+		return nil, errors.Wrap(err, "load auth store")
 	}
 
-	return &FileStore{
-		path:   path,
+	return &SnapshotStore{
+		sink:   sink,
 		memory: NewMemoryStoreFromSnapshot(snapshot),
 	}, nil
 }
 
 // CreateUser receives a user record, stores it, and persists the snapshot.
-func (s *FileStore) CreateUser(ctx context.Context, user UserRecord) (UserRecord, error) {
+func (s *SnapshotStore) CreateUser(ctx context.Context, user UserRecord) (UserRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -47,7 +53,7 @@ func (s *FileStore) CreateUser(ctx context.Context, user UserRecord) (UserRecord
 }
 
 // UserByEmail receives a normalized email and returns the matching user record.
-func (s *FileStore) UserByEmail(ctx context.Context, email string) (UserRecord, error) {
+func (s *SnapshotStore) UserByEmail(ctx context.Context, email string) (UserRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -55,7 +61,7 @@ func (s *FileStore) UserByEmail(ctx context.Context, email string) (UserRecord, 
 }
 
 // UpdateUser receives a user record, replaces it, and persists the snapshot.
-func (s *FileStore) UpdateUser(ctx context.Context, user UserRecord) (UserRecord, error) {
+func (s *SnapshotStore) UpdateUser(ctx context.Context, user UserRecord) (UserRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -71,7 +77,7 @@ func (s *FileStore) UpdateUser(ctx context.Context, user UserRecord) (UserRecord
 }
 
 // UserByID receives a user id and returns the matching user record.
-func (s *FileStore) UserByID(ctx context.Context, userID string) (UserRecord, error) {
+func (s *SnapshotStore) UserByID(ctx context.Context, userID string) (UserRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -79,7 +85,7 @@ func (s *FileStore) UserByID(ctx context.Context, userID string) (UserRecord, er
 }
 
 // StoreSession receives a hashed session token, stores it, and persists the snapshot.
-func (s *FileStore) StoreSession(ctx context.Context, tokenHash string, session Session) error {
+func (s *SnapshotStore) StoreSession(ctx context.Context, tokenHash string, session Session) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -90,7 +96,7 @@ func (s *FileStore) StoreSession(ctx context.Context, tokenHash string, session 
 }
 
 // SessionByTokenHash receives a hashed session token and returns the matching session.
-func (s *FileStore) SessionByTokenHash(ctx context.Context, tokenHash string) (Session, error) {
+func (s *SnapshotStore) SessionByTokenHash(ctx context.Context, tokenHash string) (Session, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -98,7 +104,7 @@ func (s *FileStore) SessionByTokenHash(ctx context.Context, tokenHash string) (S
 }
 
 // DeleteSession receives a hashed session token, deletes it, and persists the snapshot.
-func (s *FileStore) DeleteSession(ctx context.Context, tokenHash string) error {
+func (s *SnapshotStore) DeleteSession(ctx context.Context, tokenHash string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -109,7 +115,7 @@ func (s *FileStore) DeleteSession(ctx context.Context, tokenHash string) error {
 }
 
 // StoreEmailCode receives a one-time email code record, stores it, and persists the snapshot.
-func (s *FileStore) StoreEmailCode(ctx context.Context, code EmailCodeRecord) error {
+func (s *SnapshotStore) StoreEmailCode(ctx context.Context, code EmailCodeRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -120,7 +126,7 @@ func (s *FileStore) StoreEmailCode(ctx context.Context, code EmailCodeRecord) er
 }
 
 // EmailCode receives email-code identity and returns the stored code record.
-func (s *FileStore) EmailCode(ctx context.Context, email string, purpose EmailCodePurpose) (EmailCodeRecord, error) {
+func (s *SnapshotStore) EmailCode(ctx context.Context, email string, purpose EmailCodePurpose) (EmailCodeRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -128,7 +134,7 @@ func (s *FileStore) EmailCode(ctx context.Context, email string, purpose EmailCo
 }
 
 // DeleteEmailCode receives email-code identity, deletes it, and persists the snapshot.
-func (s *FileStore) DeleteEmailCode(ctx context.Context, email string, purpose EmailCodePurpose) error {
+func (s *SnapshotStore) DeleteEmailCode(ctx context.Context, email string, purpose EmailCodePurpose) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -139,7 +145,7 @@ func (s *FileStore) DeleteEmailCode(ctx context.Context, email string, purpose E
 }
 
 // StorePendingTOTPSetup receives a pending setup, stores it, and persists the snapshot.
-func (s *FileStore) StorePendingTOTPSetup(ctx context.Context, sessionID string, setup PendingTOTPSetup) error {
+func (s *SnapshotStore) StorePendingTOTPSetup(ctx context.Context, sessionID string, setup PendingTOTPSetup) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -150,7 +156,7 @@ func (s *FileStore) StorePendingTOTPSetup(ctx context.Context, sessionID string,
 }
 
 // PendingTOTPSetup receives a session id and returns the pending setup.
-func (s *FileStore) PendingTOTPSetup(ctx context.Context, sessionID string) (PendingTOTPSetup, error) {
+func (s *SnapshotStore) PendingTOTPSetup(ctx context.Context, sessionID string) (PendingTOTPSetup, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -158,7 +164,7 @@ func (s *FileStore) PendingTOTPSetup(ctx context.Context, sessionID string) (Pen
 }
 
 // DeletePendingTOTPSetup receives a session id, deletes setup state, and persists the snapshot.
-func (s *FileStore) DeletePendingTOTPSetup(ctx context.Context, sessionID string) error {
+func (s *SnapshotStore) DeletePendingTOTPSetup(ctx context.Context, sessionID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -169,7 +175,7 @@ func (s *FileStore) DeletePendingTOTPSetup(ctx context.Context, sessionID string
 }
 
 // StoreTOTPReplay receives a replay marker, stores it, and persists the snapshot.
-func (s *FileStore) StoreTOTPReplay(ctx context.Context, userID string, codeHash string, expiresAt time.Time) error {
+func (s *SnapshotStore) StoreTOTPReplay(ctx context.Context, userID string, codeHash string, expiresAt time.Time) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -180,7 +186,7 @@ func (s *FileStore) StoreTOTPReplay(ctx context.Context, userID string, codeHash
 }
 
 // TOTPReplayExists receives replay identity and reports whether the marker is active.
-func (s *FileStore) TOTPReplayExists(ctx context.Context, userID string, codeHash string, now time.Time) (bool, error) {
+func (s *SnapshotStore) TOTPReplayExists(ctx context.Context, userID string, codeHash string, now time.Time) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -188,7 +194,7 @@ func (s *FileStore) TOTPReplayExists(ctx context.Context, userID string, codeHas
 }
 
 // IncrementFailedTOTP increments a user's failed TOTP counter and persists the snapshot.
-func (s *FileStore) IncrementFailedTOTP(ctx context.Context, userID string) (int, error) {
+func (s *SnapshotStore) IncrementFailedTOTP(ctx context.Context, userID string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -204,7 +210,7 @@ func (s *FileStore) IncrementFailedTOTP(ctx context.Context, userID string) (int
 }
 
 // ResetFailedTOTP clears a user's failed TOTP counter and persists the snapshot.
-func (s *FileStore) ResetFailedTOTP(ctx context.Context, userID string) error {
+func (s *SnapshotStore) ResetFailedTOTP(ctx context.Context, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -215,7 +221,7 @@ func (s *FileStore) ResetFailedTOTP(ctx context.Context, userID string) error {
 }
 
 // FailedTOTPCount receives a user id and returns the failed TOTP count.
-func (s *FileStore) FailedTOTPCount(ctx context.Context, userID string) (int, error) {
+func (s *SnapshotStore) FailedTOTPCount(ctx context.Context, userID string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -223,7 +229,7 @@ func (s *FileStore) FailedTOTPCount(ctx context.Context, userID string) (int, er
 }
 
 // IncrementFailedLogin increments an email failed-login counter and persists the snapshot.
-func (s *FileStore) IncrementFailedLogin(ctx context.Context, email string) (int, error) {
+func (s *SnapshotStore) IncrementFailedLogin(ctx context.Context, email string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -239,7 +245,7 @@ func (s *FileStore) IncrementFailedLogin(ctx context.Context, email string) (int
 }
 
 // ResetFailedLogin clears an email failed-login counter and persists the snapshot.
-func (s *FileStore) ResetFailedLogin(ctx context.Context, email string) error {
+func (s *SnapshotStore) ResetFailedLogin(ctx context.Context, email string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -250,7 +256,7 @@ func (s *FileStore) ResetFailedLogin(ctx context.Context, email string) error {
 }
 
 // FailedLoginCount receives an email and returns the failed login count.
-func (s *FileStore) FailedLoginCount(ctx context.Context, email string) (int, error) {
+func (s *SnapshotStore) FailedLoginCount(ctx context.Context, email string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -258,7 +264,7 @@ func (s *FileStore) FailedLoginCount(ctx context.Context, email string) (int, er
 }
 
 // CreatePasskey receives a passkey credential, stores it, and persists the snapshot.
-func (s *FileStore) CreatePasskey(ctx context.Context, passkey PasskeyCredential) (PasskeyCredential, error) {
+func (s *SnapshotStore) CreatePasskey(ctx context.Context, passkey PasskeyCredential) (PasskeyCredential, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -274,7 +280,7 @@ func (s *FileStore) CreatePasskey(ctx context.Context, passkey PasskeyCredential
 }
 
 // UpdatePasskey receives a passkey credential, updates it, and persists the snapshot.
-func (s *FileStore) UpdatePasskey(ctx context.Context, passkey PasskeyCredential) (PasskeyCredential, error) {
+func (s *SnapshotStore) UpdatePasskey(ctx context.Context, passkey PasskeyCredential) (PasskeyCredential, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -290,7 +296,7 @@ func (s *FileStore) UpdatePasskey(ctx context.Context, passkey PasskeyCredential
 }
 
 // DeletePasskey receives passkey identity, deletes it, and persists the snapshot.
-func (s *FileStore) DeletePasskey(ctx context.Context, userID string, passkeyID string) error {
+func (s *SnapshotStore) DeletePasskey(ctx context.Context, userID string, passkeyID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -301,7 +307,7 @@ func (s *FileStore) DeletePasskey(ctx context.Context, userID string, passkeyID 
 }
 
 // PasskeyByID receives passkey identity and returns the owned credential.
-func (s *FileStore) PasskeyByID(ctx context.Context, userID string, passkeyID string) (PasskeyCredential, error) {
+func (s *SnapshotStore) PasskeyByID(ctx context.Context, userID string, passkeyID string) (PasskeyCredential, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -309,7 +315,7 @@ func (s *FileStore) PasskeyByID(ctx context.Context, userID string, passkeyID st
 }
 
 // PasskeyByCredentialID receives a raw WebAuthn credential id and returns the matching passkey.
-func (s *FileStore) PasskeyByCredentialID(ctx context.Context, credentialID []byte) (PasskeyCredential, error) {
+func (s *SnapshotStore) PasskeyByCredentialID(ctx context.Context, credentialID []byte) (PasskeyCredential, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -317,7 +323,7 @@ func (s *FileStore) PasskeyByCredentialID(ctx context.Context, credentialID []by
 }
 
 // ListPasskeys receives a user id and returns all passkeys owned by the user.
-func (s *FileStore) ListPasskeys(ctx context.Context, userID string) ([]PasskeyCredential, error) {
+func (s *SnapshotStore) ListPasskeys(ctx context.Context, userID string) ([]PasskeyCredential, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -325,7 +331,7 @@ func (s *FileStore) ListPasskeys(ctx context.Context, userID string) ([]PasskeyC
 }
 
 // StorePasskeyCeremony receives WebAuthn challenge state, stores it, and persists the snapshot.
-func (s *FileStore) StorePasskeyCeremony(ctx context.Context, ceremony PasskeyCeremony) error {
+func (s *SnapshotStore) StorePasskeyCeremony(ctx context.Context, ceremony PasskeyCeremony) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -336,7 +342,7 @@ func (s *FileStore) StorePasskeyCeremony(ctx context.Context, ceremony PasskeyCe
 }
 
 // PasskeyCeremony receives a ceremony id and returns stored WebAuthn challenge state.
-func (s *FileStore) PasskeyCeremony(ctx context.Context, ceremonyID string) (PasskeyCeremony, error) {
+func (s *SnapshotStore) PasskeyCeremony(ctx context.Context, ceremonyID string) (PasskeyCeremony, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -344,7 +350,7 @@ func (s *FileStore) PasskeyCeremony(ctx context.Context, ceremonyID string) (Pas
 }
 
 // DeletePasskeyCeremony receives a ceremony id, deletes it, and persists the snapshot.
-func (s *FileStore) DeletePasskeyCeremony(ctx context.Context, ceremonyID string) error {
+func (s *SnapshotStore) DeletePasskeyCeremony(ctx context.Context, ceremonyID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -354,10 +360,10 @@ func (s *FileStore) DeletePasskeyCeremony(ctx context.Context, ceremonyID string
 	return s.persist()
 }
 
-// persist writes the current memory snapshot to the configured JSON path.
-func (s *FileStore) persist() error {
-	if err := persistence.SaveJSONAtomic(s.path, s.memory.Snapshot()); err != nil {
-		return errors.Wrap(err, "persist auth file store")
+// persist writes the current memory snapshot to the configured sink.
+func (s *SnapshotStore) persist() error {
+	if err := s.sink.Save(s.memory.Snapshot()); err != nil {
+		return errors.Wrap(err, "persist auth store")
 	}
 
 	return nil

@@ -74,7 +74,7 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 	if len(auditServices) > 0 && auditServices[0] != nil {
 		auditService = auditServices[0]
 	}
-	importService, err := newDefaultImportService(cfg)
+	importService, err := newDefaultImportService(cfg, nil, "")
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +88,7 @@ func RegisterRoutesWithServices(router *gin.Engine, cfg config.Config, ledgerSer
 	}
 	if importService == nil {
 		var err error
-		importService, err = newDefaultImportService(cfg)
+		importService, err = newDefaultImportService(cfg, nil, "")
 		if err != nil {
 			panic(err)
 		}

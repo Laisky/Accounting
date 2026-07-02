@@ -14,28 +14,34 @@ type Snapshot struct {
 	Batches []Batch `json:"batches"`
 }
 
-// FileStore persists import preview batches to an atomic JSON snapshot file.
-type FileStore struct {
+// SnapshotStore persists import preview batches by writing the whole in-memory
+// snapshot to an atomic JSON file.
+type SnapshotStore struct {
 	mu     sync.Mutex
-	path   string
+	sink   persistence.SnapshotSink
 	memory *MemoryStore
 }
 
 // NewFileStore receives a JSON path, loads existing batches, and returns a durable import store.
-func NewFileStore(path string) (*FileStore, error) {
+func NewFileStore(path string) (*SnapshotStore, error) {
+	return newSnapshotStore(persistence.NewFileSink(path))
+}
+
+// newSnapshotStore loads the current snapshot from sink and returns a durable import store.
+func newSnapshotStore(sink persistence.SnapshotSink) (*SnapshotStore, error) {
 	var snapshot Snapshot
-	if err := persistence.LoadJSON(path, &snapshot); err != nil {
-		return nil, errors.Wrap(err, "load imports file store")
+	if err := sink.Load(&snapshot); err != nil {
+		return nil, errors.Wrap(err, "load imports store")
 	}
 
-	return &FileStore{
-		path:   path,
+	return &SnapshotStore{
+		sink:   sink,
 		memory: NewMemoryStoreFromSnapshot(snapshot),
 	}, nil
 }
 
 // SaveBatch receives an import batch, stores it, and persists the snapshot.
-func (s *FileStore) SaveBatch(ctx context.Context, batch Batch) (Batch, error) {
+func (s *SnapshotStore) SaveBatch(ctx context.Context, batch Batch) (Batch, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -43,8 +49,8 @@ func (s *FileStore) SaveBatch(ctx context.Context, batch Batch) (Batch, error) {
 	if err != nil {
 		return Batch{}, err
 	}
-	if err := persistence.SaveJSONAtomic(s.path, s.memory.Snapshot()); err != nil {
-		return Batch{}, errors.Wrap(err, "persist imports file store")
+	if err := s.sink.Save(s.memory.Snapshot()); err != nil {
+		return Batch{}, errors.Wrap(err, "persist imports store")
 	}
 
 	return stored, nil
@@ -52,7 +58,7 @@ func (s *FileStore) SaveBatch(ctx context.Context, batch Batch) (Batch, error) {
 
 // SaveBatchIfAbsent atomically stores a new batch and persists the snapshot only
 // when no batch already exists for the same owner/source/hash.
-func (s *FileStore) SaveBatchIfAbsent(ctx context.Context, batch Batch) (Batch, bool, error) {
+func (s *SnapshotStore) SaveBatchIfAbsent(ctx context.Context, batch Batch) (Batch, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -63,15 +69,15 @@ func (s *FileStore) SaveBatchIfAbsent(ctx context.Context, batch Batch) (Batch, 
 	if !created {
 		return stored, false, nil
 	}
-	if err := persistence.SaveJSONAtomic(s.path, s.memory.Snapshot()); err != nil {
-		return Batch{}, false, errors.Wrap(err, "persist imports file store")
+	if err := s.sink.Save(s.memory.Snapshot()); err != nil {
+		return Batch{}, false, errors.Wrap(err, "persist imports store")
 	}
 
 	return stored, true, nil
 }
 
 // Batch receives owner and batch id values and returns the matching batch.
-func (s *FileStore) Batch(ctx context.Context, userID string, batchID string) (Batch, error) {
+func (s *SnapshotStore) Batch(ctx context.Context, userID string, batchID string) (Batch, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -79,7 +85,7 @@ func (s *FileStore) Batch(ctx context.Context, userID string, batchID string) (B
 }
 
 // BatchByHash receives owner, source, and hash values and returns the matching batch.
-func (s *FileStore) BatchByHash(ctx context.Context, userID string, source string, sourceHash string) (Batch, error) {
+func (s *SnapshotStore) BatchByHash(ctx context.Context, userID string, source string, sourceHash string) (Batch, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
