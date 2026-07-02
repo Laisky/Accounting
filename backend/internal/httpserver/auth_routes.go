@@ -76,6 +76,22 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
 			return
 		}
+		if result.TOTPRequired {
+			// Password verified but a second factor is still required; prompt the
+			// client for a TOTP code without issuing a session. Audit the partial
+			// auth so a valid-password-but-blocked-by-2FA signal is not lost.
+			log.Debug("login awaiting totp verification")
+			recordAuditEvent(c, auditService, audit.RecordRequest{
+				ActorID:    result.User.ID,
+				ActorEmail: result.User.Email,
+				Action:     audit.ActionAuthLoginTOTPChallenge,
+				TargetType: "user",
+				TargetID:   result.User.ID,
+				Metadata:   map[string]string{"method": "password"},
+			})
+			c.JSON(http.StatusOK, gin.H{"totpRequired": true})
+			return
+		}
 
 		setSessionCookie(c, cfg, authService, result.SessionToken, result.Session.ExpiresAt)
 		recordAuditEvent(c, auditService, audit.RecordRequest{

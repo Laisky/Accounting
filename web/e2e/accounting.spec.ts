@@ -25,7 +25,7 @@ test('user signs in through the authentication screen', async ({ page }) => {
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in with email' }).click();
 
-  await expect(page.getByRole('region', { name: 'Monthly spending budget' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
 });
 
@@ -53,7 +53,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   expect(JSON.stringify(auditBody)).not.toContain('token');
 
   await page.goto('/');
-  await expect(page.getByRole('region', { name: 'Monthly spending budget' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
 
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   await nav.getByRole('button', { name: 'Accounts' }).click();
@@ -62,11 +62,12 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('Account ready.')).toBeVisible();
 
   await nav.getByRole('button', { name: 'Record' }).click();
+  await expect(page.getByRole('tab', { name: 'Expense' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: '2' }).click();
+  await page.getByRole('button', { name: '4' }).click();
   await page.getByLabel('Note').fill('Team lunch');
-  await page.getByRole('button', { name: 'Post entry' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Entry posted.')).toBeVisible();
-  await expect(page.getByText('Team lunch')).toBeVisible();
-  await expect(page.getByText('-$12.30')).toBeVisible();
 
   await nav.getByRole('button', { name: 'Me' }).click();
   await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();

@@ -20,6 +20,8 @@ const (
 	ActionAuthLogin Action = "auth.login"
 	// ActionAuthLoginFailed records a failed login attempt.
 	ActionAuthLoginFailed Action = "auth.login_failed"
+	// ActionAuthLoginTOTPChallenge records a password that verified but still awaits a TOTP code.
+	ActionAuthLoginTOTPChallenge Action = "auth.login_totp_challenge"
 	// ActionAuthLogout records a logout.
 	ActionAuthLogout Action = "auth.logout"
 	// ActionEmailVerificationRequested records a verification code request.

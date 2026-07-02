@@ -274,9 +274,12 @@ export async function fetchAllEntries(bookId: string): Promise<Entry[]> {
 export async function createEntry(bookId: string, input: {
   type: string;
   accountId: string;
+  destinationAccountId?: string;
   categoryId?: string;
   amountCents: number;
   transactionCurrency: string;
+  bookReportingCurrency?: string;
+  exchangeRate?: string;
   occurredAt: string;
   note?: string;
 }): Promise<Entry> {

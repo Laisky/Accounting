@@ -280,11 +280,13 @@ func TestServiceTOTPSetupLoginReplayAndDisable(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, status.Enabled)
 
-	_, err = service.Login(context.Background(), LoginRequest{
+	challenge, err := service.Login(context.Background(), LoginRequest{
 		Email:    "person@example.test",
 		Password: "correct horse battery staple",
 	})
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.True(t, challenge.TOTPRequired)
+	require.Empty(t, challenge.SessionToken)
 
 	_, err = service.Login(context.Background(), LoginRequest{
 		Email:    "person@example.test",

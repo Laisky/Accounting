@@ -28,6 +28,12 @@ export type AuthResult = {
   session: AuthSession;
 };
 
+// PasswordLoginResult is either a completed sign-in or a pending TOTP challenge
+// returned once the password has been verified for a TOTP-enabled account.
+export type PasswordLoginResult =
+  | ({ kind: 'authenticated' } & AuthResult)
+  | { kind: 'totpRequired' };
+
 export type SessionResult = {
   actor: AuthActor;
   session: AuthSession;
@@ -53,8 +59,8 @@ export async function fetchSession(signal?: AbortSignal): Promise<SessionResult>
   return response.json() as Promise<SessionResult>;
 }
 
-// loginWithPassword receives email/password credentials and returns authenticated user/session data.
-export async function loginWithPassword(email: string, password: string, totpCode?: string): Promise<AuthResult> {
+// loginWithPassword submits credentials and returns either authenticated data or a pending TOTP challenge.
+export async function loginWithPassword(email: string, password: string, totpCode?: string): Promise<PasswordLoginResult> {
   const response = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -64,7 +70,15 @@ export async function loginWithPassword(email: string, password: string, totpCod
     throw new Error(`login failed: ${response.status}`);
   }
 
-  return response.json() as Promise<AuthResult>;
+  const payload = (await response.json()) as Partial<AuthResult> & { totpRequired?: boolean };
+  if (payload.totpRequired) {
+    return { kind: 'totpRequired' };
+  }
+  if (!payload.user || !payload.session) {
+    throw new Error('login response missing session');
+  }
+
+  return { kind: 'authenticated', user: payload.user, session: payload.session };
 }
 
 // registerWithPassword receives email and password credentials and returns public user data.

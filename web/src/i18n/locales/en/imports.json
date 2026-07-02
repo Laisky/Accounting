@@ -1,88 +1,88 @@
 {
   "imports": {
-    "eyebrow": "Accounting workspace",
-    "heading": "Import Wacai books into a clean ledger.",
     "a11y": {
-      "currentSession": "Current session",
-      "openActivity": "Open activity",
-      "closeActivity": "Close activity",
       "activityLog": "Activity log",
-      "ledgerSummary": "Ledger summary",
+      "closeActivity": "Close activity",
+      "currentSession": "Current session",
+      "detectedValues": "Detected import values",
       "importData": "Import data",
       "importReview": "Import review",
-      "uploadFile": "Upload Wacai export file",
+      "ledgerSummary": "Ledger summary",
+      "openActivity": "Open activity",
       "previewSummary": "Import preview summary",
-      "detectedValues": "Detected import values",
-      "rowDiagnostics": "Import row diagnostics"
+      "rowDiagnostics": "Import row diagnostics",
+      "uploadFile": "Upload Wacai export file"
     },
-    "recentActivity": "Recent activity",
-    "auditEvents": "Audit events",
-    "noAuditEvents": "No audit events yet.",
-    "totalEvents": "{{value}} total events",
-    "dataImport": "Data import",
-    "chooseSource": "Choose the source, upload the export, review before commit.",
-    "csvPreviewReady": "CSV preview ready",
-    "dataSource": "Data source",
-    "uploadPrompt": "Upload a Wacai export file",
     "acceptedFormat": "Accepted format: CSV",
+    "auditEvents": "Audit events",
+    "chooseSource": "Choose the source, upload the export, review before commit.",
     "clearFile": "Clear file",
-    "reviewQueue": "Review queue",
-    "noFileSelected": "No file selected",
-    "exportDetected": "{{source}} export detected",
-    "spreadsheet": "Spreadsheet",
-    "fileSummary": "{{type}} - {{size}} MB",
-    "none": "None",
-    "missingFields": "Missing source fields: {{fields}}",
-    "schemaReady": "Detected schema ready for review.",
-    "rowDiagnostics": "Row diagnostics",
-    "rowNumber": "Row {{value}}",
-    "unmappedRow": "Unmapped row",
-    "readyForMapping": "Ready for mapping",
-    "noPreviewRows": "No preview rows parsed",
-    "sources": {
-      "wacai": {
-        "label": "Wacai",
-        "description": "Spreadsheet exports from Wacai books, accounts, and bill records."
-      }
-    },
-    "stage": {
-      "stage": "Stage import",
-      "staging": "Staging import",
-      "staged": "Import staged"
-    },
-    "facts": {
-      "source": "Source",
-      "rows": "Rows",
-      "pending": "Pending",
-      "fingerprint": "Fingerprint",
-      "pendingHash": "Pending hash",
-      "metadata": "Metadata",
-      "batch": "Batch {{id}}",
-      "previewBatch": "Preview batch"
-    },
-    "preview": {
-      "warnings": "{{value}} warnings",
-      "errors": "{{value}} errors",
-      "accounts": "{{value}} accounts",
-      "categories": "{{value}} categories"
-    },
+    "csvPreviewReady": "CSV preview ready",
+    "dataImport": "Data import",
+    "dataSource": "Data source",
     "detected": {
-      "books": "Books",
       "accounts": "Accounts",
+      "books": "Books",
       "categories": "Categories",
       "currencies": "Currencies",
       "members": "Members",
       "merchants": "Merchants",
       "tags": "Tags"
     },
-    "pipeline": {
-      "validate": "Validate source format",
-      "hash": "Compute source hash",
-      "batch": "Create preview batch",
-      "map": "Map categories and accounts"
-    },
     "error": {
       "previewFailed": "Import preview failed"
-    }
+    },
+    "exportDetected": "{{source}} export detected",
+    "eyebrow": "Accounting workspace",
+    "facts": {
+      "batch": "Batch {{id}}",
+      "fingerprint": "Fingerprint",
+      "metadata": "Metadata",
+      "pending": "Pending",
+      "pendingHash": "Pending hash",
+      "previewBatch": "Preview batch",
+      "rows": "Rows",
+      "source": "Source"
+    },
+    "fileSummary": "{{type}} - {{size}} MB",
+    "heading": "Import Wacai books into a clean ledger.",
+    "missingFields": "Missing source fields: {{fields}}",
+    "noAuditEvents": "No audit events yet.",
+    "noFileSelected": "No file selected",
+    "noPreviewRows": "No preview rows parsed",
+    "none": "None",
+    "pipeline": {
+      "batch": "Create preview batch",
+      "hash": "Compute source hash",
+      "map": "Map categories and accounts",
+      "validate": "Validate source format"
+    },
+    "preview": {
+      "accounts": "{{value}} accounts",
+      "categories": "{{value}} categories",
+      "errors": "{{value}} errors",
+      "warnings": "{{value}} warnings"
+    },
+    "readyForMapping": "Ready for mapping",
+    "recentActivity": "Recent activity",
+    "reviewQueue": "Review queue",
+    "rowDiagnostics": "Row diagnostics",
+    "rowNumber": "Row {{value}}",
+    "schemaReady": "Detected schema ready for review.",
+    "sources": {
+      "wacai": {
+        "description": "Spreadsheet exports from Wacai books, accounts, and bill records.",
+        "label": "Wacai"
+      }
+    },
+    "spreadsheet": "Spreadsheet",
+    "stage": {
+      "stage": "Stage import",
+      "staged": "Import staged",
+      "staging": "Staging import"
+    },
+    "totalEvents": "{{value}} total events",
+    "unmappedRow": "Unmapped row",
+    "uploadPrompt": "Upload a Wacai export file"
   }
 }

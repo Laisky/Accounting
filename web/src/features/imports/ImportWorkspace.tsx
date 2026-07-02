@@ -408,7 +408,7 @@ function formatAuditTime(value: string): string {
   return date.toISOString().replace('.000Z', 'Z');
 }
 
-// PreviewDetectedValues receives a preview batch and returns detected Wacai migration concepts.
+// PreviewDetectedValues receives a preview batch and returns detected import migration concepts.
 function PreviewDetectedValues({ batch }: { batch: ImportPreviewBatch }) {
   const { t } = useTranslation();
   const detectedGroups = [

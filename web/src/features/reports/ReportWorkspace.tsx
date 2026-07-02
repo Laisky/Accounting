@@ -65,7 +65,7 @@ const percent = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
 });
 
-// ReportWorkspace renders Wacai-style interactive reporting over real ledger entries.
+// ReportWorkspace renders interactive reporting over real ledger entries.
 export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<ReportData>({ books: [], accounts: [], categories: [], entries: [], rates: [] });
@@ -424,7 +424,7 @@ function DonutChart({
   );
 }
 
-// RankedList receives ranked report rows and returns a Wacai-style amount list.
+// RankedList receives ranked report rows and returns a ranked amount list.
 function RankedList({ items, totalCents, currencyCode }: { items: RankedItem[]; totalCents: number; currencyCode: string }) {
   const { t } = useTranslation();
   if (!items.length) {

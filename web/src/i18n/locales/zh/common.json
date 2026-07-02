@@ -1,34 +1,34 @@
 {
   "common": {
     "accessEyebrow": "记账访问",
-    "checkingSession": "正在检查当前会话。",
-    "loadingSessionLabel": "正在加载会话",
-    "signOut": "退出登录",
+    "amount": "金额",
     "balance": "当前余额",
+    "baseCurrency": "本位币",
+    "category": "分类",
+    "checkingSession": "正在检查当前会话。",
     "currency": "币种",
     "entries": "记录",
     "entriesCount": "{{value}} 条记录",
-    "amount": "金额",
-    "category": "分类",
-    "note": "备注",
-    "baseCurrency": "本位币",
-    "postEntry": "提交记录",
-    "noBookYet": "暂无账本",
-    "total": "合计",
-    "on": "开启",
-    "off": "关闭",
-    "loadingActivity": "正在加载动态。",
+    "error": {
+      "activityFailed": "无法加载动态。"
+    },
     "flow": {
       "all": "全部",
       "expense": "支出",
       "income": "收入"
     },
+    "loadingActivity": "正在加载动态。",
+    "loadingSessionLabel": "正在加载会话",
+    "noBookYet": "暂无账本",
+    "note": "备注",
+    "off": "关闭",
+    "on": "开启",
+    "postEntry": "提交记录",
+    "signOut": "退出登录",
     "status": {
       "accountReady": "账户已就绪。",
       "entryPosted": "记录已提交。"
     },
-    "error": {
-      "activityFailed": "无法加载动态。"
-    }
+    "total": "合计"
   }
 }

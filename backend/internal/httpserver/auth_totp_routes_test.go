@@ -68,7 +68,16 @@ func TestRegisterRoutesAuthTOTPFlow(t *testing.T) {
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)
-	require.Equal(t, http.StatusUnauthorized, loginRec.Code)
+	require.Equal(t, http.StatusOK, loginRec.Code)
+	require.Contains(t, loginRec.Body.String(), `"totpRequired":true`)
+	require.NotContains(t, loginRec.Body.String(), `"session"`)
+
+	wrongPasswordReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"the wrong password value"}`))
+	wrongPasswordReq.Header.Set("Content-Type", "application/json")
+	wrongPasswordRec := httptest.NewRecorder()
+	router.ServeHTTP(wrongPasswordRec, wrongPasswordReq)
+	require.Equal(t, http.StatusUnauthorized, wrongPasswordRec.Code)
+	require.NotContains(t, wrongPasswordRec.Body.String(), "totpRequired")
 
 	now = now.Add(30 * time.Second)
 	nextCode, err := totp.GenerateCodeCustom(setup.Secret, now, routeTestTOTPValidateOpts())
@@ -78,6 +87,10 @@ func TestRegisterRoutesAuthTOTPFlow(t *testing.T) {
 	loginRec = httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)
 	require.Equal(t, http.StatusOK, loginRec.Code)
+	// A correct code must issue a real session, not repeat the challenge.
+	require.Contains(t, loginRec.Body.String(), `"session"`)
+	require.NotContains(t, loginRec.Body.String(), "totpRequired")
+	require.NotEmpty(t, loginRec.Header().Get("Set-Cookie"))
 
 	now = now.Add(30 * time.Second)
 	disableCode, err := totp.GenerateCodeCustom(setup.Secret, now, routeTestTOTPValidateOpts())

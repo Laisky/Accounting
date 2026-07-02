@@ -12,7 +12,7 @@ cli-build:
 	cd cli && go build ./...
 
 frontend-build: ensure-web-deps
-	npm --prefix web run build
+	pnpm --dir web run build
 
 clean:
 	rm -rf web/dist backend/accounting-server cli/accounting
@@ -26,13 +26,13 @@ dev: ensure-web-deps
 	esac; \
 	(cd backend && ACCOUNTING_ADDR="$$backend_addr" go run ./cmd/accounting-server) & \
 	backend_pid=$$!; \
-	VITE_API_BASE_URL="$$api_base_url" npm --prefix web run dev -- --host 0.0.0.0 --port "$(FRONTEND_PORT)" & \
+	VITE_API_BASE_URL="$$api_base_url" pnpm --dir web run dev --host 0.0.0.0 --port "$(FRONTEND_PORT)" & \
 	frontend_pid=$$!; \
 	trap 'kill $$backend_pid $$frontend_pid 2>/dev/null || true' INT TERM EXIT; \
 	wait
 
 ensure-web-deps:
-	@if [ ! -d web/node_modules ]; then npm --prefix web install; fi
+	@if [ ! -d web/node_modules ]; then pnpm --dir web install; fi
 
 lint: backend-lint cli-lint frontend-lint
 
@@ -47,8 +47,8 @@ cli-lint:
 	cd cli && go vet ./...
 
 frontend-lint: ensure-web-deps
-	npm --prefix web run lint
-	npm --prefix web run check:i18n
+	pnpm --dir web run lint
+	pnpm --dir web run check:i18n
 
 test: backend-test cli-test frontend-test
 
@@ -59,9 +59,9 @@ cli-test:
 	cd cli && go test -race -cover ./...
 
 frontend-test: ensure-web-deps
-	npm --prefix web run test
+	pnpm --dir web run test
 
 e2e: frontend-e2e
 
 frontend-e2e: ensure-web-deps
-	npm --prefix web run test:e2e
+	pnpm --dir web run test:e2e

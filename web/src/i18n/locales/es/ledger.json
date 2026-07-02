@@ -3,39 +3,39 @@
     "a11y": {
       "workspace": "Espacio de trabajo del libro contable"
     },
-    "eyebrow": "Operaciones del libro contable",
-    "heading": "Libros, cuentas, registro rápido y revisión.",
-    "activeBook": "Libro activo",
-    "panels": {
-      "bookSwitcher": "Selector de libros",
-      "accountContext": "Contexto de la cuenta",
-      "quickEntry": "Registro rápido"
-    },
-    "fields": {
-      "bookName": "Nombre del libro",
-      "account": "Cuenta"
-    },
     "actions": {
+      "addCategory": "Añadir categoría",
       "createBook": "Crear libro",
-      "updateSettings": "Actualizar ajustes",
       "createGroup": "Crear grupo",
       "shareAccount": "Compartir cuenta",
-      "addCategory": "Añadir categoría"
+      "updateSettings": "Actualizar ajustes"
     },
+    "activeBook": "Libro activo",
+    "error": {
+      "createBookAndAccountFirst": "Crea un libro y una cuenta primero.",
+      "createBookAndGroupFirst": "Crea un libro y un grupo de cuentas primero.",
+      "createBookFirst": "Crea un libro primero.",
+      "requestFailed": "La solicitud al libro contable ha fallado."
+    },
+    "eyebrow": "Operaciones del libro contable",
+    "fields": {
+      "account": "Cuenta",
+      "bookName": "Nombre del libro"
+    },
+    "heading": "Libros, cuentas, registro rápido y revisión.",
     "noAccountConnected": "No hay ninguna cuenta conectada",
-    "transactionReview": "Revisión de transacciones ({{value}})",
     "noEntriesYet": "Aún no hay movimientos",
+    "panels": {
+      "accountContext": "Contexto de la cuenta",
+      "bookSwitcher": "Selector de libros",
+      "quickEntry": "Registro rápido"
+    },
     "status": {
+      "accountGroupReady": "Grupo de cuentas listo.",
       "bookReady": "Libro listo.",
       "bookSettingsUpdated": "Ajustes del libro actualizados.",
-      "accountGroupReady": "Grupo de cuentas listo.",
       "categoryReady": "Categoría lista."
     },
-    "error": {
-      "requestFailed": "La solicitud al libro contable ha fallado.",
-      "createBookFirst": "Crea un libro primero.",
-      "createBookAndGroupFirst": "Crea un libro y un grupo de cuentas primero.",
-      "createBookAndAccountFirst": "Crea un libro y una cuenta primero."
-    }
+    "transactionReview": "Revisión de transacciones ({{value}})"
   }
 }

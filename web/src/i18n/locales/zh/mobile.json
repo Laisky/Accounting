@@ -1,60 +1,80 @@
 {
   "mobile": {
     "a11y": {
-      "workspace": "记账移动端工作区",
       "currentBook": "当前账本",
-      "workspaceTools": "工作区工具",
-      "searchTransactions": "搜索交易",
-      "moreOptions": "更多选项",
       "mainNavigation": "主导航",
-      "selectLanguage": "选择语言"
-    },
-    "defaultBookName": "家庭",
-    "nav": {
-      "accounts": "账户",
-      "record": "记一笔",
-      "reports": "报表",
-      "me": "我"
+      "moreOptions": "更多选项",
+      "searchTransactions": "搜索交易",
+      "selectLanguage": "选择语言",
+      "workspace": "记账移动端工作区",
+      "workspaceTools": "工作区工具"
     },
     "accounts": {
+      "book": "账本",
       "eyebrow": "账户",
       "heading": "与此账本共享的钱包。",
-      "book": "账本",
       "noAccount": "尚未连接账户。",
       "prepareAccount": "准备账户"
     },
     "budget": {
-      "title": "每月支出预算",
       "remaining": "剩余",
-      "total": "合计 {{amount}}",
-      "spent": "已花 {{amount}}"
+      "spent": "已花 {{amount}}",
+      "title": "每月支出预算",
+      "total": "合计 {{amount}}"
     },
-    "record": {
-      "notePlaceholder": "这笔用于什么？"
-    },
-    "transactions": {
-      "title": "交易",
-      "empty": "暂无交易。",
-      "dayTotals": "收入 {{income}} 支出 {{expense}}",
-      "accountFallback": "账户",
-      "entryMeta": "{{time}} {{account}} / {{book}}"
+    "defaultBookName": "家庭",
+    "error": {
+      "accountSetupFailed": "账户设置失败。",
+      "baseCurrencyFailed": "无法更新本位币。",
+      "createAccountBeforeRecording": "记账前请先创建账户。",
+      "entriesFailed": "无法加载记录。",
+      "entryFailed": "无法提交记录。",
+      "ledgerDataFailed": "无法加载账本数据。"
     },
     "me": {
       "emailLogin": "邮箱登录 {{state}}",
+      "loadActivity": "加载动态",
       "passkeys": "通行密钥 {{state}}",
-      "totp": "TOTP {{state}}",
-      "loadActivity": "加载动态"
+      "totp": "TOTP {{state}}"
+    },
+    "nav": {
+      "accounts": "账户",
+      "me": "我",
+      "record": "记一笔",
+      "reports": "报表"
+    },
+    "record": {
+      "account": "Account",
+      "book": "Book",
+      "calculator": "Calculator",
+      "categoryFallback": "General",
+      "categoryShortcuts": "Category shortcuts",
+      "currency": "Currency",
+      "destination": "To account",
+      "fields": "Entry fields",
+      "member": "Member",
+      "notePlaceholder": "Add a note...",
+      "save": "Save",
+      "selectedCategory": "Selected category",
+      "time": "Time",
+      "title": "Record entry",
+      "typeLabel": "Entry type",
+      "types": {
+        "borrow": "Borrow/Lend",
+        "expense": "Expense",
+        "income": "Income",
+        "transfer": "Transfer"
+      }
     },
     "status": {
       "baseCurrencyUpdated": "本位币已更新。"
     },
-    "error": {
-      "accountSetupFailed": "账户设置失败。",
-      "createAccountBeforeRecording": "记账前请先创建账户。",
-      "entryFailed": "无法提交记录。",
-      "baseCurrencyFailed": "无法更新本位币。",
-      "ledgerDataFailed": "无法加载账本数据。",
-      "entriesFailed": "无法加载记录。"
+    "transactions": {
+      "accountFallback": "账户",
+      "dayTotals": "收入 {{income}} 支出 {{expense}}",
+      "empty": "暂无交易。",
+      "entryMeta": "{{time}} {{account}} / {{book}}",
+      "title": "交易"
     }
   }
 }

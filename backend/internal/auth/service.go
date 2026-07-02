@@ -195,6 +195,12 @@ func (s *Service) Login(ctx context.Context, request LoginRequest) (AuthResult, 
 		return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
 	}
 	if record.TOTPEnabled && s.cfg.TOTPEnabled {
+		if strings.TrimSpace(request.TOTPCode) == "" {
+			// Password verified but this user still owes a second factor. Signal
+			// the challenge instead of failing so the client can prompt for it.
+			// User is carried for server-side auditing only; no session is issued.
+			return AuthResult{TOTPRequired: true, User: record.User}, nil
+		}
 		if err := s.verifyTOTPCode(ctx, record, request.TOTPCode); err != nil {
 			return AuthResult{}, err
 		}

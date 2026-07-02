@@ -3,12 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "check:i18n": "node scripts/check-i18n-locales.mjs",
-    "test": "vitest run",
+    "test": "NODE_OPTIONS=--experimental-require-module vitest run",
     "test:e2e": "playwright test",
     "preview": "vite preview"
   },

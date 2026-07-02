@@ -1,88 +1,88 @@
 {
   "imports": {
-    "eyebrow": "Espace de comptabilité",
-    "heading": "Importez les livres Wacai dans un grand livre propre.",
     "a11y": {
-      "currentSession": "Session en cours",
-      "openActivity": "Ouvrir l'activité",
-      "closeActivity": "Fermer l'activité",
       "activityLog": "Journal d'activité",
-      "ledgerSummary": "Résumé du grand livre",
+      "closeActivity": "Fermer l'activité",
+      "currentSession": "Session en cours",
+      "detectedValues": "Valeurs d'import détectées",
       "importData": "Importer des données",
       "importReview": "Révision de l'import",
-      "uploadFile": "Téléverser le fichier d'export Wacai",
+      "ledgerSummary": "Résumé du grand livre",
+      "openActivity": "Ouvrir l'activité",
       "previewSummary": "Résumé de l'aperçu d'import",
-      "detectedValues": "Valeurs d'import détectées",
-      "rowDiagnostics": "Diagnostics des lignes d'import"
+      "rowDiagnostics": "Diagnostics des lignes d'import",
+      "uploadFile": "Téléverser le fichier d'export Wacai"
     },
-    "recentActivity": "Activité récente",
-    "auditEvents": "Événements d'audit",
-    "noAuditEvents": "Aucun événement d'audit pour l'instant.",
-    "totalEvents": "{{value}} événements au total",
-    "dataImport": "Import de données",
-    "chooseSource": "Choisissez la source, téléversez l'export, révisez avant de valider.",
-    "csvPreviewReady": "Aperçu CSV prêt",
-    "dataSource": "Source de données",
-    "uploadPrompt": "Téléversez un fichier d'export Wacai",
     "acceptedFormat": "Format accepté : CSV",
+    "auditEvents": "Événements d'audit",
+    "chooseSource": "Choisissez la source, téléversez l'export, révisez avant de valider.",
     "clearFile": "Effacer le fichier",
-    "reviewQueue": "File d'attente de révision",
-    "noFileSelected": "Aucun fichier sélectionné",
-    "exportDetected": "Export {{source}} détecté",
-    "spreadsheet": "Feuille de calcul",
-    "fileSummary": "{{type}} - {{size}} MB",
-    "none": "Aucun",
-    "missingFields": "Champs source manquants : {{fields}}",
-    "schemaReady": "Schéma détecté prêt pour la révision.",
-    "rowDiagnostics": "Diagnostics des lignes",
-    "rowNumber": "Ligne {{value}}",
-    "unmappedRow": "Ligne non mappée",
-    "readyForMapping": "Prêt pour le mappage",
-    "noPreviewRows": "Aucune ligne d'aperçu analysée",
-    "sources": {
-      "wacai": {
-        "label": "Wacai",
-        "description": "Exports de feuilles de calcul des livres, comptes et enregistrements de factures Wacai."
-      }
-    },
-    "stage": {
-      "stage": "Préparer l'import",
-      "staging": "Préparation de l'import",
-      "staged": "Import préparé"
-    },
-    "facts": {
-      "source": "Source",
-      "rows": "Lignes",
-      "pending": "En attente",
-      "fingerprint": "Empreinte",
-      "pendingHash": "Hachage en attente",
-      "metadata": "Métadonnées",
-      "batch": "Lot {{id}}",
-      "previewBatch": "Lot d'aperçu"
-    },
-    "preview": {
-      "warnings": "{{value}} avertissements",
-      "errors": "{{value}} erreurs",
-      "accounts": "{{value}} comptes",
-      "categories": "{{value}} catégories"
-    },
+    "csvPreviewReady": "Aperçu CSV prêt",
+    "dataImport": "Import de données",
+    "dataSource": "Source de données",
     "detected": {
-      "books": "Livres",
       "accounts": "Comptes",
+      "books": "Livres",
       "categories": "Catégories",
       "currencies": "Devises",
       "members": "Membres",
       "merchants": "Marchands",
       "tags": "Étiquettes"
     },
-    "pipeline": {
-      "validate": "Valider le format source",
-      "hash": "Calculer le hachage source",
-      "batch": "Créer le lot d'aperçu",
-      "map": "Mapper les catégories et les comptes"
-    },
     "error": {
       "previewFailed": "Échec de l'aperçu d'import"
-    }
+    },
+    "exportDetected": "Export {{source}} détecté",
+    "eyebrow": "Espace de comptabilité",
+    "facts": {
+      "batch": "Lot {{id}}",
+      "fingerprint": "Empreinte",
+      "metadata": "Métadonnées",
+      "pending": "En attente",
+      "pendingHash": "Hachage en attente",
+      "previewBatch": "Lot d'aperçu",
+      "rows": "Lignes",
+      "source": "Source"
+    },
+    "fileSummary": "{{type}} - {{size}} MB",
+    "heading": "Importez les livres Wacai dans un grand livre propre.",
+    "missingFields": "Champs source manquants : {{fields}}",
+    "noAuditEvents": "Aucun événement d'audit pour l'instant.",
+    "noFileSelected": "Aucun fichier sélectionné",
+    "noPreviewRows": "Aucune ligne d'aperçu analysée",
+    "none": "Aucun",
+    "pipeline": {
+      "batch": "Créer le lot d'aperçu",
+      "hash": "Calculer le hachage source",
+      "map": "Mapper les catégories et les comptes",
+      "validate": "Valider le format source"
+    },
+    "preview": {
+      "accounts": "{{value}} comptes",
+      "categories": "{{value}} catégories",
+      "errors": "{{value}} erreurs",
+      "warnings": "{{value}} avertissements"
+    },
+    "readyForMapping": "Prêt pour le mappage",
+    "recentActivity": "Activité récente",
+    "reviewQueue": "File d'attente de révision",
+    "rowDiagnostics": "Diagnostics des lignes",
+    "rowNumber": "Ligne {{value}}",
+    "schemaReady": "Schéma détecté prêt pour la révision.",
+    "sources": {
+      "wacai": {
+        "description": "Exports de feuilles de calcul des livres, comptes et enregistrements de factures Wacai.",
+        "label": "Wacai"
+      }
+    },
+    "spreadsheet": "Feuille de calcul",
+    "stage": {
+      "stage": "Préparer l'import",
+      "staged": "Import préparé",
+      "staging": "Préparation de l'import"
+    },
+    "totalEvents": "{{value}} événements au total",
+    "unmappedRow": "Ligne non mappée",
+    "uploadPrompt": "Téléversez un fichier d'export Wacai"
   }
 }

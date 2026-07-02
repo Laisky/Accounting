@@ -4,7 +4,7 @@
 
 Accounting is a single-repository web application for personal, family, and small-team bookkeeping. The backend is written in Go, the frontend is a React/Vite application, and production deployments run as one Go web server that serves both API routes and the built static frontend from `web/dist`.
 
-The product target is a browser-first personal finance system with users, authentication, authorization, multi-book collaboration, account management, multi-currency support, a complete API surface, and migration paths from Wacai-style bookkeeping data.
+The product target is a browser-first personal finance system with users, authentication, authorization, multi-book collaboration, account management, multi-currency support, a complete API surface, and an import path for data exported from Wacai.
 
 ## Goals
 
@@ -16,7 +16,7 @@ The product target is a browser-first personal finance system with users, authen
 - Support personal financial accounts grouped by user-defined account groups such as cash, savings, credit cards, loans, investments, and payment platforms.
 - Support multi-currency accounts and entries without assuming that all books use a single currency.
 - Provide a stable, documented JSON API for the webapp first and for future CLI/import automation second.
-- Support smooth migration from Wacai-style bookkeeping, including imports from Wacai exported spreadsheet data when available.
+- Support importing data exported from Wacai, including spreadsheet exports when available.
 - Keep backend, CLI, frontend, documentation, and deployment files in one repository.
 - Let `make dev` start a local Go API server and Vite frontend server for fast iteration.
 - Let production builds copy `web/dist` beside the Go binary so the Go web server can serve the SPA.
@@ -26,7 +26,7 @@ The product target is a browser-first personal finance system with users, authen
 
 - This is not an enterprise accounting suite with payroll, invoicing, tax filing, procurement, or general-ledger close workflows.
 - This is not a bank-connected aggregation product in the initial architecture; manual entry, file import, and user-reviewed normalization come first.
-- This is not a blind clone of Wacai. The compatibility target is user migration and familiar bookkeeping workflows, not reproducing private implementation details or proprietary UI.
+- This is not a clone of any existing bookkeeping product. The focus is familiar, general bookkeeping workflows, not reproducing another product's implementation details or proprietary UI.
 - This is not a mobile-native application.
 - This is not an offline-first architecture.
 
@@ -82,7 +82,7 @@ The core product model is user-centered bookkeeping:
 - Book members can create entries and can edit or delete only entries they created.
 - Book viewers can read book data but cannot create or mutate entries.
 - Each entry belongs to exactly one book and has a creator.
-- Entries must support income and expense as first-class directions. The model must also leave room for transfer, refund, reimbursement, borrow, lend, and repayment flows because Wacai-style data contains those concepts.
+- Entries must support income and expense as first-class directions. The model must also leave room for transfer, refund, reimbursement, borrow, lend, and repayment flows because imported bookkeeping data commonly contains those concepts.
 - Income and expense categories are separate trees. Top-level categories group subcategories such as dining, groceries, household goods, salary, bonus, interest, and reimbursements.
 - Categories must be book-configurable and importable. Imports must preserve raw source category names when a normalized category mapping is uncertain.
 - Accounts are personal to a user by default. A book entry can reference an account owned by the entry creator without making that account visible to every book member unless the user explicitly shares or exposes it through an aggregate view.
@@ -90,9 +90,9 @@ The core product model is user-centered bookkeeping:
 - Accounts must carry currency. Entries must carry transaction currency, account currency, book reporting currency, and exchange-rate metadata when they differ.
 - The webapp is the primary interface. CLI workflows should support administration, diagnostics, import automation, and future batch operations.
 
-## Wacai Migration Compatibility
+## Import Compatibility
 
-Wacai compatibility is a migration requirement, not a dependency. Public Wacai-facing information and third-party migration notes show that a smooth migration needs more than a flat income/expense CSV importer.
+Importing existing bookkeeping data is a migration convenience, not a runtime dependency. A smooth migration needs more than a flat income/expense CSV importer.
 
 The import system should support:
 
@@ -105,7 +105,7 @@ The import system should support:
 - Raw-source retention for imported rows so future parser improvements can repair or enrich historical imports.
 - Rollback or compensating delete for an import batch before the user starts editing imported entries individually.
 
-The importer should expect these Wacai-style concepts:
+The importer should expect these bookkeeping concepts:
 
 - Books scoped by scenario and time range.
 - Bills or transactions with type, datetime, amount, category, account, book, note, and creator/member.
@@ -117,17 +117,10 @@ The importer should expect these Wacai-style concepts:
 
 Import caveats:
 
-- Public sources confirm Wacai feature concepts and Excel-style export availability, but they do not guarantee a stable export schema.
-- Third-party notes about Wacai local databases and exported tables are useful for field discovery but must be treated as version-specific evidence.
-- The first implementation should use schema detection and explicit user mapping rather than assuming one canonical Wacai export layout.
-- Automated migration promises must be verified against current Wacai export behavior before release because export access and file shape may change.
-
-Public research anchors:
-
-- [Wacai iOS app listing](https://apps.apple.com/cn/app/%E6%8C%96%E8%B4%A2%E8%AE%B0%E8%B4%A6-ai%E8%87%AA%E5%8A%A8%E8%AE%B0%E8%B4%A6/id1544045905): current public feature positioning for bill types, shared books, reports, budgets, assets, multi-currency, and import features.
-- [Wacai personal information list](https://8.wacai.com/ikebana/contract/1DA41D9573A243EB373E1F9D9D3DD765): field-level evidence for bills, accounts, books, budgets, recurring rules, plans, import/export, and AI-assisted entry.
-- [Wacai web app page](https://www.wacai.com/index/app.action): public evidence for web access, account sync, time-range export, and Excel-format export.
-- [Third-party Wacai SQLite export notes](https://editst.com/2020/export-wacai-data/): version-specific evidence for observed local tables and CSV migration fields.
+- Source exports may offer CSV and Excel-style formats, but no external tool guarantees a stable export schema.
+- Observed export tables and fields are useful for field discovery but must be treated as version-specific evidence.
+- The first implementation should use schema detection and explicit user mapping rather than assuming one canonical export layout.
+- Automated migration promises must be verified against current export behavior before release because export access and file shape may change.
 
 ## Backend Architecture
 
@@ -314,7 +307,7 @@ Date-range filters must use UTC and include the full final day by ending just be
 
 ## Data Model Direction
 
-The durable model should support Wacai-style cashflow bookkeeping first while leaving a path toward double-entry internals for reconciliation and reporting.
+The durable model should support personal cashflow bookkeeping first while leaving a path toward double-entry internals for reconciliation and reporting.
 
 Core entities:
 
@@ -449,7 +442,7 @@ Required final gates after code changes:
 make lint
 cd backend && go test -race -cover ./...
 cd ../cli && go test -race -cover ./...
-npm --prefix web run test:e2e
+pnpm --dir web run test:e2e
 ```
 
 Equivalent separate invocations are also acceptable:
@@ -457,7 +450,7 @@ Equivalent separate invocations are also acceptable:
 ```sh
 cd backend && go test -race -cover ./...
 cd cli && go test -race -cover ./...
-npm --prefix web run test:e2e
+pnpm --dir web run test:e2e
 ```
 
 ## Operational Notes

@@ -79,6 +79,10 @@ type AuthResult struct {
 	User         User
 	Session      Session
 	SessionToken string
+	// TOTPRequired reports that the password verified but a TOTP code is still
+	// needed. When true, User carries the resolved identity for auditing while
+	// Session and SessionToken stay empty because no session is created.
+	TOTPRequired bool
 }
 
 // PasskeyCredential represents a stored WebAuthn passkey without private key material.

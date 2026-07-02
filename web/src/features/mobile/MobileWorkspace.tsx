@@ -1,22 +1,14 @@
 import {
   BarChart3,
-  BriefcaseBusiness,
-  Building2,
-  Car,
   ChevronDown,
   CircleUserRound,
-  Home,
   MoreHorizontal,
-  Package,
   Plus,
   Search,
   Shirt,
-  ShoppingBag,
-  Utensils,
   WalletCards,
 } from 'lucide-react';
-import type { TFunction } from 'i18next';
-import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '../../components/LanguageSelector';
 import { fetchAuditEvents, type AuditEvent } from '../../lib/api/audit';
@@ -45,14 +37,15 @@ import {
   type LedgerSummary,
 } from '../../lib/api/ledger';
 import { emptyRuntimeConfig, type RuntimeConfig } from '../../lib/api/runtimeConfig';
-import { buildRateIndex, convertEntryAmountCents, formatMoney } from '../../lib/money';
+import { buildRateIndex } from '../../lib/money';
 import { ReportWorkspace } from '../reports/ReportWorkspace';
 import { AccountsView } from './AccountsView';
-import './wacai.css';
+import { RecordEntryView, type RecordEntryInput } from './RecordEntryView';
+import './mobile-shell.css';
 
 type MobileTab = 'accounts' | 'record' | 'reports' | 'me';
 
-type WacaiWorkspaceProps = {
+type MobileWorkspaceProps = {
   actor: AuthActor;
   runtimeConfig: RuntimeConfig | null;
   onLogout: () => Promise<void>;
@@ -68,8 +61,6 @@ type LedgerSnapshot = {
   totalEntries: number;
 };
 
-const monthlyBudgetCents = 3000000;
-
 const navItems: Array<{ id: MobileTab; icon: ReactNode }> = [
   { id: 'accounts', icon: <WalletCards size={22} /> },
   { id: 'record', icon: <Plus size={30} /> },
@@ -77,8 +68,8 @@ const navItems: Array<{ id: MobileTab; icon: ReactNode }> = [
   { id: 'me', icon: <CircleUserRound size={22} /> },
 ];
 
-// WacaiWorkspace renders the authenticated mobile-first accounting shell.
-export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspaceProps) {
+// MobileWorkspace renders the authenticated mobile-first accounting shell.
+export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorkspaceProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<MobileTab>('record');
   const [summary, setSummary] = useState<LedgerSummary>(emptyLedgerSummary);
@@ -93,9 +84,6 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
   });
   const [selectedBookId, setSelectedBookId] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
-  const [amount, setAmount] = useState('12.30');
-  const [note, setNote] = useState('');
-  const [categoryName, setCategoryName] = useState('Dining');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
@@ -111,13 +99,6 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
     [selectedBook, snapshot.accounts],
   );
   const primaryAccount = sharedAccounts[0] ?? snapshot.accounts[0];
-  const primaryCategory = snapshot.categories.find((category) => category.direction === 'expense' && !category.archived);
-  const monthlyExpenseCents = useMemo(
-    () => currentMonthExpenseCents(snapshot.entries, bookCurrency, rateIndex),
-    [bookCurrency, rateIndex, snapshot.entries],
-  );
-  const budgetRemainingCents = Math.max(0, monthlyBudgetCents - monthlyExpenseCents);
-  const budgetProgress = Math.min(100, Math.round((monthlyExpenseCents / monthlyBudgetCents) * 100));
 
   const loadFoundation = useCallback(async () => {
     const [loadedSummary, books, groups, accounts, rates] = await Promise.all([
@@ -201,10 +182,10 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
     }
   }
 
-  // handleCreateEntry receives a form submit event and posts one expense entry.
-  async function handleCreateEntry(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedBook || !primaryAccount) {
+  // handleCreateEntry receives record-entry input and posts one ledger entry.
+  async function handleCreateEntry(input: RecordEntryInput) {
+    const account = snapshot.accounts.find((item) => item.id === input.accountId) ?? primaryAccount;
+    if (!selectedBook || !account) {
       setError(t('mobile.error.createAccountBeforeRecording'));
       return;
     }
@@ -213,23 +194,26 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
     setStatus('');
     setError('');
     try {
-      const category = primaryCategory ?? (await createCategory(selectedBook.id, categoryName || 'General', 'expense'));
+      const category = input.categoryId
+        ? snapshot.categories.find((item) => item.id === input.categoryId)
+        : await createCategory(selectedBook.id, input.categoryName || 'General', categoryDirection(input.type));
       const entry = await createEntry(selectedBook.id, {
-        type: 'expense',
-        accountId: primaryAccount.id,
-        categoryId: category.id,
-        amountCents: amountToCents(amount),
-        transactionCurrency: primaryAccount.currency,
-        occurredAt: new Date().toISOString(),
-        note,
+        type: input.type,
+        accountId: account.id,
+        destinationAccountId: input.destinationAccountId,
+        categoryId: category?.id,
+        amountCents: input.amountCents,
+        transactionCurrency: input.transactionCurrency,
+        bookReportingCurrency: selectedBook.reportingCurrency,
+        occurredAt: input.occurredAt,
+        note: input.note,
       });
       setSnapshot((current) => ({
         ...current,
-        categories: current.categories.some((item) => item.id === category.id) ? current.categories : [...current.categories, category],
+        categories: category && !current.categories.some((item) => item.id === category.id) ? [...current.categories, category] : current.categories,
         entries: [entry, ...current.entries].slice(0, 20),
         totalEntries: current.totalEntries + 1,
       }));
-      setNote('');
       setStatus(t('common.status.entryPosted'));
       setRefreshKey((current) => current + 1);
     } catch {
@@ -289,7 +273,7 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
   }
 
   return (
-    <main className="wacaiShell">
+    <main className="mobileShell">
       <section className="phoneFrame" aria-label={t('mobile.a11y.workspace')}>
         {activeTab === 'accounts' ? (
           <header className="mobileHeader accountHeader">
@@ -344,25 +328,17 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
             />
           ) : null}
           {activeTab === 'record' ? (
-            <RecordView
-              amount={amount}
-              budgetProgress={budgetProgress}
-              budgetRemainingCents={budgetRemainingCents}
-              categoryName={categoryName}
-              currencyCode={bookCurrency}
-              entries={snapshot.entries}
-              isBusy={isBusy}
-              monthlyExpenseCents={monthlyExpenseCents}
-              onAmountChange={setAmount}
-              onCategoryNameChange={setCategoryName}
-              onCreateEntry={handleCreateEntry}
-              onNoteChange={setNote}
-              note={note}
-              primaryAccount={primaryAccount}
-              totalEntries={snapshot.totalEntries}
-              categories={snapshot.categories}
+            <RecordEntryView
               accounts={snapshot.accounts}
+              books={snapshot.books}
+              categories={snapshot.categories}
+              isBusy={isBusy}
+              onCreateEntry={handleCreateEntry}
               rates={rateIndex}
+              recentEntries={snapshot.entries}
+              selectedBookCurrency={bookCurrency}
+              selectedBookId={selectedBook?.id ?? ''}
+              setSelectedBookId={setSelectedBookId}
             />
           ) : null}
           {activeTab === 'reports' ? <ReportWorkspace refreshKey={refreshKey} /> : null}
@@ -395,175 +371,6 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
         </nav>
       </section>
     </main>
-  );
-}
-
-// RecordView receives ledger entries and returns the Wacai-like transaction tab.
-function RecordView({
-  accounts,
-  amount,
-  budgetProgress,
-  budgetRemainingCents,
-  categories,
-  categoryName,
-  currencyCode,
-  entries,
-  isBusy,
-  monthlyExpenseCents,
-  note,
-  onAmountChange,
-  onCategoryNameChange,
-  onCreateEntry,
-  onNoteChange,
-  primaryAccount,
-  rates,
-  totalEntries,
-}: {
-  accounts: Account[];
-  amount: string;
-  budgetProgress: number;
-  budgetRemainingCents: number;
-  categories: Category[];
-  categoryName: string;
-  currencyCode: string;
-  entries: Entry[];
-  isBusy: boolean;
-  monthlyExpenseCents: number;
-  note: string;
-  onAmountChange: (value: string) => void;
-  onCategoryNameChange: (value: string) => void;
-  onCreateEntry: (event: FormEvent<HTMLFormElement>) => void;
-  onNoteChange: (value: string) => void;
-  primaryAccount?: Account;
-  rates: Map<string, number>;
-  totalEntries: number;
-}) {
-  const { t } = useTranslation();
-  return (
-    <section className="tabPanel recordPanel" aria-label={t('mobile.nav.record')}>
-      <BudgetCard
-        currencyCode={currencyCode}
-        monthlyExpenseCents={monthlyExpenseCents}
-        progress={budgetProgress}
-        remainingCents={budgetRemainingCents}
-      />
-      <form className="quickRecord" onSubmit={onCreateEntry}>
-        <label>
-          <span>{t('common.amount')}</span>
-          <input value={amount} inputMode="decimal" onChange={(event) => onAmountChange(event.target.value)} />
-        </label>
-        <label>
-          <span>{t('common.category')}</span>
-          <input value={categoryName} onChange={(event) => onCategoryNameChange(event.target.value)} />
-        </label>
-        <label>
-          <span>{t('common.note')}</span>
-          <input value={note} placeholder={t('mobile.record.notePlaceholder')} onChange={(event) => onNoteChange(event.target.value)} />
-        </label>
-        <button type="submit" disabled={isBusy || !primaryAccount}>
-          <Plus size={18} />
-          <span>{t('common.postEntry')}</span>
-        </button>
-      </form>
-      <TransactionList accounts={accounts} categories={categories} currencyCode={currencyCode} entries={entries} rates={rates} totalEntries={totalEntries} />
-    </section>
-  );
-}
-
-// BudgetCard receives budget numbers and returns a compact spending progress card.
-function BudgetCard({
-  currencyCode,
-  monthlyExpenseCents,
-  progress,
-  remainingCents,
-}: {
-  currencyCode: string;
-  monthlyExpenseCents: number;
-  progress: number;
-  remainingCents: number;
-}) {
-  const { t } = useTranslation();
-  return (
-    <section className="budgetCard" aria-label={t('mobile.budget.title')}>
-      <div>
-        <h1>{t('mobile.budget.title')}</h1>
-        <p>
-          <span>{t('mobile.budget.remaining')}</span>
-          <strong>{formatMoney(remainingCents, currencyCode)}</strong>
-        </p>
-      </div>
-      <div className="budgetTrack" aria-hidden="true">
-        <span style={{ width: `${progress}%` }} />
-      </div>
-      <footer>
-        <span>{t('mobile.budget.total', { amount: formatMoney(monthlyBudgetCents, currencyCode) })}</span>
-        <span>{t('mobile.budget.spent', { amount: formatMoney(monthlyExpenseCents, currencyCode) })}</span>
-        <span>{progress}%</span>
-      </footer>
-    </section>
-  );
-}
-
-// TransactionList receives entries and returns them grouped by UTC day.
-function TransactionList({
-  accounts,
-  categories,
-  currencyCode,
-  entries,
-  rates,
-  totalEntries,
-}: {
-  accounts: Account[];
-  categories: Category[];
-  currencyCode: string;
-  entries: Entry[];
-  rates: Map<string, number>;
-  totalEntries: number;
-}) {
-  const { t } = useTranslation();
-  const groupedEntries = groupEntriesByDay(entries);
-
-  if (!groupedEntries.length) {
-    return (
-      <section className="transactionList" aria-label={t('mobile.transactions.title')}>
-        <p className="emptyState">{t('mobile.transactions.empty')}</p>
-      </section>
-    );
-  }
-
-  return (
-    <section className="transactionList" aria-label={t('mobile.transactions.title')}>
-      {groupedEntries.map((group) => (
-        <article className="dayGroup" key={group.day}>
-          <header>
-            <span>{formatDayHeading(group.day)}</span>
-            <b>
-              {t('mobile.transactions.dayTotals', {
-                income: formatMoney(dayTotal(group.entries, 'income', currencyCode, rates), currencyCode),
-                expense: formatMoney(dayTotal(group.entries, 'expense', currencyCode, rates), currencyCode),
-              })}
-            </b>
-          </header>
-          <ul>
-            {group.entries.map((entry) => {
-              const category = categories.find((item) => item.id === entry.categoryId);
-              const account = accounts.find((item) => item.id === entry.accountId);
-              return (
-                <li key={entry.id}>
-                  <span className="transactionIcon">{categoryIcon(category?.name ?? entry.note ?? entry.type)}</span>
-                  <div>
-                    <strong>{entry.note || category?.name || entry.type}</strong>
-                    <small>{formatEntryMeta(t, entry, account)}</small>
-                  </div>
-                  <b>{formatSignedAmount(entry)}</b>
-                </li>
-              );
-            })}
-          </ul>
-        </article>
-      ))}
-      <p className="listFooter">{t('common.entriesCount', { value: totalEntries })}</p>
-    </section>
   );
 }
 
@@ -622,62 +429,6 @@ function MeView({
   );
 }
 
-// amountToCents receives a decimal text amount and returns whole cents.
-function amountToCents(value: string): number {
-  const parsed = Number(value.replace(/,/g, ''));
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 0;
-  }
-
-  return Math.round(parsed * 100);
-}
-
-// categoryIcon receives category text and returns a matching visual category icon.
-function categoryIcon(value: string): ReactNode {
-  const normalized = value.toLowerCase();
-  if (normalized.includes('rent') || normalized.includes('home')) {
-    return <Home size={22} />;
-  }
-  if (normalized.includes('delivery') || normalized.includes('mail')) {
-    return <BriefcaseBusiness size={22} />;
-  }
-  if (normalized.includes('dining') || normalized.includes('lunch') || normalized.includes('food')) {
-    return <Utensils size={22} />;
-  }
-  if (normalized.includes('market') || normalized.includes('grocery')) {
-    return <ShoppingBag size={22} />;
-  }
-  if (normalized.includes('transport') || normalized.includes('car')) {
-    return <Car size={22} />;
-  }
-  if (normalized.includes('salary') || normalized.includes('income')) {
-    return <Building2 size={22} />;
-  }
-
-  return <Package size={22} />;
-}
-
-// currentMonthExpenseCents receives entries, currency, and rates and returns current UTC month spending.
-function currentMonthExpenseCents(entries: Entry[], currencyCode: string, rates: Map<string, number>): number {
-  const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  return entries
-    .filter((entry) => entry.type === 'expense')
-    .filter((entry) => {
-      const occurredAt = new Date(entry.occurredAt);
-      return !Number.isNaN(occurredAt.getTime()) && occurredAt >= start && occurredAt < end;
-    })
-    .reduce((sum, entry) => sum + (convertEntryAmountCents(entry, currencyCode, rates) ?? 0), 0);
-}
-
-// dayTotal receives entries, a flow type, currency, and rates and returns the matching day total.
-function dayTotal(entries: Entry[], type: string, currencyCode: string, rates: Map<string, number>): number {
-  return entries
-    .filter((entry) => entry.type === type)
-    .reduce((sum, entry) => sum + (convertEntryAmountCents(entry, currencyCode, rates) ?? 0), 0);
-}
-
 // formatAuditTime receives an ISO timestamp and returns a compact UTC string.
 function formatAuditTime(value: string): string {
   const date = new Date(value);
@@ -686,36 +437,6 @@ function formatAuditTime(value: string): string {
   }
 
   return date.toISOString().replace('.000Z', 'Z');
-}
-
-// formatDayHeading receives a day key and returns a Wacai-style date heading.
-function formatDayHeading(day: string): string {
-  const date = new Date(`${day}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) {
-    return day;
-  }
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-    timeZone: 'UTC',
-  }).format(date);
-}
-
-// formatEntryMeta receives the translator, an entry, and an optional account and returns secondary transaction text.
-function formatEntryMeta(t: TFunction, entry: Entry, account?: Account): string {
-  const time = new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  }).format(new Date(entry.occurredAt));
-  return t('mobile.transactions.entryMeta', {
-    time,
-    account: account?.name ?? t('mobile.transactions.accountFallback'),
-    book: t('mobile.defaultBookName'),
-  });
 }
 
 // formatShortDate receives a date and returns the UTC header date.
@@ -727,21 +448,7 @@ function formatShortDate(value: Date): string {
   }).format(value);
 }
 
-// formatSignedAmount receives an entry and returns signed currency display text.
-function formatSignedAmount(entry: Entry): string {
-  const sign = entry.type === 'expense' ? '-' : '+';
-  return `${sign}${formatMoney(entry.amountCents, entry.transactionCurrency)}`;
-}
-
-// groupEntriesByDay receives entries and returns date groups sorted newest first.
-function groupEntriesByDay(entries: Entry[]): Array<{ day: string; entries: Entry[] }> {
-  const groups = new Map<string, Entry[]>();
-  for (const entry of entries) {
-    const day = new Date(entry.occurredAt).toISOString().slice(0, 10);
-    groups.set(day, [...(groups.get(day) ?? []), entry]);
-  }
-
-  return Array.from(groups.entries())
-    .map(([day, groupEntries]) => ({ day, entries: groupEntries }))
-    .sort((first, second) => second.day.localeCompare(first.day));
+// categoryDirection receives an entry type and returns the category direction needed for fallback category creation.
+function categoryDirection(type: string): string {
+  return type === 'income' || type === 'borrow' ? 'income' : 'expense';
 }

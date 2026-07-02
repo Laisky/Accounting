@@ -1,66 +1,66 @@
 {
   "reports": {
-    "title": "Rapports",
-    "eyebrow": "Rapports",
-    "heading": "Analysez les dépenses avec des explorations façon Wacai.",
     "a11y": {
-      "book": "Livre de rapport",
-      "filters": "Filtres de rapport",
       "activeFilters": "Filtres de rapport actifs",
+      "book": "Livre de rapport",
       "controls": "Commandes de rapport",
+      "dimensions": "Dimensions du rapport",
+      "filters": "Filtres de rapport",
       "flowFilter": "Filtre de flux",
-      "timeMode": "Mode temporel",
+      "nextPeriod": "Période suivante",
       "period": "Période du rapport",
       "prevPeriod": "Période précédente",
-      "nextPeriod": "Période suivante",
-      "dimensions": "Dimensions du rapport"
+      "timeMode": "Mode temporel"
     },
-    "noBook": "Aucun livre",
     "cashflow": "trésorerie",
-    "loading": "Chargement des rapports.",
     "conversionIssue": "{{value}} écritures nécessitent des taux de change pour apparaître dans les totaux en devise de base.",
-    "showAll": "Tout afficher",
-    "showLess": "Afficher moins",
-    "rankedEmpty": "Aucune écriture ne correspond à cette période et à ce filtre.",
+    "donut": {
+      "desc": "{{value}} tranches classées pour un total de {{amount}}.",
+      "empty": "Aucune écriture pour cette période de rapport.",
+      "emptyCaption": "Aucune écriture pour cette période."
+    },
+    "eyebrow": "Rapports",
     "filter": {
       "book": "Livre",
       "flow": "Flux",
       "period": "Période",
       "total": "Total"
     },
-    "timeMode": {
-      "year": "année",
-      "month": "mois"
+    "heading": "Analysez les dépenses avec des explorations interactives.",
+    "labels": {
+      "noMember": "Aucun membre",
+      "noMerchant": "Aucun marchand",
+      "noTag": "Aucune étiquette",
+      "other": "Autre",
+      "unassignedAccount": "Compte non attribué",
+      "uncategorized": "Non catégorisé"
     },
-    "tabs": {
-      "trend": "Tendance",
-      "category": "Catégorie",
-      "subcategory": "Sous-catégorie",
-      "member": "Membre",
-      "account": "Compte",
-      "merchant": "Marchand",
-      "tag": "Étiquette"
-    },
+    "loading": "Chargement des rapports.",
+    "noBook": "Aucun livre",
     "panel": {
       "eyebrow": "{{dimension}} {{flow}}",
       "heading": "{{dimension}} {{target}}"
     },
-    "donut": {
-      "desc": "{{value}} tranches classées pour un total de {{amount}}.",
-      "empty": "Aucune écriture pour cette période de rapport.",
-      "emptyCaption": "Aucune écriture pour cette période."
+    "rankedEmpty": "Aucune écriture ne correspond à cette période et à ce filtre.",
+    "showAll": "Tout afficher",
+    "showLess": "Afficher moins",
+    "tabs": {
+      "account": "Compte",
+      "category": "Catégorie",
+      "member": "Membre",
+      "merchant": "Marchand",
+      "subcategory": "Sous-catégorie",
+      "tag": "Étiquette",
+      "trend": "Tendance"
     },
+    "timeMode": {
+      "month": "mois",
+      "year": "année"
+    },
+    "title": "Rapports",
     "trend": {
-      "heading": "Évolution sur la période",
-      "filteredTotal": "total filtré"
-    },
-    "labels": {
-      "uncategorized": "Non catégorisé",
-      "noMember": "Aucun membre",
-      "unassignedAccount": "Compte non attribué",
-      "noMerchant": "Aucun marchand",
-      "noTag": "Aucune étiquette",
-      "other": "Autre"
+      "filteredTotal": "total filtré",
+      "heading": "Évolution sur la période"
     }
   }
 }

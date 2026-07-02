@@ -3,39 +3,39 @@
     "a11y": {
       "workspace": "Espace de travail du grand livre"
     },
-    "eyebrow": "Opérations du grand livre",
-    "heading": "Livres, comptes, saisie rapide et révision.",
-    "activeBook": "Livre actif",
-    "panels": {
-      "bookSwitcher": "Sélecteur de livre",
-      "accountContext": "Contexte du compte",
-      "quickEntry": "Saisie rapide"
-    },
-    "fields": {
-      "bookName": "Nom du livre",
-      "account": "Compte"
-    },
     "actions": {
+      "addCategory": "Ajouter une catégorie",
       "createBook": "Créer un livre",
-      "updateSettings": "Mettre à jour les paramètres",
       "createGroup": "Créer un groupe",
       "shareAccount": "Partager le compte",
-      "addCategory": "Ajouter une catégorie"
+      "updateSettings": "Mettre à jour les paramètres"
     },
+    "activeBook": "Livre actif",
+    "error": {
+      "createBookAndAccountFirst": "Créez d'abord un livre et un compte.",
+      "createBookAndGroupFirst": "Créez d'abord un livre et un groupe de comptes.",
+      "createBookFirst": "Créez d'abord un livre.",
+      "requestFailed": "Échec de la requête du grand livre."
+    },
+    "eyebrow": "Opérations du grand livre",
+    "fields": {
+      "account": "Compte",
+      "bookName": "Nom du livre"
+    },
+    "heading": "Livres, comptes, saisie rapide et révision.",
     "noAccountConnected": "Aucun compte connecté",
-    "transactionReview": "Révision des transactions ({{value}})",
     "noEntriesYet": "Aucune écriture pour l'instant",
+    "panels": {
+      "accountContext": "Contexte du compte",
+      "bookSwitcher": "Sélecteur de livre",
+      "quickEntry": "Saisie rapide"
+    },
     "status": {
+      "accountGroupReady": "Groupe de comptes prêt.",
       "bookReady": "Livre prêt.",
       "bookSettingsUpdated": "Paramètres du livre mis à jour.",
-      "accountGroupReady": "Groupe de comptes prêt.",
       "categoryReady": "Catégorie prête."
     },
-    "error": {
-      "requestFailed": "Échec de la requête du grand livre.",
-      "createBookFirst": "Créez d'abord un livre.",
-      "createBookAndGroupFirst": "Créez d'abord un livre et un groupe de comptes.",
-      "createBookAndAccountFirst": "Créez d'abord un livre et un compte."
-    }
+    "transactionReview": "Révision des transactions ({{value}})"
   }
 }

@@ -1,34 +1,34 @@
 {
   "common": {
     "accessEyebrow": "Acceso a Contabilidad",
-    "checkingSession": "Comprobando la sesión actual.",
-    "loadingSessionLabel": "Cargando sesión",
-    "signOut": "Cerrar sesión",
+    "amount": "Importe",
     "balance": "Saldo actual",
+    "baseCurrency": "Moneda base",
+    "category": "Categoría",
+    "checkingSession": "Comprobando la sesión actual.",
     "currency": "Moneda",
     "entries": "Movimientos",
     "entriesCount": "{{value}} movimientos",
-    "amount": "Importe",
-    "category": "Categoría",
-    "note": "Nota",
-    "baseCurrency": "Moneda base",
-    "postEntry": "Registrar movimiento",
-    "noBookYet": "Aún no hay libro",
-    "total": "Total",
-    "on": "activado",
-    "off": "desactivado",
-    "loadingActivity": "Cargando actividad.",
+    "error": {
+      "activityFailed": "No se pudo cargar la actividad."
+    },
     "flow": {
       "all": "todos",
       "expense": "gasto",
       "income": "ingreso"
     },
+    "loadingActivity": "Cargando actividad.",
+    "loadingSessionLabel": "Cargando sesión",
+    "noBookYet": "Aún no hay libro",
+    "note": "Nota",
+    "off": "desactivado",
+    "on": "activado",
+    "postEntry": "Registrar movimiento",
+    "signOut": "Cerrar sesión",
     "status": {
       "accountReady": "Cuenta lista.",
       "entryPosted": "Movimiento registrado."
     },
-    "error": {
-      "activityFailed": "No se pudo cargar la actividad."
-    }
+    "total": "Total"
   }
 }

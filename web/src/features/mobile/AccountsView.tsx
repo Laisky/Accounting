@@ -23,7 +23,7 @@ type AccountSection = {
   accounts: Account[];
 };
 
-// AccountsView receives account data and returns the Wacai-style account management tab.
+// AccountsView receives account data and returns the account management tab.
 export function AccountsView({
   accounts,
   books,

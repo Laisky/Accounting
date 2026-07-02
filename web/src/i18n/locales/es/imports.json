@@ -1,88 +1,88 @@
 {
   "imports": {
-    "eyebrow": "Espacio de trabajo de contabilidad",
-    "heading": "Importa libros de Wacai a un libro contable limpio.",
     "a11y": {
-      "currentSession": "Sesión actual",
-      "openActivity": "Abrir actividad",
-      "closeActivity": "Cerrar actividad",
       "activityLog": "Registro de actividad",
-      "ledgerSummary": "Resumen del libro contable",
+      "closeActivity": "Cerrar actividad",
+      "currentSession": "Sesión actual",
+      "detectedValues": "Valores de importación detectados",
       "importData": "Importar datos",
       "importReview": "Revisión de importación",
-      "uploadFile": "Subir archivo de exportación de Wacai",
+      "ledgerSummary": "Resumen del libro contable",
+      "openActivity": "Abrir actividad",
       "previewSummary": "Resumen de vista previa de importación",
-      "detectedValues": "Valores de importación detectados",
-      "rowDiagnostics": "Diagnóstico de filas de importación"
+      "rowDiagnostics": "Diagnóstico de filas de importación",
+      "uploadFile": "Subir archivo de exportación de Wacai"
     },
-    "recentActivity": "Actividad reciente",
-    "auditEvents": "Eventos de auditoría",
-    "noAuditEvents": "Aún no hay eventos de auditoría.",
-    "totalEvents": "{{value}} eventos en total",
-    "dataImport": "Importación de datos",
-    "chooseSource": "Elige la fuente, sube la exportación y revísala antes de confirmar.",
-    "csvPreviewReady": "Vista previa CSV lista",
-    "dataSource": "Fuente de datos",
-    "uploadPrompt": "Sube un archivo de exportación de Wacai",
     "acceptedFormat": "Formato aceptado: CSV",
+    "auditEvents": "Eventos de auditoría",
+    "chooseSource": "Elige la fuente, sube la exportación y revísala antes de confirmar.",
     "clearFile": "Quitar archivo",
-    "reviewQueue": "Cola de revisión",
-    "noFileSelected": "Ningún archivo seleccionado",
-    "exportDetected": "Exportación de {{source}} detectada",
-    "spreadsheet": "Hoja de cálculo",
-    "fileSummary": "{{type}} - {{size}} MB",
-    "none": "Ninguno",
-    "missingFields": "Faltan campos de origen: {{fields}}",
-    "schemaReady": "Esquema detectado listo para revisión.",
-    "rowDiagnostics": "Diagnóstico de filas",
-    "rowNumber": "Fila {{value}}",
-    "unmappedRow": "Fila sin asignar",
-    "readyForMapping": "Lista para asignar",
-    "noPreviewRows": "No se analizaron filas de vista previa",
-    "sources": {
-      "wacai": {
-        "label": "Wacai",
-        "description": "Exportaciones de hoja de cálculo de libros, cuentas y registros de facturas de Wacai."
-      }
-    },
-    "stage": {
-      "stage": "Preparar importación",
-      "staging": "Preparando importación",
-      "staged": "Importación preparada"
-    },
-    "facts": {
-      "source": "Fuente",
-      "rows": "Filas",
-      "pending": "Pendiente",
-      "fingerprint": "Huella digital",
-      "pendingHash": "Hash pendiente",
-      "metadata": "Metadatos",
-      "batch": "Lote {{id}}",
-      "previewBatch": "Lote de vista previa"
-    },
-    "preview": {
-      "warnings": "{{value}} advertencias",
-      "errors": "{{value}} errores",
-      "accounts": "{{value}} cuentas",
-      "categories": "{{value}} categorías"
-    },
+    "csvPreviewReady": "Vista previa CSV lista",
+    "dataImport": "Importación de datos",
+    "dataSource": "Fuente de datos",
     "detected": {
-      "books": "Libros",
       "accounts": "Cuentas",
+      "books": "Libros",
       "categories": "Categorías",
       "currencies": "Monedas",
       "members": "Miembros",
       "merchants": "Comercios",
       "tags": "Etiquetas"
     },
-    "pipeline": {
-      "validate": "Validar formato de origen",
-      "hash": "Calcular hash de origen",
-      "batch": "Crear lote de vista previa",
-      "map": "Asignar categorías y cuentas"
-    },
     "error": {
       "previewFailed": "La vista previa de importación ha fallado"
-    }
+    },
+    "exportDetected": "Exportación de {{source}} detectada",
+    "eyebrow": "Espacio de trabajo de contabilidad",
+    "facts": {
+      "batch": "Lote {{id}}",
+      "fingerprint": "Huella digital",
+      "metadata": "Metadatos",
+      "pending": "Pendiente",
+      "pendingHash": "Hash pendiente",
+      "previewBatch": "Lote de vista previa",
+      "rows": "Filas",
+      "source": "Fuente"
+    },
+    "fileSummary": "{{type}} - {{size}} MB",
+    "heading": "Importa libros de Wacai a un libro contable limpio.",
+    "missingFields": "Faltan campos de origen: {{fields}}",
+    "noAuditEvents": "Aún no hay eventos de auditoría.",
+    "noFileSelected": "Ningún archivo seleccionado",
+    "noPreviewRows": "No se analizaron filas de vista previa",
+    "none": "Ninguno",
+    "pipeline": {
+      "batch": "Crear lote de vista previa",
+      "hash": "Calcular hash de origen",
+      "map": "Asignar categorías y cuentas",
+      "validate": "Validar formato de origen"
+    },
+    "preview": {
+      "accounts": "{{value}} cuentas",
+      "categories": "{{value}} categorías",
+      "errors": "{{value}} errores",
+      "warnings": "{{value}} advertencias"
+    },
+    "readyForMapping": "Lista para asignar",
+    "recentActivity": "Actividad reciente",
+    "reviewQueue": "Cola de revisión",
+    "rowDiagnostics": "Diagnóstico de filas",
+    "rowNumber": "Fila {{value}}",
+    "schemaReady": "Esquema detectado listo para revisión.",
+    "sources": {
+      "wacai": {
+        "description": "Exportaciones de hoja de cálculo de libros, cuentas y registros de facturas de Wacai.",
+        "label": "Wacai"
+      }
+    },
+    "spreadsheet": "Hoja de cálculo",
+    "stage": {
+      "stage": "Preparar importación",
+      "staged": "Importación preparada",
+      "staging": "Preparando importación"
+    },
+    "totalEvents": "{{value}} eventos en total",
+    "unmappedRow": "Fila sin asignar",
+    "uploadPrompt": "Sube un archivo de exportación de Wacai"
   }
 }

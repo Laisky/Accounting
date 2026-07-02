@@ -1,34 +1,34 @@
 {
   "common": {
     "accessEyebrow": "Accès à la comptabilité",
-    "checkingSession": "Vérification de la session en cours.",
-    "loadingSessionLabel": "Chargement de la session",
-    "signOut": "Se déconnecter",
+    "amount": "Montant",
     "balance": "Solde actuel",
+    "baseCurrency": "Devise de base",
+    "category": "Catégorie",
+    "checkingSession": "Vérification de la session en cours.",
     "currency": "Devise",
     "entries": "Écritures",
     "entriesCount": "{{value}} écritures",
-    "amount": "Montant",
-    "category": "Catégorie",
-    "note": "Note",
-    "baseCurrency": "Devise de base",
-    "postEntry": "Enregistrer l'écriture",
-    "noBookYet": "Aucun livre pour l'instant",
-    "total": "Total",
-    "on": "activé",
-    "off": "désactivé",
-    "loadingActivity": "Chargement de l'activité.",
+    "error": {
+      "activityFailed": "Impossible de charger l'activité."
+    },
     "flow": {
       "all": "tout",
       "expense": "dépense",
       "income": "revenu"
     },
+    "loadingActivity": "Chargement de l'activité.",
+    "loadingSessionLabel": "Chargement de la session",
+    "noBookYet": "Aucun livre pour l'instant",
+    "note": "Note",
+    "off": "désactivé",
+    "on": "activé",
+    "postEntry": "Enregistrer l'écriture",
+    "signOut": "Se déconnecter",
     "status": {
       "accountReady": "Compte prêt.",
       "entryPosted": "Écriture enregistrée."
     },
-    "error": {
-      "activityFailed": "Impossible de charger l'activité."
-    }
+    "total": "Total"
   }
 }

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { emptyRuntimeConfig } from './lib/api/runtimeConfig';
@@ -195,13 +195,16 @@ describe('App', () => {
     );
   });
 
-  it('renders the Wacai-style mobile workspace with four bottom tabs', async () => {
+  it('renders the mobile workspace with four bottom tabs', async () => {
     render(<App />);
 
-    expect(await screen.findByRole('region', { name: 'Monthly spending budget' })).toBeInTheDocument();
-    expect(screen.getByText('Remaining')).toBeInTheDocument();
-    expect(await screen.findByText('Lunch')).toBeInTheDocument();
-    expect(screen.getByText('-$12.30')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Income' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Expense' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Transfer' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Borrow/Lend' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Selected category' })).toHaveTextContent('Dining'));
+    expect(screen.getByRole('group', { name: 'Entry fields' })).toBeInTheDocument();
 
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
     expect(within(nav).getAllByRole('button')).toHaveLength(4);
@@ -231,15 +234,33 @@ describe('App', () => {
   it('posts a quick ledger entry from the record tab', async () => {
     render(<App />);
 
-    expect(await screen.findByRole('region', { name: 'Record' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('group', { name: 'Category shortcuts' })).toHaveTextContent('Dining'));
+    fireEvent.click(screen.getByRole('button', { name: '2' }));
+    fireEvent.click(screen.getByRole('button', { name: '4' }));
     fireEvent.change(screen.getByLabelText('Note'), { target: { value: 'Team lunch' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Post entry' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('Entry posted.')).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"note":"Team lunch"'),
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: expect.stringContaining('"type":"expense"'),
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: expect.stringContaining('"amountCents":24'),
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: expect.stringContaining('"transactionCurrency":"USD"'),
     });
   });
 
@@ -292,6 +313,9 @@ describe('App', () => {
       if (url === '/api/ledger/summary') {
         return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) } as Response);
       }
+      if (url === '/api/exchange-rates') {
+        return Promise.resolve(response([{ currency: 'CNY', unitsPerUsd: '7.1', source: 'test', updatedAt: '2026-07-01T00:00:00Z' }]));
+      }
       const ledger = ledgerResponse(url, init);
       if (ledger) {
         return Promise.resolve(ledger);
@@ -302,8 +326,8 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('region', { name: 'Monthly spending budget' })).toBeInTheDocument();
-    expect(screen.getByText('Total $30,000.00')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Selected category' })).toHaveTextContent('Dining'));
   });
 
   it('signs in from the authentication screen', async () => {
@@ -361,7 +385,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct horse battery staple' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with email' }));
 
-    expect(await screen.findByRole('region', { name: 'Monthly spending budget' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
     expect(await screen.findByRole('region', { name: 'Me' })).toBeInTheDocument();

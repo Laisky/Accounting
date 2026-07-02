@@ -1,34 +1,34 @@
 {
   "common": {
     "accessEyebrow": "Accounting access",
-    "checkingSession": "Checking the current session.",
-    "loadingSessionLabel": "Loading session",
-    "signOut": "Sign out",
+    "amount": "Amount",
     "balance": "Current balance",
+    "baseCurrency": "Base currency",
+    "category": "Category",
+    "checkingSession": "Checking the current session.",
     "currency": "Currency",
     "entries": "Entries",
     "entriesCount": "{{value}} entries",
-    "amount": "Amount",
-    "category": "Category",
-    "note": "Note",
-    "baseCurrency": "Base currency",
-    "postEntry": "Post entry",
-    "noBookYet": "No book yet",
-    "total": "Total",
-    "on": "on",
-    "off": "off",
-    "loadingActivity": "Loading activity.",
+    "error": {
+      "activityFailed": "Activity could not be loaded."
+    },
     "flow": {
       "all": "all",
       "expense": "expense",
       "income": "income"
     },
+    "loadingActivity": "Loading activity.",
+    "loadingSessionLabel": "Loading session",
+    "noBookYet": "No book yet",
+    "note": "Note",
+    "off": "off",
+    "on": "on",
+    "postEntry": "Post entry",
+    "signOut": "Sign out",
     "status": {
       "accountReady": "Account ready.",
       "entryPosted": "Entry posted."
     },
-    "error": {
-      "activityFailed": "Activity could not be loaded."
-    }
+    "total": "Total"
   }
 }

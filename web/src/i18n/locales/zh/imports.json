@@ -1,88 +1,88 @@
 {
   "imports": {
-    "eyebrow": "记账工作区",
-    "heading": "将 Wacai 账本导入干净的账本。",
     "a11y": {
-      "currentSession": "当前会话",
-      "openActivity": "打开动态",
-      "closeActivity": "关闭动态",
       "activityLog": "动态日志",
-      "ledgerSummary": "账本摘要",
+      "closeActivity": "关闭动态",
+      "currentSession": "当前会话",
+      "detectedValues": "检测到的导入值",
       "importData": "导入数据",
       "importReview": "导入审核",
-      "uploadFile": "上传 Wacai 导出文件",
+      "ledgerSummary": "账本摘要",
+      "openActivity": "打开动态",
       "previewSummary": "导入预览摘要",
-      "detectedValues": "检测到的导入值",
-      "rowDiagnostics": "导入行诊断"
+      "rowDiagnostics": "导入行诊断",
+      "uploadFile": "上传 Wacai 导出文件"
     },
-    "recentActivity": "最近动态",
-    "auditEvents": "审计事件",
-    "noAuditEvents": "暂无审计事件。",
-    "totalEvents": "共 {{value}} 个事件",
-    "dataImport": "数据导入",
-    "chooseSource": "选择来源、上传导出文件，提交前先审核。",
-    "csvPreviewReady": "CSV 预览已就绪",
-    "dataSource": "数据来源",
-    "uploadPrompt": "上传 Wacai 导出文件",
     "acceptedFormat": "支持格式：CSV",
+    "auditEvents": "审计事件",
+    "chooseSource": "选择来源、上传导出文件，提交前先审核。",
     "clearFile": "清除文件",
-    "reviewQueue": "审核队列",
-    "noFileSelected": "未选择文件",
-    "exportDetected": "已检测到 {{source}} 导出",
-    "spreadsheet": "电子表格",
-    "fileSummary": "{{type}} - {{size}} MB",
-    "none": "无",
-    "missingFields": "缺少来源字段：{{fields}}",
-    "schemaReady": "检测到的架构已可审核。",
-    "rowDiagnostics": "行诊断",
-    "rowNumber": "第 {{value}} 行",
-    "unmappedRow": "未映射行",
-    "readyForMapping": "已可映射",
-    "noPreviewRows": "未解析出预览行",
-    "sources": {
-      "wacai": {
-        "label": "Wacai",
-        "description": "来自 Wacai 账本、账户和账单记录的电子表格导出。"
-      }
-    },
-    "stage": {
-      "stage": "暂存导入",
-      "staging": "正在暂存导入",
-      "staged": "导入已暂存"
-    },
-    "facts": {
-      "source": "来源",
-      "rows": "行数",
-      "pending": "待处理",
-      "fingerprint": "指纹",
-      "pendingHash": "待处理哈希",
-      "metadata": "元数据",
-      "batch": "批次 {{id}}",
-      "previewBatch": "预览批次"
-    },
-    "preview": {
-      "warnings": "{{value}} 个警告",
-      "errors": "{{value}} 个错误",
-      "accounts": "{{value}} 个账户",
-      "categories": "{{value}} 个分类"
-    },
+    "csvPreviewReady": "CSV 预览已就绪",
+    "dataImport": "数据导入",
+    "dataSource": "数据来源",
     "detected": {
-      "books": "账本",
       "accounts": "账户",
+      "books": "账本",
       "categories": "分类",
       "currencies": "币种",
       "members": "成员",
       "merchants": "商家",
       "tags": "标签"
     },
-    "pipeline": {
-      "validate": "校验来源格式",
-      "hash": "计算来源哈希",
-      "batch": "创建预览批次",
-      "map": "映射分类和账户"
-    },
     "error": {
       "previewFailed": "导入预览失败"
-    }
+    },
+    "exportDetected": "已检测到 {{source}} 导出",
+    "eyebrow": "记账工作区",
+    "facts": {
+      "batch": "批次 {{id}}",
+      "fingerprint": "指纹",
+      "metadata": "元数据",
+      "pending": "待处理",
+      "pendingHash": "待处理哈希",
+      "previewBatch": "预览批次",
+      "rows": "行数",
+      "source": "来源"
+    },
+    "fileSummary": "{{type}} - {{size}} MB",
+    "heading": "将 Wacai 账本导入干净的账本。",
+    "missingFields": "缺少来源字段：{{fields}}",
+    "noAuditEvents": "暂无审计事件。",
+    "noFileSelected": "未选择文件",
+    "noPreviewRows": "未解析出预览行",
+    "none": "无",
+    "pipeline": {
+      "batch": "创建预览批次",
+      "hash": "计算来源哈希",
+      "map": "映射分类和账户",
+      "validate": "校验来源格式"
+    },
+    "preview": {
+      "accounts": "{{value}} 个账户",
+      "categories": "{{value}} 个分类",
+      "errors": "{{value}} 个错误",
+      "warnings": "{{value}} 个警告"
+    },
+    "readyForMapping": "已可映射",
+    "recentActivity": "最近动态",
+    "reviewQueue": "审核队列",
+    "rowDiagnostics": "行诊断",
+    "rowNumber": "第 {{value}} 行",
+    "schemaReady": "检测到的架构已可审核。",
+    "sources": {
+      "wacai": {
+        "description": "来自 Wacai 账本、账户和账单记录的电子表格导出。",
+        "label": "Wacai"
+      }
+    },
+    "spreadsheet": "电子表格",
+    "stage": {
+      "stage": "暂存导入",
+      "staged": "导入已暂存",
+      "staging": "正在暂存导入"
+    },
+    "totalEvents": "共 {{value}} 个事件",
+    "unmappedRow": "未映射行",
+    "uploadPrompt": "上传 Wacai 导出文件"
   }
 }

@@ -1,60 +1,80 @@
 {
   "mobile": {
     "a11y": {
-      "workspace": "Espacio de trabajo móvil de Contabilidad",
       "currentBook": "Libro actual",
-      "workspaceTools": "Herramientas del espacio de trabajo",
-      "searchTransactions": "Buscar transacciones",
-      "moreOptions": "Más opciones",
       "mainNavigation": "Navegación principal",
-      "selectLanguage": "Seleccionar idioma"
-    },
-    "defaultBookName": "Hogar",
-    "nav": {
-      "accounts": "Cuentas",
-      "record": "Registrar",
-      "reports": "Informes",
-      "me": "Yo"
+      "moreOptions": "Más opciones",
+      "searchTransactions": "Buscar transacciones",
+      "selectLanguage": "Seleccionar idioma",
+      "workspace": "Espacio de trabajo móvil de Contabilidad",
+      "workspaceTools": "Herramientas del espacio de trabajo"
     },
     "accounts": {
+      "book": "Libro",
       "eyebrow": "Cuentas",
       "heading": "Carteras compartidas con este libro.",
-      "book": "Libro",
       "noAccount": "Aún no hay ninguna cuenta conectada.",
       "prepareAccount": "Preparar cuenta"
     },
     "budget": {
-      "title": "Presupuesto de gasto mensual",
       "remaining": "Restante",
-      "total": "Total {{amount}}",
-      "spent": "Gastado {{amount}}"
+      "spent": "Gastado {{amount}}",
+      "title": "Presupuesto de gasto mensual",
+      "total": "Total {{amount}}"
     },
-    "record": {
-      "notePlaceholder": "¿Para qué fue esto?"
-    },
-    "transactions": {
-      "title": "Transacciones",
-      "empty": "Aún no hay transacciones.",
-      "dayTotals": "Ingreso {{income}} Gasto {{expense}}",
-      "accountFallback": "Cuenta",
-      "entryMeta": "{{time}} {{account}} / {{book}}"
+    "defaultBookName": "Hogar",
+    "error": {
+      "accountSetupFailed": "La configuración de la cuenta ha fallado.",
+      "baseCurrencyFailed": "No se pudo actualizar la moneda base.",
+      "createAccountBeforeRecording": "Crea una cuenta antes de registrar.",
+      "entriesFailed": "No se pudieron cargar los movimientos.",
+      "entryFailed": "No se pudo registrar el movimiento.",
+      "ledgerDataFailed": "No se pudieron cargar los datos del libro contable."
     },
     "me": {
       "emailLogin": "Inicio de sesión por correo {{state}}",
+      "loadActivity": "Cargar actividad",
       "passkeys": "Claves de acceso {{state}}",
-      "totp": "TOTP {{state}}",
-      "loadActivity": "Cargar actividad"
+      "totp": "TOTP {{state}}"
+    },
+    "nav": {
+      "accounts": "Cuentas",
+      "me": "Yo",
+      "record": "Registrar",
+      "reports": "Informes"
+    },
+    "record": {
+      "account": "Account",
+      "book": "Book",
+      "calculator": "Calculator",
+      "categoryFallback": "General",
+      "categoryShortcuts": "Category shortcuts",
+      "currency": "Currency",
+      "destination": "To account",
+      "fields": "Entry fields",
+      "member": "Member",
+      "notePlaceholder": "Add a note...",
+      "save": "Save",
+      "selectedCategory": "Selected category",
+      "time": "Time",
+      "title": "Record entry",
+      "typeLabel": "Entry type",
+      "types": {
+        "borrow": "Borrow/Lend",
+        "expense": "Expense",
+        "income": "Income",
+        "transfer": "Transfer"
+      }
     },
     "status": {
       "baseCurrencyUpdated": "Moneda base actualizada."
     },
-    "error": {
-      "accountSetupFailed": "La configuración de la cuenta ha fallado.",
-      "createAccountBeforeRecording": "Crea una cuenta antes de registrar.",
-      "entryFailed": "No se pudo registrar el movimiento.",
-      "baseCurrencyFailed": "No se pudo actualizar la moneda base.",
-      "ledgerDataFailed": "No se pudieron cargar los datos del libro contable.",
-      "entriesFailed": "No se pudieron cargar los movimientos."
+    "transactions": {
+      "accountFallback": "Cuenta",
+      "dayTotals": "Ingreso {{income}} Gasto {{expense}}",
+      "empty": "Aún no hay transacciones.",
+      "entryMeta": "{{time}} {{account}} / {{book}}",
+      "title": "Transacciones"
     }
   }
 }

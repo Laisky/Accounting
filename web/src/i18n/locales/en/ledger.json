@@ -3,39 +3,39 @@
     "a11y": {
       "workspace": "Ledger workspace"
     },
-    "eyebrow": "Ledger operations",
-    "heading": "Books, accounts, quick entry, and review.",
-    "activeBook": "Active book",
-    "panels": {
-      "bookSwitcher": "Book switcher",
-      "accountContext": "Account context",
-      "quickEntry": "Quick entry"
-    },
-    "fields": {
-      "bookName": "Book name",
-      "account": "Account"
-    },
     "actions": {
+      "addCategory": "Add category",
       "createBook": "Create book",
-      "updateSettings": "Update settings",
       "createGroup": "Create group",
       "shareAccount": "Share account",
-      "addCategory": "Add category"
+      "updateSettings": "Update settings"
     },
+    "activeBook": "Active book",
+    "error": {
+      "createBookAndAccountFirst": "Create a book and account first.",
+      "createBookAndGroupFirst": "Create a book and account group first.",
+      "createBookFirst": "Create a book first.",
+      "requestFailed": "Ledger request failed."
+    },
+    "eyebrow": "Ledger operations",
+    "fields": {
+      "account": "Account",
+      "bookName": "Book name"
+    },
+    "heading": "Books, accounts, quick entry, and review.",
     "noAccountConnected": "No account connected",
-    "transactionReview": "Transaction review ({{value}})",
     "noEntriesYet": "No entries yet",
+    "panels": {
+      "accountContext": "Account context",
+      "bookSwitcher": "Book switcher",
+      "quickEntry": "Quick entry"
+    },
     "status": {
+      "accountGroupReady": "Account group ready.",
       "bookReady": "Book ready.",
       "bookSettingsUpdated": "Book settings updated.",
-      "accountGroupReady": "Account group ready.",
       "categoryReady": "Category ready."
     },
-    "error": {
-      "requestFailed": "Ledger request failed.",
-      "createBookFirst": "Create a book first.",
-      "createBookAndGroupFirst": "Create a book and account group first.",
-      "createBookAndAccountFirst": "Create a book and account first."
-    }
+    "transactionReview": "Transaction review ({{value}})"
   }
 }

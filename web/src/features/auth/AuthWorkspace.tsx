@@ -15,6 +15,7 @@ import { emptyRuntimeConfig, type RuntimeConfig } from '../../lib/api/runtimeCon
 
 type AuthMode = 'login' | 'register' | 'recover';
 type RecoveryStep = 'request' | 'confirm';
+type LoginStep = 'password' | 'totp';
 
 type AuthWorkspaceProps = {
   runtimeConfig: RuntimeConfig | null;
@@ -29,6 +30,7 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTOTPCode] = useState('');
+  const [loginStep, setLoginStep] = useState<LoginStep>('password');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>('request');
@@ -45,7 +47,13 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
 
     try {
       if (mode === 'login') {
-        const result = await loginWithPassword(email, password, totpCode);
+        const result = await loginWithPassword(email, password, loginStep === 'totp' ? totpCode : undefined);
+        if (result.kind === 'totpRequired') {
+          // Password verified and the account has TOTP enabled; reveal the code step.
+          setLoginStep('totp');
+          setStatus(t('auth.status.totpRequired'));
+          return;
+        }
         onAuthenticated({
           userId: result.user.id,
           email: result.user.email,
@@ -105,6 +113,25 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
     }
   }
 
+  // changeMode receives a target auth mode and resets any in-progress login challenge and messages.
+  function changeMode(next: AuthMode) {
+    setMode(next);
+    setLoginStep('password');
+    setTOTPCode('');
+    setError('');
+    setStatus('');
+  }
+
+  // resetLoginChallenge receives no parameters and clears a pending TOTP step after credentials change.
+  function resetLoginChallenge() {
+    if (loginStep !== 'password') {
+      setLoginStep('password');
+      setTOTPCode('');
+      setStatus('');
+      setError('');
+    }
+  }
+
   return (
     <main className="shell authShell">
       <section className="authLayout" aria-label={t('auth.a11y.authentication')}>
@@ -122,14 +149,14 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
 
         <div className="authPanel">
           <div className="authTabs" role="tablist" aria-label={t('auth.a11y.authenticationMode')}>
-            <button type="button" className={mode === 'login' ? 'authTabActive' : ''} onClick={() => setMode('login')}>
+            <button type="button" className={mode === 'login' ? 'authTabActive' : ''} onClick={() => changeMode('login')}>
               <LogIn size={16} />
               <span>{t('auth.tabs.signIn')}</span>
             </button>
             <button
               type="button"
               className={mode === 'register' ? 'authTabActive' : ''}
-              onClick={() => setMode('register')}
+              onClick={() => changeMode('register')}
               disabled={!config.auth.emailRegisterEnabled}
             >
               <UserPlus size={16} />
@@ -138,7 +165,7 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
             <button
               type="button"
               className={mode === 'recover' ? 'authTabActive' : ''}
-              onClick={() => setMode('recover')}
+              onClick={() => changeMode('recover')}
             >
               <Mail size={16} />
               <span>{t('auth.tabs.recover')}</span>
@@ -153,7 +180,10 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
                 value={email}
                 autoComplete="email"
                 required
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  resetLoginChallenge();
+                }}
               />
             </label>
 
@@ -166,12 +196,15 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   required
                   minLength={12}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    resetLoginChallenge();
+                  }}
                 />
               </label>
             ) : null}
 
-            {mode === 'login' && config.features.totpEnabled ? (
+            {mode === 'login' && loginStep === 'totp' ? (
               <label>
                 <span>{t('auth.fields.totpCode')}</span>
                 <input
@@ -179,6 +212,8 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
                   value={totpCode}
                   inputMode="numeric"
                   autoComplete="one-time-code"
+                  required
+                  autoFocus
                   onChange={(event) => setTOTPCode(event.target.value)}
                 />
               </label>
@@ -215,7 +250,7 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
             {status ? <p className="authStatus">{status}</p> : null}
 
             <button className="primaryButton" type="submit" disabled={isBusy || (mode === 'login' && !config.auth.emailLoginEnabled)}>
-              <span>{submitLabel(t, mode, recoveryStep, isBusy)}</span>
+              <span>{submitLabel(t, mode, recoveryStep, loginStep, isBusy)}</span>
             </button>
           </form>
 
@@ -237,8 +272,8 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
   );
 }
 
-// submitLabel receives the translator, current auth mode, recovery step, and busy state and returns button copy.
-function submitLabel(t: TFunction, mode: AuthMode, recoveryStep: RecoveryStep, isBusy: boolean): string {
+// submitLabel receives the translator, current auth mode, recovery step, login step, and busy state and returns button copy.
+function submitLabel(t: TFunction, mode: AuthMode, recoveryStep: RecoveryStep, loginStep: LoginStep, isBusy: boolean): string {
   if (isBusy) {
     return t('auth.submit.working');
   }
@@ -247,6 +282,9 @@ function submitLabel(t: TFunction, mode: AuthMode, recoveryStep: RecoveryStep, i
   }
   if (mode === 'recover') {
     return recoveryStep === 'request' ? t('auth.submit.sendResetEmail') : t('auth.submit.resetPassword');
+  }
+  if (mode === 'login' && loginStep === 'totp') {
+    return t('auth.submit.verifyTotp');
   }
 
   return t('auth.submit.signInWithEmail');

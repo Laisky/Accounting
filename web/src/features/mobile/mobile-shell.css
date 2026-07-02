@@ -1,4 +1,4 @@
-.wacaiShell {
+.mobileShell {
   min-height: 100vh;
   background:
     radial-gradient(circle at 18% 0%, oklch(95% 0.03 45), transparent 31rem),
@@ -655,7 +655,7 @@
 }
 
 @media (max-width: 520px) {
-  .wacaiShell {
+  .mobileShell {
     padding: 0;
   }
 

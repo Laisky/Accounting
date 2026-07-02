@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuthWorkspace } from './features/auth/AuthWorkspace';
-import { WacaiWorkspace } from './features/mobile/WacaiWorkspace';
+import { MobileWorkspace } from './features/mobile/MobileWorkspace';
 import { fetchSession, logout, type AuthActor } from './lib/api/auth';
 import { emptyRuntimeConfig, fetchRuntimeConfig, type RuntimeConfig } from './lib/api/runtimeConfig';
 
@@ -45,7 +45,7 @@ export function App() {
     return <AuthWorkspace runtimeConfig={runtimeConfig} onAuthenticated={setActor} />;
   }
 
-  return <WacaiWorkspace actor={actor} runtimeConfig={runtimeConfig} onLogout={handleLogout} />;
+  return <MobileWorkspace actor={actor} runtimeConfig={runtimeConfig} onLogout={handleLogout} />;
 }
 
 // useRuntimeConfig accepts no parameters, loads public runtime config, and returns fallback settings on failure.
