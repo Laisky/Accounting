@@ -199,6 +199,42 @@ func TestListBookMembersEnforcesMembership(t *testing.T) {
 	require.True(t, errors.Is(err, ErrAccessDenied))
 }
 
+// TestAddBookMemberEnforcesManagerRoles verifies managers can add existing users once.
+func TestAddBookMemberEnforcesManagerRoles(t *testing.T) {
+	service := NewServiceWithStore(NewMemoryStore(testSeedData()))
+
+	created, err := service.AddBookMember(context.Background(), AddBookMemberRequest{
+		Actor:       Actor{UserID: "admin"},
+		BookID:      "book",
+		UserID:      "roommate",
+		Role:        RoleMember,
+		DisplayName: "Roommate",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "roommate", created.UserID)
+	require.Equal(t, RoleMember, created.Role)
+	require.Equal(t, "Roommate", created.DisplayName)
+
+	again, err := service.AddBookMember(context.Background(), AddBookMemberRequest{
+		Actor:  Actor{UserID: "owner"},
+		BookID: "book",
+		UserID: "roommate",
+		Role:   RoleMember,
+	})
+	require.NoError(t, err)
+	require.Equal(t, created.UserID, again.UserID)
+	require.Equal(t, created.DisplayName, again.DisplayName)
+
+	_, err = service.AddBookMember(context.Background(), AddBookMemberRequest{
+		Actor:  Actor{UserID: "member"},
+		BookID: "book",
+		UserID: "blocked",
+		Role:   RoleMember,
+	})
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrAccessDenied))
+}
+
 // TestBookMembersSortByBookID verifies membership listing has deterministic order.
 func TestBookMembersSortByBookID(t *testing.T) {
 	now := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)

@@ -2,6 +2,8 @@ package imports
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Laisky/errors/v2"
@@ -41,6 +43,34 @@ func TestPreviewWacaiCSVParsesRowsAndDetectedValues(t *testing.T) {
 	require.Equal(t, []string{"Dining", "Salary"}, batch.Detected.Categories)
 	require.Equal(t, []string{"CNY"}, batch.Detected.Currencies)
 	require.True(t, batch.CreatedAt.Equal(batch.CreatedAt.UTC()))
+}
+
+// TestPreviewWacaiFileParsesRealXLSX verifies the parser handles the observed Wacai workbook export shape.
+func TestPreviewWacaiFileParsesRealXLSX(t *testing.T) {
+	service := NewService(NewMemoryStore())
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "ref", "wacai", "import", "wacai_日常账本_202607022149857_924.xlsx"))
+	require.NoError(t, err)
+
+	batch, err := service.PreviewWacaiFile(context.Background(), PreviewRequest{
+		Actor:       Actor{UserID: "user-owner"},
+		Filename:    "wacai.xlsx",
+		ContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		Data:        data,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, "wacai-preview-v2", batch.ParserVersion)
+	require.NotEmpty(t, batch.Detected.Books)
+	require.NotEmpty(t, batch.Detected.Accounts)
+	require.Contains(t, batch.Detected.Currencies, "CNY")
+	require.Len(t, batch.Rows, maxPreviewRows)
+	require.Equal(t, 8, batch.Rows[0].RowNumber)
+	require.NotEmpty(t, batch.Rows[0].SourceType)
+	require.NotEmpty(t, batch.Rows[0].Account)
+	require.NotEmpty(t, batch.Rows[0].Raw["日期时间"])
+	require.Equal(t, "transfer", batch.Rows[0].Type)
+	require.NotEmpty(t, batch.Rows[0].DestinationAccount)
+	require.Empty(t, batch.Rows[0].Errors)
 }
 
 // TestPreviewWacaiCSVIsIdempotentByHash verifies repeated uploads return the stored batch.

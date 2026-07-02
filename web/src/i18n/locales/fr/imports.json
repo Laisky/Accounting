@@ -4,22 +4,33 @@
       "activityLog": "Journal d'activité",
       "closeActivity": "Fermer l'activité",
       "currentSession": "Session en cours",
+      "destinationBook": "Destination book",
       "detectedValues": "Valeurs d'import détectées",
       "importData": "Importer des données",
       "importReview": "Révision de l'import",
       "ledgerSummary": "Résumé du grand livre",
+      "memberMappings": "Member mappings",
       "openActivity": "Ouvrir l'activité",
       "previewSummary": "Résumé de l'aperçu d'import",
       "rowDiagnostics": "Diagnostics des lignes d'import",
       "uploadFile": "Téléverser le fichier d'export Wacai"
     },
-    "acceptedFormat": "Format accepté : CSV",
+    "acceptedFormat": "Supported formats: CSV or XLSX",
     "auditEvents": "Événements d'audit",
     "chooseSource": "Choisissez la source, téléversez l'export, révisez avant de valider.",
     "clearFile": "Effacer le fichier",
-    "csvPreviewReady": "Aperçu CSV prêt",
+    "csvPreviewReady": "CSV/XLSX preview ready",
     "dataImport": "Import de données",
     "dataSource": "Source de données",
+    "destination": {
+      "create": "Create",
+      "creating": "Creating",
+      "newBook": "New book",
+      "none": "No book",
+      "placeholder": "Book name",
+      "select": "Import into",
+      "title": "Destination book"
+    },
     "detected": {
       "accounts": "Comptes",
       "books": "Livres",
@@ -31,6 +42,7 @@
     },
     "error": {
       "applyFailed": "Import apply failed",
+      "bookCreateFailed": "Book creation failed",
       "previewFailed": "Échec de l'aperçu d'import"
     },
     "exportDetected": "Export {{source}} détecté",
@@ -47,6 +59,15 @@
     },
     "fileSummary": "{{type}} - {{size}} MB",
     "heading": "Importez les livres Wacai dans un grand livre propre.",
+    "memberMapping": {
+      "description": "Map each source name to an existing UID or email.",
+      "matched": "Known member: {{value}}",
+      "missing": "Add member mappings before applying.",
+      "placeholder": "UID or email",
+      "required": "{{value}} required",
+      "title": "Member mappings",
+      "userReference": "UID or email for {{name}}"
+    },
     "missingFields": "Champs source manquants : {{fields}}",
     "noAuditEvents": "Aucun événement d'audit pour l'instant.",
     "noFileSelected": "Aucun fichier sélectionné",
@@ -78,10 +99,10 @@
     },
     "spreadsheet": "Feuille de calcul",
     "stage": {
-      "apply": "Apply import",
       "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
-      "applying": "Applying import",
+      "apply": "Apply import",
       "applyComplete": "Import applied.",
+      "applying": "Applying import",
       "stage": "Préparer l'import",
       "staged": "Import préparé",
       "staging": "Préparation de l'import"

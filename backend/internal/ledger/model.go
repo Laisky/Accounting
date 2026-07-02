@@ -227,6 +227,15 @@ type ListBookMembersRequest struct {
 	PageSize int
 }
 
+// AddBookMemberRequest contains actor intent for adding an existing user to a book.
+type AddBookMemberRequest struct {
+	Actor       Actor
+	BookID      string
+	UserID      string
+	Role        Role
+	DisplayName string
+}
+
 // CreateAccountRequest contains actor intent for creating a personal account.
 type CreateAccountRequest struct {
 	Actor          Actor
@@ -265,6 +274,7 @@ type Entry struct {
 type CreateEntryRequest struct {
 	Actor                 Actor
 	BookID                string
+	CreatorUserID         string
 	Type                  EntryType
 	AccountID             string
 	DestinationAccountID  string

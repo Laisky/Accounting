@@ -88,6 +88,22 @@ func (s *SnapshotStore) UpdateBook(ctx context.Context, book Book) (Book, error)
 	return updated, nil
 }
 
+// CreateBookMember receives a membership, stores it, and persists the snapshot.
+func (s *SnapshotStore) CreateBookMember(ctx context.Context, member BookMember) (BookMember, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	created, err := s.memory.CreateBookMember(ctx, member)
+	if err != nil {
+		return BookMember{}, err
+	}
+	if err := s.persist(); err != nil {
+		return BookMember{}, err
+	}
+
+	return created, nil
+}
+
 // Member receives a book id and user id and returns the explicit membership relationship.
 func (s *SnapshotStore) Member(ctx context.Context, bookID string, userID string) (BookMember, error) {
 	return s.memory.Member(ctx, bookID, userID)

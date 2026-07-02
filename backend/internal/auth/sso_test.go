@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testExternalSSOUID = "0194d5f8-19f7-7f7b-a8d3-421a60f8d8ab"
+
 // TestServiceExternalSSOLoginCreatesLocalSession verifies validated SSO users receive local sessions.
 func TestServiceExternalSSOLoginCreatesLocalSession(t *testing.T) {
 	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
@@ -18,7 +20,7 @@ func TestServiceExternalSSOLoginCreatesLocalSession(t *testing.T) {
 	}, NewMemoryStore(), NoopTurnstileVerifier{}).
 		WithExternalSSOValidator(fakeExternalSSOValidator{
 			identity: ExternalSSOIdentity{
-				Subject:  "66c9f85d31dc8f4eb9a4df0a",
+				Subject:  testExternalSSOUID,
 				Username: "Person@Example.Test",
 			},
 		}).
@@ -30,6 +32,7 @@ func TestServiceExternalSSOLoginCreatesLocalSession(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, result.SessionToken)
 	require.Equal(t, "person@example.test", result.User.Email)
+	require.Equal(t, testExternalSSOUID, result.User.ID)
 	require.Equal(t, UserStatusActive, result.User.Status)
 	require.True(t, result.User.EmailVerified)
 	require.Equal(t, result.User.ID, result.Session.UserID)
@@ -38,6 +41,24 @@ func TestServiceExternalSSOLoginCreatesLocalSession(t *testing.T) {
 	session, err := service.SessionFromToken(context.Background(), result.SessionToken)
 	require.NoError(t, err)
 	require.Equal(t, result.Session.ID, session.ID)
+}
+
+// TestServiceExternalSSOLoginRequiresUUIDv7Subject verifies SSO cannot create users with private provider ids.
+func TestServiceExternalSSOLoginRequiresUUIDv7Subject(t *testing.T) {
+	service := NewService(Config{
+		ExternalSSOEnabled:       true,
+		ExternalSSOAutoProvision: true,
+		SessionTTL:               time.Hour,
+	}, NewMemoryStore(), NoopTurnstileVerifier{}).WithExternalSSOValidator(fakeExternalSSOValidator{
+		identity: ExternalSSOIdentity{
+			Subject:  "66c9f85d31dc8f4eb9a4df0a",
+			Username: "person@example.test",
+		},
+	})
+
+	_, err := service.LoginWithExternalSSO(context.Background(), ExternalSSOLoginRequest{Token: "opaque-sso-token"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "external sso uid")
 }
 
 // TestServiceExternalSSOLoginReusesExistingUser verifies SSO maps trusted usernames to existing local users.
@@ -62,7 +83,7 @@ func TestServiceExternalSSOLoginReusesExistingUser(t *testing.T) {
 		SessionTTL:               time.Hour,
 	}, store, NoopTurnstileVerifier{}).WithExternalSSOValidator(fakeExternalSSOValidator{
 		identity: ExternalSSOIdentity{
-			Subject:  "66c9f85d31dc8f4eb9a4df0a",
+			Subject:  testExternalSSOUID,
 			Username: "person@example.test",
 		},
 	})
@@ -80,7 +101,7 @@ func TestServiceExternalSSOLoginDisabled(t *testing.T) {
 		SessionTTL:         time.Hour,
 	}, NewMemoryStore(), NoopTurnstileVerifier{}).WithExternalSSOValidator(fakeExternalSSOValidator{
 		identity: ExternalSSOIdentity{
-			Subject:  "66c9f85d31dc8f4eb9a4df0a",
+			Subject:  testExternalSSOUID,
 			Username: "person@example.test",
 		},
 	})

@@ -35,7 +35,7 @@ type ImportWorkspaceProps = {
 const importSources: ImportSource[] = [
   {
     id: 'wacai',
-    acceptedFormats: '.csv',
+    acceptedFormats: '.csv,.xlsx',
     enabled: true,
   },
 ];

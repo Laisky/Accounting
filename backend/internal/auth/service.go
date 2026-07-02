@@ -141,10 +141,14 @@ func (s *Service) Register(ctx context.Context, request RegisterRequest) (User, 
 		status = UserStatusPendingVerification
 		emailVerified = false
 	}
+	userID, err := NewUserID()
+	if err != nil {
+		return User{}, err
+	}
 
 	record := UserRecord{
 		User: User{
-			ID:            uuid.NewString(),
+			ID:            userID,
 			Email:         email,
 			Status:        status,
 			EmailVerified: emailVerified,
@@ -235,8 +239,19 @@ func (s *Service) LoginWithExternalSSO(ctx context.Context, request ExternalSSOL
 	if err != nil {
 		return AuthResult{}, errors.Wrap(err, "normalize external sso username")
 	}
+	ssoUserID, err := normalizeExternalSSOUserID(identity.Subject)
+	if err != nil {
+		return AuthResult{}, err
+	}
 
-	record, err := s.store.UserByEmail(ctx, email)
+	record, err := s.store.UserByID(ctx, ssoUserID)
+	if err == nil {
+		if record.Status != UserStatusActive {
+			return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
+		}
+		return s.createSession(ctx, record)
+	}
+	record, err = s.store.UserByEmail(ctx, email)
 	if err == nil {
 		if record.Status != UserStatusActive {
 			return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
@@ -250,7 +265,7 @@ func (s *Service) LoginWithExternalSSO(ctx context.Context, request ExternalSSOL
 	now := s.clock().UTC()
 	created, err := s.store.CreateUser(ctx, UserRecord{
 		User: User{
-			ID:            uuid.NewString(),
+			ID:            ssoUserID,
 			Email:         email,
 			Status:        UserStatusActive,
 			EmailVerified: true,
@@ -263,6 +278,32 @@ func (s *Service) LoginWithExternalSSO(ctx context.Context, request ExternalSSOL
 	}
 
 	return s.createSession(ctx, created)
+}
+
+// ResolveUser receives a user id or email address and returns the matching public active user.
+func (s *Service) ResolveUser(ctx context.Context, request ResolveUserRequest) (User, error) {
+	var record UserRecord
+	var err error
+	switch {
+	case strings.TrimSpace(request.UserID) != "":
+		record, err = s.store.UserByID(ctx, strings.TrimSpace(request.UserID))
+	case strings.TrimSpace(request.Email) != "":
+		var email string
+		email, err = normalizeEmail(request.Email)
+		if err == nil {
+			record, err = s.store.UserByEmail(ctx, email)
+		}
+	default:
+		return User{}, errors.WithStack(errors.New("user id or email is required"))
+	}
+	if err != nil {
+		return User{}, errors.Wrap(err, "resolve user")
+	}
+	if record.Status != UserStatusActive {
+		return User{}, errors.WithStack(errors.New("user is not active"))
+	}
+
+	return record.User, nil
 }
 
 // SessionFromToken receives an opaque token and returns the active session.

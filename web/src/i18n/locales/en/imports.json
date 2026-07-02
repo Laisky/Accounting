@@ -4,22 +4,33 @@
       "activityLog": "Activity log",
       "closeActivity": "Close activity",
       "currentSession": "Current session",
+      "destinationBook": "Destination book",
       "detectedValues": "Detected import values",
       "importData": "Import data",
       "importReview": "Import review",
       "ledgerSummary": "Ledger summary",
+      "memberMappings": "Member mappings",
       "openActivity": "Open activity",
       "previewSummary": "Import preview summary",
       "rowDiagnostics": "Import row diagnostics",
       "uploadFile": "Upload Wacai export file"
     },
-    "acceptedFormat": "Accepted format: CSV",
+    "acceptedFormat": "Accepted formats: CSV or XLSX",
     "auditEvents": "Audit events",
     "chooseSource": "Choose the source, upload the export, review before commit.",
     "clearFile": "Clear file",
-    "csvPreviewReady": "CSV preview ready",
+    "csvPreviewReady": "CSV/XLSX preview ready",
     "dataImport": "Data import",
     "dataSource": "Data source",
+    "destination": {
+      "create": "Create",
+      "creating": "Creating",
+      "newBook": "New book",
+      "none": "No book",
+      "placeholder": "Book name",
+      "select": "Import into",
+      "title": "Destination book"
+    },
     "detected": {
       "accounts": "Accounts",
       "books": "Books",
@@ -31,6 +42,7 @@
     },
     "error": {
       "applyFailed": "Import apply failed",
+      "bookCreateFailed": "Book creation failed",
       "previewFailed": "Import preview failed"
     },
     "exportDetected": "{{source}} export detected",
@@ -47,6 +59,15 @@
     },
     "fileSummary": "{{type}} - {{size}} MB",
     "heading": "Import Wacai books into a clean ledger.",
+    "memberMapping": {
+      "description": "Map each source name to an existing UID or email.",
+      "matched": "Known member: {{value}}",
+      "missing": "Add member mappings before applying.",
+      "placeholder": "UID or email",
+      "required": "{{value}} required",
+      "title": "Member mappings",
+      "userReference": "UID or email for {{name}}"
+    },
     "missingFields": "Missing source fields: {{fields}}",
     "noAuditEvents": "No audit events yet.",
     "noFileSelected": "No file selected",
@@ -78,10 +99,10 @@
     },
     "spreadsheet": "Spreadsheet",
     "stage": {
-      "apply": "Apply import",
       "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
-      "applying": "Applying import",
+      "apply": "Apply import",
       "applyComplete": "Import applied.",
+      "applying": "Applying import",
       "stage": "Stage import",
       "staged": "Import staged",
       "staging": "Staging import"

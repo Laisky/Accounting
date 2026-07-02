@@ -133,6 +133,18 @@ func (s *SQLStore) UpdateBook(ctx context.Context, book Book) (Book, error) {
 	return cloneBook(book), nil
 }
 
+// CreateBookMember receives a membership and stores it when the book exists and the member is unique.
+func (s *SQLStore) CreateBookMember(ctx context.Context, member BookMember) (BookMember, error) {
+	member = cloneBookMember(member)
+	if _, err := s.Book(ctx, member.BookID); err != nil {
+		return BookMember{}, err
+	}
+	if err := s.records.Insert(ctx, memberRecord(member)); err != nil {
+		return BookMember{}, errors.Wrap(err, "insert book member")
+	}
+	return cloneBookMember(member), nil
+}
+
 // Member receives a book id and user id and returns the explicit membership relationship.
 func (s *SQLStore) Member(ctx context.Context, bookID string, userID string) (BookMember, error) {
 	var member BookMember

@@ -71,6 +71,11 @@
   color: oklch(45% 0.17 28);
 }
 
+.mobileImportMessageWarning {
+  background: oklch(96% 0.045 86);
+  color: oklch(42% 0.1 74);
+}
+
 .mobileImportPreview {
   display: grid;
   gap: 12px;
@@ -82,12 +87,22 @@
 }
 
 .mobileImportMetrics,
-.mobileImportDetected {
+.mobileImportDetected,
+.mobileImportDestination,
+.mobileImportMemberMappings {
   display: grid;
   gap: 8px;
   padding: 12px;
   border-radius: 12px;
   background: oklch(100% 0 0);
+}
+
+.mobileImportDestination {
+  gap: 10px;
+}
+
+.mobileImportMemberMappings {
+  gap: 10px;
 }
 
 .mobileImportMetrics {
@@ -114,6 +129,124 @@
   color: oklch(22% 0.034 235);
   font-size: 0.95rem;
   font-weight: 860;
+  overflow-wrap: anywhere;
+}
+
+.mobileImportSectionHeader {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.mobileImportSectionHeader span {
+  color: oklch(22% 0.034 235);
+  font-size: 0.96rem;
+  font-weight: 880;
+}
+
+.mobileImportSectionHeader strong {
+  color: oklch(56% 0.095 165);
+  font-size: 0.78rem;
+  font-weight: 860;
+  white-space: nowrap;
+}
+
+.mobileImportMemberMappings p {
+  margin: 0;
+  color: oklch(48% 0.03 230);
+  font-size: 0.82rem;
+  font-weight: 720;
+}
+
+.mobileImportDestination label,
+.mobileImportCreateBook label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.mobileImportDestination label > span,
+.mobileImportCreateBook label > span {
+  color: oklch(58% 0.025 230);
+  font-size: 0.72rem;
+  font-weight: 860;
+  text-transform: uppercase;
+}
+
+.mobileImportDestination select,
+.mobileImportCreateBook input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid oklch(88% 0.013 220);
+  border-radius: 8px;
+  background: oklch(98% 0.004 220);
+  color: oklch(22% 0.034 235);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 760;
+}
+
+.mobileImportDestination select:focus,
+.mobileImportCreateBook input:focus {
+  border-color: oklch(61% 0.11 170);
+  outline: 3px solid oklch(88% 0.05 170);
+}
+
+.mobileImportCreateBook {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.mobileImportMappingRows {
+  display: grid;
+  gap: 8px;
+}
+
+.mobileImportMappingRow {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.38fr) minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.mobileImportMappingRow span {
+  color: oklch(30% 0.04 235);
+  font-size: 0.86rem;
+  font-weight: 840;
+  overflow-wrap: anywhere;
+}
+
+.mobileImportMappingRow input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid oklch(88% 0.013 220);
+  border-radius: 8px;
+  background: oklch(98% 0.004 220);
+  color: oklch(22% 0.034 235);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 720;
+}
+
+.mobileImportMappingRow input:focus {
+  border-color: oklch(61% 0.11 170);
+  outline: 3px solid oklch(88% 0.05 170);
+}
+
+.mobileImportMappingRow small {
+  grid-column: 2;
+  color: oklch(56% 0.04 220);
+  font-size: 0.75rem;
+  font-weight: 720;
   overflow-wrap: anywhere;
 }
 
@@ -177,4 +310,13 @@
 
 .mobileImportRows small {
   grid-column: 1 / -1;
+}
+
+.mobileImportRows p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: oklch(46% 0.03 230);
+  font-size: 0.8rem;
+  font-weight: 760;
+  overflow-wrap: anywhere;
 }

@@ -96,8 +96,8 @@ Importing existing bookkeeping data is a migration convenience, not a runtime de
 
 The import system should support:
 
-- Initial authenticated CSV preview for Wacai exports through `POST /api/imports/wacai/preview`, using a multipart upload field named `file`.
-- Later spreadsheet imports, especially `.xlsx` files exported from Wacai or manually converted from Wacai exports.
+- Initial authenticated CSV and `.xlsx` preview for Wacai exports through `POST /api/imports/wacai/preview`, using a multipart upload field named `file`.
+- Spreadsheet imports must handle the observed Wacai workbook shape with metadata rows before the header row.
 - A staging preview that shows parsed rows, detected books, accounts, categories, currencies, members, merchants, tags, and unmapped fields before writing committed ledger records.
 - Idempotent preview batches keyed by user, source, and source file hash, with later committed imports also considering source row identity when present, normalized timestamp, amount, account, book, and source-specific identifiers.
 - Per-row validation errors and warnings. Invalid rows must not block valid rows from being reviewed, but committed imports must remain explicit.
@@ -153,6 +153,7 @@ Accounting should follow the proven `one-api` authentication shape while keeping
 - Cloudflare Turnstile must be supported on registration and login. The default product posture should bind Turnstile to both routes when enabled, while allowing an `after_failure` login mode that requires Turnstile after a recent failed login for the same email.
 - Sessions should be HTTP-only, SameSite=Lax cookies. Production deployments must use Secure cookies.
 - Session values should contain only stable user identity and role/status data, not secrets.
+- User `id` values are public stable UIDs generated as UUIDv7. APIs must never expose database-internal incrementing identifiers as user identity, and external SSO auto-provisioning must preserve the UUIDv7 UID returned by SSO `WhoAmI.id` / token subject.
 - Password hashes must use OWASP-compliant parameters and must never be returned by any API.
 - Auth routes must not reveal whether an email exists when credentials, reset requests, or verification requests fail.
 - TOTP is an optional per-user MFA method. Setup stores the generated secret only in the session until the user confirms a valid code.
@@ -250,7 +251,8 @@ Initial endpoints:
 | `POST` | `/api/books/{bookID}/entries` | Authenticated entry creation for owners, administrators, and members, with server-controlled creator and book fields. |
 | `PATCH` | `/api/books/{bookID}/entries/{entryID}` | Authenticated partial entry update with owner/administrator override and member creator-only policy. |
 | `DELETE` | `/api/books/{bookID}/entries/{entryID}` | Authenticated entry deletion with owner/administrator override and member creator-only policy. |
-| `POST` | `/api/imports/wacai/preview` | Authenticated Wacai CSV import preview from multipart field `file`, returning `201` with a staged preview batch. |
+| `POST` | `/api/imports/wacai/preview` | Authenticated Wacai CSV or `.xlsx` import preview from multipart field `file`, returning `201` with a staged preview batch. |
+| `POST` | `/api/books/{bookID}/imports/{batchID}/apply` | Authenticated Wacai import commit with source-hash confirmation and optional member mappings for non-self source names. |
 
 Future APIs should be grouped by domain and versioned once the first persistent contract is ready:
 
@@ -260,7 +262,7 @@ Future APIs should be grouped by domain and versioned once the first persistent 
 - `/api/books/{bookID}/entries`: income, expense, transfer, refund, reimbursement, borrow, lend, and repayment entries.
 - `/api/books/{bookID}/categories`: category mapping and display metadata beyond the initial create/update/archive contract.
 - `/api/accounts`: account balances, credit-card settings, and visibility settings beyond the initial account and group create/list/update contract.
-- `/api/imports`: mapping, commit, rollback, durable raw-file storage, `.xlsx` parsing, and import-batch status beyond the initial Wacai CSV preview contract.
+- `/api/imports`: mapping, commit, rollback, durable raw-file storage, and import-batch status beyond the initial Wacai CSV and `.xlsx` preview contract.
 - `/api/reconciliation`: statement-period matching and lock records.
 - `/api/reports`: book-level and personal reports by category, account, member, merchant, tag, and time range.
 - `/api/audit`: membership, import commit/rollback, reconciliation, and admin recovery audit events beyond the initial auth, ledger mutation, and import-preview feed.
@@ -289,7 +291,8 @@ Initial auth, book, account, category, entry, and import request contracts:
 - `POST /api/books/{bookID}/categories` accepts `parentId`, `name`, `direction`, `sortOrder`, and `rawSourceName`. Category direction must be `income` or `expense`.
 - `PATCH /api/books/{bookID}/categories/{categoryID}` accepts optional `parentId`, `name`, `direction`, `sortOrder`, `archived`, and `rawSourceName`. Category removal is archival by setting `archived=true`; hard delete is deferred to avoid breaking historical entry references.
 - `PATCH /api/books/{bookID}/entries/{entryID}` accepts optional `type`, `accountId`, `destinationAccountId`, `categoryId`, `amountCents`, `transactionCurrency`, `exchangeRate`, `occurredAt`, `note`, `merchant`, and `tags`. At least one field is required. The server controls id, book id, creator, account currency, book reporting currency, raw source, and timestamps.
-- `POST /api/imports/wacai/preview` accepts authenticated `multipart/form-data` with a required `file` field. Initial support is CSV-only and returns `201 Created` with a preview batch containing source hash, parser version, detected schema, preview rows, row-level warnings/errors, and detected accounts, categories, currencies, and tags. Re-uploading the same file for the same user and source returns the same idempotent preview batch.
+- `POST /api/imports/wacai/preview` accepts authenticated `multipart/form-data` with a required `file` field. Initial support accepts CSV and `.xlsx`, including Wacai workbooks with metadata rows before the table header, and returns `201 Created` with a preview batch containing source hash, parser version, detected schema, preview rows, row-level warnings/errors, source type, transfer destination account, participants, attributes, and detected books, accounts, categories, currencies, members, merchants, and tags. Re-uploading the same file for the same user and source returns the same idempotent preview batch.
+- `POST /api/books/{bookID}/imports/{batchID}/apply` applies a reviewed Wacai batch to one explicit destination book. The request accepts `sourceHash` and optional `memberMappings`, a source member-name to existing UID/email map. Blank, `Self`, `Me`, `Myself`, the authenticated UID, and the authenticated email are treated as the importer. Other row members and participants require a mapping; mapped active users are added to the destination book as members when needed, and a mapped row member becomes the created entry's `creatorUserId`. During apply, the server supplements missing imported account references by creating user-owned accounts under a Wacai import account group, shares those accounts with the destination book, creates missing category trees from slash-separated Wacai category paths, and maps transfers to source and destination accounts when both endpoints are present.
 - Mutating book, account, category, and entry requests reject unknown JSON fields, return `201` for creates and `200` for updates, map validation failures to `400`, policy failures to `403`, and missing referenced resources to `404`.
 
 API design rules:
@@ -480,6 +483,6 @@ pnpm --dir web run test:e2e
 - Define authentication and session strategy.
 - Define the first durable API versioning strategy and request/response schema format.
 - Specify the double-entry posting invariants.
-- Extend the initial Wacai CSV preview parser with sample-file collection, mapping UX, commit behavior, rollback behavior, `.xlsx` support, and broader format coverage.
+- Extend the initial Wacai CSV and `.xlsx` preview parser with mapping UX, commit enrichment, rollback behavior, durable raw-file retention, and broader format coverage.
 - Add import/export formats for bank statements after the Wacai migration path is defined.
 - Add a deployment document once Docker and CI exist.

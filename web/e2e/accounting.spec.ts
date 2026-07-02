@@ -301,7 +301,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
     name: 'wacai.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from(
-      'date,type,amount,currency,account,category,book,member,merchant,note,tags\n2026-07-01,expense,12.30,cny,Cash,Dining,Household,Alice,Market,Import lunch,food|work\n',
+      'date,type,amount,currency,account,category,book,member,merchant,note,tags\n2026-07-01,expense,12.30,cny,Cash,Dining,Household,Self,Market,Import lunch,food|work\n',
     ),
   });
   await expect(page.getByText('wacai.csv')).toBeVisible();

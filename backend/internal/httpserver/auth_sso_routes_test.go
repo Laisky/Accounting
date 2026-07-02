@@ -16,6 +16,8 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/logger"
 )
 
+const testRouteExternalSSOUID = "0194d5f8-19f7-7f7b-a8d3-421a60f8d8ab"
+
 // TestRegisterRoutesExternalSSOFlow verifies SSO start and callback issue a local session without exposing the token.
 func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -32,7 +34,7 @@ func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 	cfg.Auth.External.SuccessRedirectURL = "/"
 	authService := testAuthService(cfg).WithExternalSSOValidator(routeExternalSSOValidator{
 		identity: auth.ExternalSSOIdentity{
-			Subject:  "66c9f85d31dc8f4eb9a4df0a",
+			Subject:  testRouteExternalSSOUID,
 			Username: "person@example.test",
 		},
 	})
@@ -72,6 +74,7 @@ func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 	session, err := authService.SessionFromToken(t.Context(), sessionCookie.Value)
 	require.NoError(t, err)
 	require.Equal(t, "person@example.test", session.UserEmail)
+	require.Equal(t, testRouteExternalSSOUID, session.UserID)
 }
 
 // TestRegisterRoutesExternalSSOCallbackRejectsBadState verifies callback state validation fails closed.
@@ -87,7 +90,7 @@ func TestRegisterRoutesExternalSSOCallbackRejectsBadState(t *testing.T) {
 	cfg.Auth.External.StateCookieName = "accounting_test_sso_state"
 	authService := testAuthService(cfg).WithExternalSSOValidator(routeExternalSSOValidator{
 		identity: auth.ExternalSSOIdentity{
-			Subject:  "66c9f85d31dc8f4eb9a4df0a",
+			Subject:  testRouteExternalSSOUID,
 			Username: "person@example.test",
 		},
 	})

@@ -89,21 +89,25 @@ type DetectedSchema struct {
 
 // PreviewRow contains one parsed source row and row-level diagnostics.
 type PreviewRow struct {
-	RowNumber  int               `json:"rowNumber"`
-	Raw        map[string]string `json:"raw"`
-	Type       string            `json:"type,omitempty"`
-	OccurredAt string            `json:"occurredAt,omitempty"`
-	Amount     string            `json:"amount,omitempty"`
-	Currency   string            `json:"currency,omitempty"`
-	Account    string            `json:"account,omitempty"`
-	Category   string            `json:"category,omitempty"`
-	Book       string            `json:"book,omitempty"`
-	Member     string            `json:"member,omitempty"`
-	Merchant   string            `json:"merchant,omitempty"`
-	Note       string            `json:"note,omitempty"`
-	Tags       []string          `json:"tags,omitempty"`
-	Warnings   []string          `json:"warnings,omitempty"`
-	Errors     []string          `json:"errors,omitempty"`
+	RowNumber          int               `json:"rowNumber"`
+	Raw                map[string]string `json:"raw"`
+	Type               string            `json:"type,omitempty"`
+	SourceType         string            `json:"sourceType,omitempty"`
+	OccurredAt         string            `json:"occurredAt,omitempty"`
+	Amount             string            `json:"amount,omitempty"`
+	Currency           string            `json:"currency,omitempty"`
+	Account            string            `json:"account,omitempty"`
+	DestinationAccount string            `json:"destinationAccount,omitempty"`
+	Category           string            `json:"category,omitempty"`
+	Book               string            `json:"book,omitempty"`
+	Member             string            `json:"member,omitempty"`
+	Participants       []string          `json:"participants,omitempty"`
+	Merchant           string            `json:"merchant,omitempty"`
+	Attribute          string            `json:"attribute,omitempty"`
+	Note               string            `json:"note,omitempty"`
+	Tags               []string          `json:"tags,omitempty"`
+	Warnings           []string          `json:"warnings,omitempty"`
+	Errors             []string          `json:"errors,omitempty"`
 }
 
 // DetectedValues contains unique values discovered during preview parsing.

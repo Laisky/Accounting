@@ -67,6 +67,50 @@ func TestCreateEntryEnforcesRolesAndServerControlledFields(t *testing.T) {
 	require.Equal(t, 7, list.Total)
 }
 
+// TestCreateEntryAllowsManagerCreatorOverride verifies managers can attribute imports to book members.
+func TestCreateEntryAllowsManagerCreatorOverride(t *testing.T) {
+	service := NewServiceWithStore(NewMemoryStore(testSeedData()))
+
+	entry, err := service.CreateEntry(context.Background(), CreateEntryRequest{
+		Actor:               Actor{UserID: "owner"},
+		BookID:              "book",
+		CreatorUserID:       "member",
+		Type:                EntryTypeExpense,
+		AccountID:           "account-shared",
+		AmountCents:         1200,
+		TransactionCurrency: "USD",
+		OccurredAt:          time.Date(2026, 7, 1, 20, 0, 0, 0, time.UTC),
+	})
+	require.NoError(t, err)
+	require.Equal(t, "member", entry.CreatorUserID)
+
+	_, err = service.CreateEntry(context.Background(), CreateEntryRequest{
+		Actor:               Actor{UserID: "member"},
+		BookID:              "book",
+		CreatorUserID:       "owner",
+		Type:                EntryTypeExpense,
+		AccountID:           "account-shared",
+		AmountCents:         1200,
+		TransactionCurrency: "USD",
+		OccurredAt:          time.Date(2026, 7, 1, 20, 0, 0, 0, time.UTC),
+	})
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrAccessDenied))
+
+	_, err = service.CreateEntry(context.Background(), CreateEntryRequest{
+		Actor:               Actor{UserID: "owner"},
+		BookID:              "book",
+		CreatorUserID:       "stranger",
+		Type:                EntryTypeExpense,
+		AccountID:           "account-shared",
+		AmountCents:         1200,
+		TransactionCurrency: "USD",
+		OccurredAt:          time.Date(2026, 7, 1, 20, 0, 0, 0, time.UTC),
+	})
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrAccessDenied))
+}
+
 // TestCreateEntryRejectsViewerAndInaccessibleAccount verifies viewers and private accounts cannot create entries.
 func TestCreateEntryRejectsViewerAndInaccessibleAccount(t *testing.T) {
 	service := NewServiceWithStore(NewMemoryStore(testSeedData()))

@@ -17,7 +17,7 @@ const (
 	UserStatusActive UserStatus = "active"
 )
 
-// User represents an authenticated identity without exposing password hash material.
+// User represents an authenticated identity with a public stable UUIDv7 id and without exposing password hash material.
 type User struct {
 	ID            string     `json:"id"`
 	Email         string     `json:"email"`
@@ -67,8 +67,15 @@ type ExternalSSOLoginRequest struct {
 	Token string
 }
 
+// ResolveUserRequest contains a user id or email address to resolve to a public user.
+type ResolveUserRequest struct {
+	UserID string
+	Email  string
+}
+
 // ExternalSSOIdentity contains validated identity metadata from the configured SSO provider.
 type ExternalSSOIdentity struct {
+	// Subject is the stable external SSO user UID and must be UUIDv7.
 	Subject     string
 	Username    string
 	DisplayName string

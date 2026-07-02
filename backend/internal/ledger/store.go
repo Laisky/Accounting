@@ -16,6 +16,7 @@ type Store interface {
 	BookMembers(ctx context.Context, bookID string) ([]BookMember, error)
 	CreateBook(ctx context.Context, book Book, owner BookMember) (Book, BookMember, error)
 	UpdateBook(ctx context.Context, book Book) (Book, error)
+	CreateBookMember(ctx context.Context, member BookMember) (BookMember, error)
 	Member(ctx context.Context, bookID string, userID string) (BookMember, error)
 	Entry(ctx context.Context, bookID string, entryID string) (Entry, error)
 	Entries(ctx context.Context, bookID string) ([]Entry, error)
@@ -205,6 +206,26 @@ func (s *MemoryStore) CreateBook(_ context.Context, book Book, owner BookMember)
 	s.members[book.ID][owner.UserID] = owner
 
 	return cloneBook(book), cloneBookMember(owner), nil
+}
+
+// CreateBookMember receives a membership and stores it when the book exists and the member is unique.
+func (s *MemoryStore) CreateBookMember(_ context.Context, member BookMember) (BookMember, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.books[member.BookID]; !ok {
+		return BookMember{}, errors.Wrapf(ErrNotFound, "book %q not found", member.BookID)
+	}
+	member = cloneBookMember(member)
+	if s.members[member.BookID] == nil {
+		s.members[member.BookID] = map[string]BookMember{}
+	}
+	if _, ok := s.members[member.BookID][member.UserID]; ok {
+		return BookMember{}, errors.WithStack(errors.New("book member already exists"))
+	}
+	s.members[member.BookID][member.UserID] = member
+
+	return cloneBookMember(member), nil
 }
 
 // UpdateBook receives a book and replaces mutable settings for an existing book.

@@ -4,22 +4,33 @@
       "activityLog": "Registro de actividad",
       "closeActivity": "Cerrar actividad",
       "currentSession": "Sesión actual",
+      "destinationBook": "Destination book",
       "detectedValues": "Valores de importación detectados",
       "importData": "Importar datos",
       "importReview": "Revisión de importación",
       "ledgerSummary": "Resumen del libro contable",
+      "memberMappings": "Member mappings",
       "openActivity": "Abrir actividad",
       "previewSummary": "Resumen de vista previa de importación",
       "rowDiagnostics": "Diagnóstico de filas de importación",
       "uploadFile": "Subir archivo de exportación de Wacai"
     },
-    "acceptedFormat": "Formato aceptado: CSV",
+    "acceptedFormat": "Supported formats: CSV or XLSX",
     "auditEvents": "Eventos de auditoría",
     "chooseSource": "Elige la fuente, sube la exportación y revísala antes de confirmar.",
     "clearFile": "Quitar archivo",
-    "csvPreviewReady": "Vista previa CSV lista",
+    "csvPreviewReady": "CSV/XLSX preview ready",
     "dataImport": "Importación de datos",
     "dataSource": "Fuente de datos",
+    "destination": {
+      "create": "Create",
+      "creating": "Creating",
+      "newBook": "New book",
+      "none": "No book",
+      "placeholder": "Book name",
+      "select": "Import into",
+      "title": "Destination book"
+    },
     "detected": {
       "accounts": "Cuentas",
       "books": "Libros",
@@ -31,6 +42,7 @@
     },
     "error": {
       "applyFailed": "Import apply failed",
+      "bookCreateFailed": "Book creation failed",
       "previewFailed": "La vista previa de importación ha fallado"
     },
     "exportDetected": "Exportación de {{source}} detectada",
@@ -47,6 +59,15 @@
     },
     "fileSummary": "{{type}} - {{size}} MB",
     "heading": "Importa libros de Wacai a un libro contable limpio.",
+    "memberMapping": {
+      "description": "Map each source name to an existing UID or email.",
+      "matched": "Known member: {{value}}",
+      "missing": "Add member mappings before applying.",
+      "placeholder": "UID or email",
+      "required": "{{value}} required",
+      "title": "Member mappings",
+      "userReference": "UID or email for {{name}}"
+    },
     "missingFields": "Faltan campos de origen: {{fields}}",
     "noAuditEvents": "Aún no hay eventos de auditoría.",
     "noFileSelected": "Ningún archivo seleccionado",
@@ -78,10 +99,10 @@
     },
     "spreadsheet": "Hoja de cálculo",
     "stage": {
-      "apply": "Apply import",
       "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
-      "applying": "Applying import",
+      "apply": "Apply import",
       "applyComplete": "Import applied.",
+      "applying": "Applying import",
       "stage": "Preparar importación",
       "staged": "Importación preparada",
       "staging": "Preparando importación"

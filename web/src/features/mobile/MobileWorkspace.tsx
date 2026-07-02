@@ -414,6 +414,18 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
+  // handleCreateImportBook receives a destination name, creates a book, and selects it for import.
+  async function handleCreateImportBook(name: string): Promise<string> {
+    const book = await createBook(name, bookCurrency || summary.currency || 'USD');
+    setSnapshot((current) => ({
+      ...current,
+      books: [...current.books.filter((item) => item.id !== book.id), book],
+    }));
+    setSelectedBookId(book.id);
+
+    return book.id;
+  }
+
   // handleUpdateEntry receives entry identity and patch fields, updates the entry, and refreshes visible ledgers.
   async function handleUpdateEntry(entryId: string, input: EntryUpdateInput) {
     const entry = snapshot.entries.find((item) => item.id === entryId);
@@ -621,7 +633,15 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
           ) : null}
           {!isSearchOpen && activeTab === 'reports' ? <ReportWorkspace refreshKey={refreshKey} /> : null}
           {!isSearchOpen && activeTab === 'imports' ? (
-            <ImportPreviewView selectedBookId={selectedBook?.id ?? ''} onApplied={handleImportApplied} />
+            <ImportPreviewView
+              actor={actor}
+              books={snapshot.books}
+              members={snapshot.members}
+              onCreateBook={handleCreateImportBook}
+              selectedBookId={selectedBook?.id ?? ''}
+              setSelectedBookId={setSelectedBookId}
+              onApplied={handleImportApplied}
+            />
           ) : null}
           {!isSearchOpen && activeTab === 'me' ? (
             <MeView

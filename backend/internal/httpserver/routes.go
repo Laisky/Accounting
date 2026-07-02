@@ -145,7 +145,7 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 
 	registerBookRoutes(api, ledgerService, auditService)
 	registerAccountCategoryRoutes(api, ledgerService, auditService)
-	registerImportRoutes(api, importService, ledgerService, auditService)
+	registerImportRoutes(api, importService, ledgerService, authService, auditService)
 	registerAuditRoutes(api, auditService)
 
 	api.GET("/books/:bookID/ledger/summary", RequireSession(), func(c *gin.Context) {

@@ -22,9 +22,10 @@ import (
 )
 
 const maxImportUploadBytes = 6 * 1024 * 1024
+const wacaiImportAccountGroupName = "Wacai Import"
 
 // registerImportRoutes receives an API group and registers protected import endpoints.
-func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service, ledgerService *ledger.Service, auditService *audit.Service) {
+func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service, ledgerService *ledger.Service, authService *auth.Service, auditService *audit.Service) {
 	api.POST("/imports/wacai/preview", RequireSession(), func(c *gin.Context) {
 		log := gmw.GetLogger(c)
 
@@ -61,7 +62,7 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 			return
 		}
 
-		batch, err := importService.PreviewWacaiCSV(c.Request.Context(), importsvc.PreviewRequest{
+		batch, err := importService.PreviewWacaiFile(c.Request.Context(), importsvc.PreviewRequest{
 			Actor:       importsvc.Actor{UserID: actor.UserID},
 			Filename:    fileHeader.Filename,
 			ContentType: fileHeader.Header.Get("Content-Type"),
@@ -137,7 +138,7 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 			return
 		}
 
-		response, err := commitWacaiBatch(c.Request.Context(), ledgerService, ledger.Actor{UserID: actor.UserID}, c.Param("bookID"), batch)
+		response, err := commitWacaiBatch(c.Request.Context(), ledgerService, authService, ledger.Actor{UserID: actor.UserID}, actor.Email, c.Param("bookID"), batch, request.MemberMappings)
 		if err != nil {
 			respondLedgerError(c, log, err)
 			return
@@ -191,7 +192,8 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 }
 
 type importCommitRequest struct {
-	SourceHash string `json:"sourceHash"`
+	SourceHash     string            `json:"sourceHash"`
+	MemberMappings map[string]string `json:"memberMappings"`
 }
 
 type importCommitResponse struct {
@@ -210,19 +212,19 @@ type importSkippedRow struct {
 }
 
 // commitWacaiBatch receives a parsed Wacai batch and creates ledger entries for mappable rows.
-func commitWacaiBatch(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor, bookID string, batch importsvc.Batch) (importCommitResponse, error) {
-	accounts, err := ledgerService.ListAccounts(ctx, ledger.ListAccountsRequest{Actor: actor, Page: 1, PageSize: 100})
+func commitWacaiBatch(ctx context.Context, ledgerService *ledger.Service, authService *auth.Service, actor ledger.Actor, actorEmail string, bookID string, batch importsvc.Batch, memberMappings map[string]string) (importCommitResponse, error) {
+	creators, err := resolveWacaiMemberMappings(ctx, authService, ledgerService, actor, actorEmail, bookID, batch.Rows, memberMappings)
 	if err != nil {
-		return importCommitResponse{}, errors.Wrap(err, "load accounts for import commit")
+		return importCommitResponse{}, err
 	}
-	categories, err := ledgerService.ListCategories(ctx, ledger.ListCategoriesRequest{Actor: actor, BookID: bookID, Page: 1, PageSize: 100})
+	accounts, categories, err := ensureWacaiImportReferences(ctx, ledgerService, actor, bookID, batch.Rows)
 	if err != nil {
-		return importCommitResponse{}, errors.Wrap(err, "load categories for import commit")
+		return importCommitResponse{}, err
 	}
 
 	response := importCommitResponse{BatchID: batch.ID, BookID: bookID, Status: "applied", Entries: []ledger.Entry{}}
 	for _, row := range batch.Rows {
-		entry, skipped, err := commitWacaiRow(ctx, ledgerService, actor, bookID, row, accounts.Items, categories.Items)
+		entry, skipped, err := commitWacaiRow(ctx, ledgerService, actor, bookID, creators[row.RowNumber], row, accounts, categories)
 		if err != nil {
 			return importCommitResponse{}, err
 		}
@@ -336,13 +338,57 @@ func importSkippedRowsFromService(rows []importsvc.AppliedSkippedRow) []importSk
 	return converted
 }
 
+// ensureWacaiImportReferences receives preview rows and creates missing account and category references.
+func ensureWacaiImportReferences(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor, bookID string, rows []importsvc.PreviewRow) ([]ledger.Account, []ledger.Category, error) {
+	accounts, err := listAllImportAccounts(ctx, ledgerService, actor)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "load accounts for import commit")
+	}
+	groups, err := listAllImportAccountGroups(ctx, ledgerService, actor)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "load account groups for import commit")
+	}
+	categories, err := listAllImportCategories(ctx, ledgerService, actor, bookID)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "load categories for import commit")
+	}
+
+	groupID := ""
+	for _, row := range rows {
+		if len(row.Errors) > 0 {
+			continue
+		}
+		entryType, ok := importEntryType(row.Type)
+		if !ok {
+			continue
+		}
+		groupID, accounts, err = ensureWacaiImportAccount(ctx, ledgerService, actor, bookID, groups, groupID, accounts, row.Account, row.Currency)
+		if err != nil {
+			return nil, nil, err
+		}
+		if entryType == ledger.EntryTypeTransfer {
+			groupID, accounts, err = ensureWacaiImportAccount(ctx, ledgerService, actor, bookID, groups, groupID, accounts, row.DestinationAccount, row.Currency)
+			if err != nil {
+				return nil, nil, err
+			}
+			continue
+		}
+		categories, err = ensureWacaiImportCategory(ctx, ledgerService, actor, bookID, categories, row.Category, importCategoryDirection(entryType))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return accounts, categories, nil
+}
+
 // commitWacaiRow receives one preview row and creates a ledger entry when all references map cleanly.
-func commitWacaiRow(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor, bookID string, row importsvc.PreviewRow, accounts []ledger.Account, categories []ledger.Category) (ledger.Entry, *importSkippedRow, error) {
+func commitWacaiRow(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor, bookID string, creatorUserID string, row importsvc.PreviewRow, accounts []ledger.Account, categories []ledger.Category) (ledger.Entry, *importSkippedRow, error) {
 	if len(row.Errors) > 0 {
 		return ledger.Entry{}, &importSkippedRow{RowNumber: row.RowNumber, Reason: strings.Join(row.Errors, "; ")}, nil
 	}
 
-	accountID := accountIDByName(accounts, row.Account)
+	accountID := accountIDByNameCurrency(accounts, row.Account, row.Currency)
 	if accountID == "" {
 		return ledger.Entry{}, &importSkippedRow{RowNumber: row.RowNumber, Reason: "account is not mapped"}, nil
 	}
@@ -350,9 +396,16 @@ func commitWacaiRow(ctx context.Context, ledgerService *ledger.Service, actor le
 	if !ok {
 		return ledger.Entry{}, &importSkippedRow{RowNumber: row.RowNumber, Reason: "type is not supported"}, nil
 	}
+	destinationAccountID := ""
+	if entryType == ledger.EntryTypeTransfer {
+		destinationAccountID = accountIDByNameCurrency(accounts, row.DestinationAccount, row.Currency)
+		if destinationAccountID == "" {
+			return ledger.Entry{}, &importSkippedRow{RowNumber: row.RowNumber, Reason: "destination account is not mapped"}, nil
+		}
+	}
 	categoryID := ""
-	if strings.TrimSpace(row.Category) != "" {
-		categoryID = categoryIDByName(categories, row.Category)
+	if strings.TrimSpace(row.Category) != "" && entryType != ledger.EntryTypeTransfer {
+		categoryID = categoryIDByPathDirection(categories, row.Category, importCategoryDirection(entryType))
 		if categoryID == "" {
 			return ledger.Entry{}, &importSkippedRow{RowNumber: row.RowNumber, Reason: "category is not mapped"}, nil
 		}
@@ -367,17 +420,19 @@ func commitWacaiRow(ctx context.Context, ledgerService *ledger.Service, actor le
 	}
 
 	entry, err := ledgerService.CreateEntry(ctx, ledger.CreateEntryRequest{
-		Actor:               actor,
-		BookID:              bookID,
-		Type:                entryType,
-		AccountID:           accountID,
-		CategoryID:          categoryID,
-		AmountCents:         amountCents,
-		TransactionCurrency: row.Currency,
-		OccurredAt:          occurredAt,
-		Note:                row.Note,
-		Merchant:            row.Merchant,
-		Tags:                row.Tags,
+		Actor:                actor,
+		BookID:               bookID,
+		CreatorUserID:        creatorUserID,
+		Type:                 entryType,
+		AccountID:            accountID,
+		DestinationAccountID: destinationAccountID,
+		CategoryID:           categoryID,
+		AmountCents:          amountCents,
+		TransactionCurrency:  row.Currency,
+		OccurredAt:           occurredAt,
+		Note:                 row.Note,
+		Merchant:             row.Merchant,
+		Tags:                 row.Tags,
 	})
 	if err != nil {
 		return ledger.Entry{}, nil, errors.Wrap(err, "create imported entry")
@@ -386,11 +441,116 @@ func commitWacaiRow(ctx context.Context, ledgerService *ledger.Service, actor le
 	return entry, nil, nil
 }
 
-// accountIDByName receives accounts and a source name and returns the exact matching account id.
-func accountIDByName(accounts []ledger.Account, name string) string {
+// listAllImportAccounts receives an actor and returns all personal accounts across bounded pages.
+func listAllImportAccounts(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor) ([]ledger.Account, error) {
+	var accounts []ledger.Account
+	for page := 1; ; page++ {
+		result, err := ledgerService.ListAccounts(ctx, ledger.ListAccountsRequest{Actor: actor, Page: page, PageSize: 100})
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, result.Items...)
+		if page*result.PageSize >= result.Total {
+			break
+		}
+	}
+
+	return accounts, nil
+}
+
+// listAllImportAccountGroups receives an actor and returns all personal account groups across bounded pages.
+func listAllImportAccountGroups(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor) ([]ledger.AccountGroup, error) {
+	var groups []ledger.AccountGroup
+	for page := 1; ; page++ {
+		result, err := ledgerService.ListAccountGroups(ctx, ledger.ListAccountGroupsRequest{Actor: actor, Page: page, PageSize: 100})
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, result.Items...)
+		if page*result.PageSize >= result.Total {
+			break
+		}
+	}
+
+	return groups, nil
+}
+
+// listAllImportCategories receives a book scope and returns all categories across bounded pages.
+func listAllImportCategories(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor, bookID string) ([]ledger.Category, error) {
+	var categories []ledger.Category
+	for page := 1; ; page++ {
+		result, err := ledgerService.ListCategories(ctx, ledger.ListCategoriesRequest{Actor: actor, BookID: bookID, Page: page, PageSize: 100})
+		if err != nil {
+			return nil, err
+		}
+		categories = append(categories, result.Items...)
+		if page*result.PageSize >= result.Total {
+			break
+		}
+	}
+
+	return categories, nil
+}
+
+// ensureWacaiImportAccountGroup receives existing groups and returns a group id for imported accounts.
+func ensureWacaiImportAccountGroup(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor, groups []ledger.AccountGroup) (string, error) {
+	for _, group := range groups {
+		if strings.EqualFold(strings.TrimSpace(group.Name), wacaiImportAccountGroupName) {
+			return group.ID, nil
+		}
+	}
+
+	group, err := ledgerService.CreateAccountGroup(ctx, ledger.CreateAccountGroupRequest{
+		Actor:     actor,
+		Name:      wacaiImportAccountGroupName,
+		SortOrder: len(groups) + 1,
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "create wacai import account group")
+	}
+
+	return group.ID, nil
+}
+
+// ensureWacaiImportAccount receives source account data and creates a missing account when needed.
+func ensureWacaiImportAccount(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor, bookID string, groups []ledger.AccountGroup, groupID string, accounts []ledger.Account, name string, currency string) (string, []ledger.Account, error) {
 	name = strings.TrimSpace(name)
+	currency = strings.ToUpper(strings.TrimSpace(currency))
+	if name == "" {
+		return groupID, accounts, nil
+	}
+	if accountIDByNameCurrency(accounts, name, currency) != "" {
+		return groupID, accounts, nil
+	}
+	if groupID == "" {
+		var err error
+		groupID, err = ensureWacaiImportAccountGroup(ctx, ledgerService, actor, groups)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	account, err := ledgerService.CreateAccount(ctx, ledger.CreateAccountRequest{
+		Actor:         actor,
+		GroupID:       groupID,
+		Name:          name,
+		Type:          inferWacaiAccountType(name),
+		Currency:      currency,
+		SharedBookIDs: []string{bookID},
+	})
+	if err != nil {
+		return "", nil, errors.Wrapf(err, "create wacai import account %q", name)
+	}
+
+	return groupID, append(accounts, account), nil
+}
+
+// accountIDByNameCurrency receives accounts and source data and returns the exact matching account id.
+func accountIDByNameCurrency(accounts []ledger.Account, name string, currency string) string {
+	name = strings.TrimSpace(name)
+	currency = strings.ToUpper(strings.TrimSpace(currency))
 	for _, account := range accounts {
-		if account.Name == name {
+		if account.Name == name && account.Currency == currency {
 			return account.ID
 		}
 	}
@@ -398,16 +558,114 @@ func accountIDByName(accounts []ledger.Account, name string) string {
 	return ""
 }
 
-// categoryIDByName receives categories and a source name and returns the exact active category id.
-func categoryIDByName(categories []ledger.Category, name string) string {
+// ensureWacaiImportCategory receives a source category path and creates missing category tree nodes.
+func ensureWacaiImportCategory(ctx context.Context, ledgerService *ledger.Service, actor ledger.Actor, bookID string, categories []ledger.Category, sourcePath string, direction ledger.CategoryDirection) ([]ledger.Category, error) {
+	parts := splitWacaiCategoryPath(sourcePath)
+	if len(parts) == 0 {
+		return categories, nil
+	}
+
+	parentID := ""
+	for index, part := range parts {
+		categoryID := categoryIDByParentNameDirection(categories, parentID, part, direction)
+		if categoryID != "" {
+			parentID = categoryID
+			continue
+		}
+
+		rawSourceName := part
+		if index == len(parts)-1 {
+			rawSourceName = strings.TrimSpace(sourcePath)
+		}
+		category, err := ledgerService.CreateCategory(ctx, ledger.CreateCategoryRequest{
+			Actor:         actor,
+			BookID:        bookID,
+			ParentID:      parentID,
+			Name:          part,
+			Direction:     direction,
+			SortOrder:     len(categories) + 1,
+			RawSourceName: rawSourceName,
+		})
+		if err != nil {
+			return nil, errors.Wrapf(err, "create wacai import category %q", sourcePath)
+		}
+		categories = append(categories, category)
+		parentID = category.ID
+	}
+
+	return categories, nil
+}
+
+// categoryIDByPathDirection receives categories and a source path and returns the matching active leaf id.
+func categoryIDByPathDirection(categories []ledger.Category, sourcePath string, direction ledger.CategoryDirection) string {
+	parentID := ""
+	for _, part := range splitWacaiCategoryPath(sourcePath) {
+		categoryID := categoryIDByParentNameDirection(categories, parentID, part, direction)
+		if categoryID == "" {
+			return ""
+		}
+		parentID = categoryID
+	}
+
+	return parentID
+}
+
+// categoryIDByParentNameDirection receives category identity fields and returns the matching active id.
+func categoryIDByParentNameDirection(categories []ledger.Category, parentID string, name string, direction ledger.CategoryDirection) string {
+	parentID = strings.TrimSpace(parentID)
 	name = strings.TrimSpace(name)
 	for _, category := range categories {
-		if category.Name == name && !category.Archived {
+		if category.ParentID == parentID && category.Name == name && category.Direction == direction && !category.Archived {
 			return category.ID
 		}
 	}
 
 	return ""
+}
+
+// splitWacaiCategoryPath receives a Wacai category path and returns normalized hierarchy parts.
+func splitWacaiCategoryPath(sourcePath string) []string {
+	rawParts := strings.FieldsFunc(sourcePath, func(r rune) bool {
+		return r == '/' || r == '\\' || r == '／'
+	})
+	parts := make([]string, 0, len(rawParts))
+	for _, part := range rawParts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+
+	return parts
+}
+
+// importCategoryDirection receives an entry type and returns the category direction used for imported paths.
+func importCategoryDirection(entryType ledger.EntryType) ledger.CategoryDirection {
+	switch entryType {
+	case ledger.EntryTypeIncome, ledger.EntryTypeBorrow, ledger.EntryTypeRefund, ledger.EntryTypeReimbursement, ledger.EntryTypeRepayment:
+		return ledger.CategoryDirectionIncome
+	default:
+		return ledger.CategoryDirectionExpense
+	}
+}
+
+// inferWacaiAccountType receives a source account name and returns a broad account type.
+func inferWacaiAccountType(name string) ledger.AccountType {
+	normalized := strings.ToLower(strings.TrimSpace(name))
+	switch {
+	case strings.Contains(normalized, "信用卡") || strings.Contains(normalized, "credit"):
+		return ledger.AccountTypeCreditCard
+	case strings.Contains(normalized, "支付宝") || strings.Contains(normalized, "微信") || strings.Contains(normalized, "paypal"):
+		return ledger.AccountTypePaymentPlatform
+	case strings.Contains(normalized, "loan") || strings.Contains(normalized, "贷款"):
+		return ledger.AccountTypeLoan
+	case strings.Contains(normalized, "股票") || strings.Contains(normalized, "基金") || strings.Contains(normalized, "invest"):
+		return ledger.AccountTypeInvestment
+	case strings.Contains(normalized, "现金") || strings.Contains(normalized, "cash"):
+		return ledger.AccountTypeCash
+	default:
+		return ledger.AccountTypeSavings
+	}
 }
 
 // importEntryType receives source text and returns the supported ledger entry type.
@@ -417,6 +675,18 @@ func importEntryType(raw string) (ledger.EntryType, bool) {
 		return ledger.EntryTypeExpense, true
 	case "income":
 		return ledger.EntryTypeIncome, true
+	case "transfer":
+		return ledger.EntryTypeTransfer, true
+	case "refund":
+		return ledger.EntryTypeRefund, true
+	case "reimbursement":
+		return ledger.EntryTypeReimbursement, true
+	case "borrow":
+		return ledger.EntryTypeBorrow, true
+	case "lend":
+		return ledger.EntryTypeLend, true
+	case "repayment":
+		return ledger.EntryTypeRepayment, true
 	default:
 		return "", false
 	}

@@ -82,6 +82,10 @@ func (s *Service) CreateEntry(ctx context.Context, request CreateEntryRequest) (
 	if member.Role == RoleViewer {
 		return Entry{}, errors.Wrapf(ErrAccessDenied, "viewer %q cannot create entries", request.Actor.UserID)
 	}
+	creatorUserID, err := s.createEntryCreatorUserID(ctx, request, member)
+	if err != nil {
+		return Entry{}, err
+	}
 
 	account, err := s.visibleAccount(ctx, request.Actor, request.BookID, request.AccountID)
 	if err != nil {
@@ -113,7 +117,7 @@ func (s *Service) CreateEntry(ctx context.Context, request CreateEntryRequest) (
 	entry := Entry{
 		ID:                    uuid.NewString(),
 		BookID:                request.BookID,
-		CreatorUserID:         request.Actor.UserID,
+		CreatorUserID:         creatorUserID,
 		Type:                  request.Type,
 		AccountID:             strings.TrimSpace(request.AccountID),
 		DestinationAccountID:  strings.TrimSpace(request.DestinationAccountID),
@@ -137,6 +141,22 @@ func (s *Service) CreateEntry(ctx context.Context, request CreateEntryRequest) (
 	}
 
 	return created, nil
+}
+
+// createEntryCreatorUserID receives create intent and returns the server-approved creator user id.
+func (s *Service) createEntryCreatorUserID(ctx context.Context, request CreateEntryRequest, actorMember BookMember) (string, error) {
+	creatorUserID := strings.TrimSpace(request.CreatorUserID)
+	if creatorUserID == "" || creatorUserID == request.Actor.UserID {
+		return request.Actor.UserID, nil
+	}
+	if actorMember.Role != RoleOwner && actorMember.Role != RoleAdministrator {
+		return "", errors.Wrapf(ErrAccessDenied, "role %q cannot create entries for another user", actorMember.Role)
+	}
+	if _, err := s.store.Member(ctx, request.BookID, creatorUserID); err != nil {
+		return "", errors.Wrapf(ErrAccessDenied, "creator %q is not a member of book %q", creatorUserID, request.BookID)
+	}
+
+	return creatorUserID, nil
 }
 
 // UpdateEntry receives an actor request, enforces mutation policy, validates final state, and stores the entry.

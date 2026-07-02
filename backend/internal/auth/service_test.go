@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Laisky/errors/v2"
+	"github.com/google/uuid"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/require"
@@ -32,6 +33,7 @@ func TestServiceRegisterLoginAndLogout(t *testing.T) {
 	require.Equal(t, "person@example.test", user.Email)
 	require.Equal(t, UserStatusActive, user.Status)
 	require.True(t, user.EmailVerified)
+	requireUUIDv7(t, user.ID)
 
 	result, err := service.Login(context.Background(), LoginRequest{
 		Email:    "person@example.test",
@@ -52,6 +54,53 @@ func TestServiceRegisterLoginAndLogout(t *testing.T) {
 	_, err = service.SessionFromToken(context.Background(), result.SessionToken)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "load session")
+}
+
+// requireUUIDv7 receives a user id and verifies it is a UUID version 7 value.
+func requireUUIDv7(t *testing.T, userID string) {
+	t.Helper()
+
+	parsed, err := uuid.Parse(userID)
+	require.NoError(t, err)
+	require.Equal(t, uuid.Version(7), parsed.Version())
+}
+
+// TestServiceResolveUserReturnsOnlyActivePublicUsers verifies import member lookup boundaries.
+func TestServiceResolveUserReturnsOnlyActivePublicUsers(t *testing.T) {
+	service := NewService(Config{
+		AllowedRegistrationDomains: []string{"example.test"},
+		EmailRegisterEnabled:       true,
+		EmailVerificationRequired:  false,
+	}, NewMemoryStore(), NoopTurnstileVerifier{})
+
+	user, err := service.Register(context.Background(), RegisterRequest{
+		Email:    " Person@Example.Test ",
+		Password: "correct horse battery staple",
+	})
+	require.NoError(t, err)
+
+	byEmail, err := service.ResolveUser(context.Background(), ResolveUserRequest{Email: "PERSON@example.test"})
+	require.NoError(t, err)
+	require.Equal(t, user.ID, byEmail.ID)
+	require.False(t, byEmail.TOTPEnabled)
+
+	byID, err := service.ResolveUser(context.Background(), ResolveUserRequest{UserID: user.ID})
+	require.NoError(t, err)
+	require.Equal(t, "person@example.test", byID.Email)
+
+	pendingService := NewService(Config{
+		EmailRegisterEnabled:      true,
+		EmailVerificationRequired: true,
+	}, NewMemoryStore(), NoopTurnstileVerifier{})
+	pending, err := pendingService.Register(context.Background(), RegisterRequest{
+		Email:    "pending@example.test",
+		Password: "correct horse battery staple",
+	})
+	require.NoError(t, err)
+
+	_, err = pendingService.ResolveUser(context.Background(), ResolveUserRequest{UserID: pending.ID})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "user is not active")
 }
 
 // TestServiceRequiresVerificationBeforeLogin verifies unverified users cannot create sessions.

@@ -18,7 +18,7 @@ import (
 
 const (
 	sourceWacai     = "wacai"
-	parserVersion   = "wacai-csv-preview-v1"
+	parserVersion   = "wacai-preview-v2"
 	maxPreviewBytes = 5 * 1024 * 1024
 	maxPreviewRows  = 500
 	defaultCurrency = "CNY"
@@ -34,8 +34,8 @@ func NewService(store Store) *Service {
 	return &Service{store: store}
 }
 
-// PreviewWacaiCSV receives an uploaded CSV file, parses preview rows, and stores an idempotent batch.
-func (s *Service) PreviewWacaiCSV(ctx context.Context, request PreviewRequest) (Batch, error) {
+// PreviewWacaiFile receives an uploaded Wacai file, parses preview rows, and stores an idempotent batch.
+func (s *Service) PreviewWacaiFile(ctx context.Context, request PreviewRequest) (Batch, error) {
 	if request.Actor.UserID == "" {
 		return Batch{}, errors.Wrap(ErrInvalidInput, "actor user id is required")
 	}
@@ -48,8 +48,9 @@ func (s *Service) PreviewWacaiCSV(ctx context.Context, request PreviewRequest) (
 	if len(request.Data) > maxPreviewBytes {
 		return Batch{}, errors.Wrap(ErrInvalidInput, "import file is too large")
 	}
-	if strings.ToLower(filepath.Ext(request.Filename)) != ".csv" {
-		return Batch{}, errors.Wrap(ErrInvalidInput, "only csv preview is supported")
+	extension := strings.ToLower(filepath.Ext(request.Filename))
+	if extension != ".csv" && extension != ".xlsx" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "only csv and xlsx preview are supported")
 	}
 
 	sourceHash := sourceHash(request.Data)
@@ -59,7 +60,7 @@ func (s *Service) PreviewWacaiCSV(ctx context.Context, request PreviewRequest) (
 		return Batch{}, errors.Wrap(err, "load import batch by hash")
 	}
 
-	rows, schema, detected, warningCount, errorCount, err := parseWacaiCSV(request.Data)
+	rows, schema, detected, warningCount, errorCount, err := parseWacaiFile(request.Data, extension)
 	if err != nil {
 		return Batch{}, err
 	}
@@ -92,6 +93,15 @@ func (s *Service) PreviewWacaiCSV(ctx context.Context, request PreviewRequest) (
 	}
 
 	return stored, nil
+}
+
+// PreviewWacaiCSV receives an uploaded CSV file and returns a Wacai preview batch.
+func (s *Service) PreviewWacaiCSV(ctx context.Context, request PreviewRequest) (Batch, error) {
+	if strings.ToLower(filepath.Ext(request.Filename)) != ".csv" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "only csv preview is supported")
+	}
+
+	return s.PreviewWacaiFile(ctx, request)
 }
 
 // Batch receives an actor and batch id, verifies ownership, and returns the stored import batch.
@@ -175,6 +185,23 @@ func normalizeAppliedEntryIDs(entryIDs []string) []string {
 	return normalized
 }
 
+// parseWacaiFile receives source bytes and returns preview rows, schema, detected values, and diagnostics.
+func parseWacaiFile(data []byte, extension string) ([]PreviewRow, DetectedSchema, DetectedValues, int, int, error) {
+	switch strings.ToLower(strings.TrimSpace(extension)) {
+	case ".csv":
+		return parseWacaiCSV(data)
+	case ".xlsx":
+		records, metadata, err := parseWacaiXLSX(data)
+		if err != nil {
+			return nil, DetectedSchema{}, DetectedValues{}, 0, 0, err
+		}
+
+		return parseWacaiRecords(records, metadata)
+	default:
+		return nil, DetectedSchema{}, DetectedValues{}, 0, 0, errors.Wrap(ErrInvalidInput, "unsupported import file extension")
+	}
+}
+
 // parseWacaiCSV receives CSV bytes and returns preview rows, schema, detected values, and diagnostics.
 func parseWacaiCSV(data []byte) ([]PreviewRow, DetectedSchema, DetectedValues, int, int, error) {
 	// Wacai exports are commonly saved as UTF-8 with a byte-order mark. Strip a
@@ -193,17 +220,30 @@ func parseWacaiCSV(data []byte) ([]PreviewRow, DetectedSchema, DetectedValues, i
 		return nil, DetectedSchema{}, DetectedValues{}, 0, 0, errors.Wrap(ErrInvalidInput, "csv requires header and rows")
 	}
 
-	headers := normalizeHeaders(records[0])
-	schema := detectSchema(headers)
-	rows := make([]PreviewRow, 0, min(len(records)-1, maxPreviewRows))
+	return parseWacaiRecords(records, wacaiMetadata{})
+}
+
+// parseWacaiRecords receives tabular Wacai rows and returns normalized preview data.
+func parseWacaiRecords(records [][]string, metadata wacaiMetadata) ([]PreviewRow, DetectedSchema, DetectedValues, int, int, error) {
+	headerIndex, schema := detectWacaiHeader(records)
+	if headerIndex < 0 {
+		return nil, DetectedSchema{}, DetectedValues{}, 0, 0, errors.Wrap(ErrInvalidInput, "wacai header row is missing required columns")
+	}
+
+	headers := normalizeHeaders(records[headerIndex])
+	rows := make([]PreviewRow, 0, min(len(records)-headerIndex-1, maxPreviewRows))
 	detected := detectedCollector{}
 	warningCount := 0
 	errorCount := 0
-	for index, record := range records[1:] {
-		if index >= maxPreviewRows {
+	for recordIndex := headerIndex + 1; recordIndex < len(records); recordIndex++ {
+		if len(rows) >= maxPreviewRows {
 			break
 		}
-		row := buildPreviewRow(index+2, headers, record, schema)
+		record := records[recordIndex]
+		if isEmptyRecord(record) {
+			continue
+		}
+		row := buildPreviewRow(recordIndex+1, headers, record, schema, metadata)
 		validatePreviewRow(&row)
 		detected.add(row)
 		warningCount += len(row.Warnings)
@@ -212,6 +252,30 @@ func parseWacaiCSV(data []byte) ([]PreviewRow, DetectedSchema, DetectedValues, i
 	}
 
 	return rows, schema, detected.values(), warningCount, errorCount, nil
+}
+
+// detectWacaiHeader receives records and returns the first row that looks like a Wacai table header.
+func detectWacaiHeader(records [][]string) (int, DetectedSchema) {
+	for index, record := range records {
+		headers := normalizeHeaders(record)
+		schema := detectSchema(headers)
+		if len(schema.Missing) == 0 {
+			return index, schema
+		}
+	}
+
+	return -1, DetectedSchema{}
+}
+
+// isEmptyRecord receives a source row and reports whether every cell is blank.
+func isEmptyRecord(record []string) bool {
+	for _, value := range record {
+		if strings.TrimSpace(value) != "" {
+			return false
+		}
+	}
+
+	return true
 }
 
 // normalizeHeaders receives raw CSV headers and returns trimmed headers.
@@ -249,22 +313,24 @@ func detectSchema(headers []string) DetectedSchema {
 // headerAliases returns supported Wacai-style CSV header aliases.
 func headerAliases() map[string][]string {
 	return map[string][]string{
-		"type":       {"type", "transaction type", "bill type", "类型", "收支类型"},
-		"occurredAt": {"date", "time", "datetime", "occurred at", "日期", "时间", "交易时间"},
-		"amount":     {"amount", "money", "金额"},
-		"currency":   {"currency", "币种"},
-		"account":    {"account", "账户", "账号"},
-		"category":   {"category", "分类"},
-		"book":       {"book", "账本"},
-		"member":     {"member", "成员"},
-		"merchant":   {"merchant", "payee", "商家", "对象"},
-		"note":       {"note", "memo", "备注"},
-		"tags":       {"tags", "tag", "标签"},
+		"type":         {"type", "transaction type", "bill type", "类型", "收支类型"},
+		"occurredAt":   {"date", "time", "datetime", "occurred at", "日期", "时间", "交易时间", "日期时间"},
+		"amount":       {"amount", "money", "金额"},
+		"currency":     {"currency", "币种"},
+		"account":      {"account", "账户", "账号", "收付账户"},
+		"category":     {"category", "分类", "类别"},
+		"book":         {"book", "账本", "导出账本"},
+		"member":       {"member", "成员", "收付款人"},
+		"participants": {"participants", "participant", "参与人"},
+		"merchant":     {"merchant", "payee", "商家", "对象"},
+		"attribute":    {"attribute", "attributes", "属性"},
+		"note":         {"note", "memo", "备注"},
+		"tags":         {"tags", "tag", "标签"},
 	}
 }
 
-// buildPreviewRow receives one CSV record and returns its preview row.
-func buildPreviewRow(rowNumber int, headers []string, record []string, schema DetectedSchema) PreviewRow {
+// buildPreviewRow receives one tabular record and returns its preview row.
+func buildPreviewRow(rowNumber int, headers []string, record []string, schema DetectedSchema, metadata wacaiMetadata) PreviewRow {
 	raw := make(map[string]string, len(headers))
 	for index, header := range headers {
 		if index < len(record) {
@@ -274,20 +340,30 @@ func buildPreviewRow(rowNumber int, headers []string, record []string, schema De
 		raw[header] = ""
 	}
 
+	sourceType := valueFor(schema, raw, "type")
+	sourceCurrency := valueFor(schema, raw, "currency")
+	account, destinationAccount := parseWacaiAccounts(valueFor(schema, raw, "account"), sourceType)
 	row := PreviewRow{
-		RowNumber:  rowNumber,
-		Raw:        raw,
-		Type:       valueFor(schema, raw, "type"),
-		OccurredAt: valueFor(schema, raw, "occurredAt"),
-		Amount:     valueFor(schema, raw, "amount"),
-		Currency:   strings.ToUpper(valueFor(schema, raw, "currency")),
-		Account:    valueFor(schema, raw, "account"),
-		Category:   valueFor(schema, raw, "category"),
-		Book:       valueFor(schema, raw, "book"),
-		Member:     valueFor(schema, raw, "member"),
-		Merchant:   valueFor(schema, raw, "merchant"),
-		Note:       valueFor(schema, raw, "note"),
-		Tags:       splitTags(valueFor(schema, raw, "tags")),
+		RowNumber:          rowNumber,
+		Raw:                raw,
+		Type:               normalizeWacaiType(sourceType),
+		SourceType:         sourceType,
+		OccurredAt:         valueFor(schema, raw, "occurredAt"),
+		Amount:             valueFor(schema, raw, "amount"),
+		Currency:           normalizeWacaiCurrency(sourceCurrency),
+		Account:            account,
+		DestinationAccount: destinationAccount,
+		Category:           valueFor(schema, raw, "category"),
+		Book:               valueFor(schema, raw, "book"),
+		Member:             valueFor(schema, raw, "member"),
+		Participants:       splitTags(valueFor(schema, raw, "participants")),
+		Merchant:           valueFor(schema, raw, "merchant"),
+		Attribute:          valueFor(schema, raw, "attribute"),
+		Note:               valueFor(schema, raw, "note"),
+		Tags:               splitTags(valueFor(schema, raw, "tags")),
+	}
+	if row.Book == "" {
+		row.Book = metadata.Book
 	}
 	if row.Currency == "" {
 		row.Currency = defaultCurrency
@@ -341,6 +417,9 @@ func validatePreviewRow(row *PreviewRow) {
 	if strings.TrimSpace(row.Account) == "" {
 		row.Warnings = append(row.Warnings, "account is missing")
 	}
+	if row.Type == "transfer" && strings.TrimSpace(row.DestinationAccount) == "" {
+		row.Warnings = append(row.Warnings, "destination account is missing")
+	}
 	if strings.TrimSpace(row.Category) == "" {
 		row.Warnings = append(row.Warnings, "category is missing")
 	}
@@ -371,9 +450,13 @@ type detectedCollector struct {
 func (d *detectedCollector) add(row PreviewRow) {
 	d.books = appendUnique(d.books, row.Book)
 	d.accounts = appendUnique(d.accounts, row.Account)
+	d.accounts = appendUnique(d.accounts, row.DestinationAccount)
 	d.categories = appendUnique(d.categories, row.Category)
 	d.currencies = appendUnique(d.currencies, row.Currency)
 	d.members = appendUnique(d.members, row.Member)
+	for _, participant := range row.Participants {
+		d.members = appendUnique(d.members, participant)
+	}
 	d.merchants = appendUnique(d.merchants, row.Merchant)
 	for _, tag := range row.Tags {
 		d.tags = appendUnique(d.tags, tag)

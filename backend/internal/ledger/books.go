@@ -140,6 +140,46 @@ func (s *Service) ListBookMembers(ctx context.Context, request ListBookMembersRe
 	return paginate(members, request.Page, request.PageSize), nil
 }
 
+// AddBookMember receives actor intent, enforces manager roles, and adds an existing user to a book.
+func (s *Service) AddBookMember(ctx context.Context, request AddBookMemberRequest) (BookMember, error) {
+	manager, _, err := s.authorizeBookMember(ctx, request.Actor, request.BookID)
+	if err != nil {
+		return BookMember{}, err
+	}
+	if manager.Role != RoleOwner && manager.Role != RoleAdministrator {
+		return BookMember{}, errors.Wrapf(ErrAccessDenied, "role %q cannot add book members", manager.Role)
+	}
+	if strings.TrimSpace(request.UserID) == "" {
+		return BookMember{}, errors.Wrap(ErrInvalidInput, "member user id is required")
+	}
+	if !isSupportedMemberRole(request.Role) {
+		return BookMember{}, errors.Wrap(ErrInvalidInput, "member role is invalid")
+	}
+	if existing, err := s.store.Member(ctx, request.BookID, strings.TrimSpace(request.UserID)); err == nil {
+		return existing, nil
+	}
+
+	now := time.Now().UTC()
+	member := BookMember{
+		BookID:      request.BookID,
+		UserID:      strings.TrimSpace(request.UserID),
+		Role:        request.Role,
+		DisplayName: strings.TrimSpace(request.DisplayName),
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	if member.DisplayName == "" {
+		member.DisplayName = member.UserID
+	}
+
+	created, err := s.store.CreateBookMember(ctx, member)
+	if err != nil {
+		return BookMember{}, errors.Wrap(err, "create book member")
+	}
+
+	return created, nil
+}
+
 // validateCreateBookRequest receives book input and returns an error when it is invalid.
 func validateCreateBookRequest(request CreateBookRequest) error {
 	if strings.TrimSpace(request.Name) == "" {
@@ -174,6 +214,16 @@ func validateUpdateBookRequest(request UpdateBookRequest) error {
 	}
 
 	return nil
+}
+
+// isSupportedMemberRole receives a role and reports whether it can be assigned to a book member.
+func isSupportedMemberRole(role Role) bool {
+	switch role {
+	case RoleAdministrator, RoleMember, RoleViewer:
+		return true
+	default:
+		return false
+	}
 }
 
 // authorizeBookMember receives actor and book id and returns membership plus book after policy checks.

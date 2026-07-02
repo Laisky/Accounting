@@ -107,23 +107,28 @@ const fixtureImportBatch = {
   id: 'import-batch-1',
   userId: 'user-1',
   source: 'wacai',
-  filename: 'wacai.csv',
-  contentType: 'text/csv',
+  filename: 'wacai.xlsx',
+  contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   sourceHash: 'source-hash-1',
-  parserVersion: 'wacai-csv-preview-v1',
+  parserVersion: 'wacai-preview-v2',
   status: 'preview',
-  detectedSchema: { columns: { occurredAt: 'date', type: 'type', amount: 'amount' } },
+  detectedSchema: { columns: { occurredAt: '日期时间', type: '类型', amount: '金额' } },
   rows: [
     {
-      rowNumber: 2,
+      rowNumber: 8,
       type: 'expense',
+      sourceType: '支出',
       occurredAt: '2026-07-01',
       amount: '12.30',
       currency: 'USD',
       account: 'Cash',
+      destinationAccount: '',
       category: 'Dining',
       book: 'Household',
+      member: 'Self',
+      participants: ['Roommate'],
       merchant: 'Market',
+      attribute: 'Reviewed',
       note: 'Import lunch',
       tags: ['food', 'work'],
     },
@@ -133,6 +138,7 @@ const fixtureImportBatch = {
     accounts: ['Cash'],
     categories: ['Dining'],
     currencies: ['USD'],
+    members: ['Self', 'Roommate'],
     merchants: ['Market'],
     tags: ['food', 'work'],
   },
@@ -606,13 +612,28 @@ describe('App', () => {
     fireEvent.click(within(nav).getByRole('button', { name: 'Import' }));
 
     expect(await screen.findByRole('region', { name: 'Import data' })).toBeInTheDocument();
-    const file = new File(['date,type,amount\n2026-07-01,expense,12.30\n'], 'wacai.csv', { type: 'text/csv' });
+    expect(screen.getByLabelText('Destination book')).toHaveTextContent('Household');
+    fireEvent.change(screen.getByLabelText('New book'), { target: { value: 'Fish pond' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/books', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: expect.stringContaining('"name":"Fish pond"'),
+    }));
+
+    const file = new File(['xlsx-bytes'], 'wacai.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     fireEvent.change(screen.getByLabelText('Upload Wacai export file'), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Stage import' }));
 
     expect(await screen.findByText('Import staged')).toBeInTheDocument();
     expect(screen.getByLabelText('Import preview summary')).toHaveTextContent('Rows');
     expect(screen.getByLabelText('Detected import values')).toHaveTextContent('Dining');
+    expect(screen.getByLabelText('Import row diagnostics')).toHaveTextContent('Self');
+    expect(screen.getByLabelText('Import row diagnostics')).toHaveTextContent('Roommate');
+    expect(screen.getByLabelText('Member mappings')).toHaveTextContent('Roommate');
+    expect(screen.getByText('Add member mappings before applying.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply import' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('UID or email for Roommate'), { target: { value: 'roommate@example.test' } });
     fireEvent.click(screen.getByRole('button', { name: 'Apply import' }));
 
     expect(await screen.findByText('Imported 1 rows, skipped 0.')).toBeInTheDocument();
@@ -620,7 +641,7 @@ describe('App', () => {
     expect(fetch).toHaveBeenCalledWith('/api/books/book-1/imports/import-batch-1/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: '{"sourceHash":"source-hash-1"}',
+      body: '{"sourceHash":"source-hash-1","memberMappings":{"Roommate":"roommate@example.test"}}',
     });
   });
 

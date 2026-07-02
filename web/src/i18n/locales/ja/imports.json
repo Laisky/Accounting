@@ -4,22 +4,33 @@
       "activityLog": "アクティビティログ",
       "closeActivity": "アクティビティを閉じる",
       "currentSession": "現在のセッション",
+      "destinationBook": "Destination book",
       "detectedValues": "検出されたインポート値",
       "importData": "データをインポート",
       "importReview": "インポートのレビュー",
       "ledgerSummary": "台帳サマリー",
+      "memberMappings": "Member mappings",
       "openActivity": "アクティビティを開く",
       "previewSummary": "インポートプレビューのサマリー",
       "rowDiagnostics": "インポート行の診断",
       "uploadFile": "Wacai のエクスポートファイルをアップロード"
     },
-    "acceptedFormat": "対応形式: CSV",
+    "acceptedFormat": "Supported formats: CSV or XLSX",
     "auditEvents": "監査イベント",
     "chooseSource": "ソースを選択し、エクスポートをアップロードして、コミット前にレビューします。",
     "clearFile": "ファイルをクリア",
-    "csvPreviewReady": "CSV プレビューの準備が整いました",
+    "csvPreviewReady": "CSV/XLSX preview ready",
     "dataImport": "データインポート",
     "dataSource": "データソース",
+    "destination": {
+      "create": "Create",
+      "creating": "Creating",
+      "newBook": "New book",
+      "none": "No book",
+      "placeholder": "Book name",
+      "select": "Import into",
+      "title": "Destination book"
+    },
     "detected": {
       "accounts": "口座",
       "books": "帳簿",
@@ -31,6 +42,7 @@
     },
     "error": {
       "applyFailed": "Import apply failed",
+      "bookCreateFailed": "Book creation failed",
       "previewFailed": "インポートプレビューに失敗しました"
     },
     "exportDetected": "{{source}} のエクスポートを検出しました",
@@ -47,6 +59,15 @@
     },
     "fileSummary": "{{type}} - {{size}} MB",
     "heading": "Wacai の帳簿をクリーンな台帳にインポートします。",
+    "memberMapping": {
+      "description": "Map each source name to an existing UID or email.",
+      "matched": "Known member: {{value}}",
+      "missing": "Add member mappings before applying.",
+      "placeholder": "UID or email",
+      "required": "{{value}} required",
+      "title": "Member mappings",
+      "userReference": "UID or email for {{name}}"
+    },
     "missingFields": "不足しているソースフィールド: {{fields}}",
     "noAuditEvents": "監査イベントはまだありません。",
     "noFileSelected": "ファイルが選択されていません",
@@ -78,10 +99,10 @@
     },
     "spreadsheet": "スプレッドシート",
     "stage": {
-      "apply": "Apply import",
       "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
-      "applying": "Applying import",
+      "apply": "Apply import",
       "applyComplete": "Import applied.",
+      "applying": "Applying import",
       "stage": "インポートをステージング",
       "staged": "インポートをステージングしました",
       "staging": "インポートをステージング中"

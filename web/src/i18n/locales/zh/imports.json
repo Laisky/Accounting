@@ -4,22 +4,33 @@
       "activityLog": "动态日志",
       "closeActivity": "关闭动态",
       "currentSession": "当前会话",
+      "destinationBook": "Destination book",
       "detectedValues": "检测到的导入值",
       "importData": "导入数据",
       "importReview": "导入审核",
       "ledgerSummary": "账本摘要",
+      "memberMappings": "Member mappings",
       "openActivity": "打开动态",
       "previewSummary": "导入预览摘要",
       "rowDiagnostics": "导入行诊断",
       "uploadFile": "上传 Wacai 导出文件"
     },
-    "acceptedFormat": "支持格式：CSV",
+    "acceptedFormat": "Supported formats: CSV or XLSX",
     "auditEvents": "审计事件",
     "chooseSource": "选择来源、上传导出文件，提交前先审核。",
     "clearFile": "清除文件",
-    "csvPreviewReady": "CSV 预览已就绪",
+    "csvPreviewReady": "CSV/XLSX preview ready",
     "dataImport": "数据导入",
     "dataSource": "数据来源",
+    "destination": {
+      "create": "Create",
+      "creating": "Creating",
+      "newBook": "New book",
+      "none": "No book",
+      "placeholder": "Book name",
+      "select": "Import into",
+      "title": "Destination book"
+    },
     "detected": {
       "accounts": "账户",
       "books": "账本",
@@ -31,6 +42,7 @@
     },
     "error": {
       "applyFailed": "Import apply failed",
+      "bookCreateFailed": "Book creation failed",
       "previewFailed": "导入预览失败"
     },
     "exportDetected": "已检测到 {{source}} 导出",
@@ -47,6 +59,15 @@
     },
     "fileSummary": "{{type}} - {{size}} MB",
     "heading": "将 Wacai 账本导入干净的账本。",
+    "memberMapping": {
+      "description": "Map each source name to an existing UID or email.",
+      "matched": "Known member: {{value}}",
+      "missing": "Add member mappings before applying.",
+      "placeholder": "UID or email",
+      "required": "{{value}} required",
+      "title": "Member mappings",
+      "userReference": "UID or email for {{name}}"
+    },
     "missingFields": "缺少来源字段：{{fields}}",
     "noAuditEvents": "暂无审计事件。",
     "noFileSelected": "未选择文件",
@@ -78,10 +99,10 @@
     },
     "spreadsheet": "电子表格",
     "stage": {
-      "apply": "Apply import",
       "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
-      "applying": "Applying import",
+      "apply": "Apply import",
       "applyComplete": "Import applied.",
+      "applying": "Applying import",
       "stage": "暂存导入",
       "staged": "导入已暂存",
       "staging": "正在暂存导入"
