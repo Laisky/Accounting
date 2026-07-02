@@ -45,8 +45,9 @@ import {
   type LedgerSummary,
 } from '../../lib/api/ledger';
 import { emptyRuntimeConfig, type RuntimeConfig } from '../../lib/api/runtimeConfig';
-import { buildRateIndex, convertEntryAmountCents, formatMoney, supportedCurrencies } from '../../lib/money';
+import { buildRateIndex, convertEntryAmountCents, formatMoney } from '../../lib/money';
 import { ReportWorkspace } from '../reports/ReportWorkspace';
+import { AccountsView } from './AccountsView';
 import './wacai.css';
 
 type MobileTab = 'accounts' | 'record' | 'reports' | 'me';
@@ -290,26 +291,41 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
   return (
     <main className="wacaiShell">
       <section className="phoneFrame" aria-label={t('mobile.a11y.workspace')}>
-        <header className="mobileHeader">
-          <div>
-            <button className="bookButton" type="button" aria-label={t('mobile.a11y.currentBook')}>
-              <span>{selectedBook?.name ?? t('mobile.defaultBookName')}</span>
-              <ChevronDown size={16} />
-            </button>
-            <p>{formatShortDate(new Date())}</p>
-          </div>
-          <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>
-            <button type="button" aria-label={t('mobile.nav.accounts')} onClick={() => setActiveTab('accounts')}>
-              <Shirt size={22} />
-            </button>
-            <button type="button" aria-label={t('mobile.a11y.searchTransactions')}>
-              <Search size={24} />
-            </button>
-            <button type="button" aria-label={t('mobile.a11y.moreOptions')}>
-              <MoreHorizontal size={25} />
-            </button>
-          </div>
-        </header>
+        {activeTab === 'accounts' ? (
+          <header className="mobileHeader accountHeader">
+            <span />
+            <h1>Accounts</h1>
+            <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>
+              <button type="button" aria-label="Add account" onClick={handlePrepareAccount}>
+                <Plus size={25} />
+              </button>
+              <button type="button" aria-label={t('mobile.a11y.moreOptions')}>
+                <MoreHorizontal size={25} />
+              </button>
+            </div>
+          </header>
+        ) : (
+          <header className="mobileHeader">
+            <div>
+              <button className="bookButton" type="button" aria-label={t('mobile.a11y.currentBook')}>
+                <span>{selectedBook?.name ?? t('mobile.defaultBookName')}</span>
+                <ChevronDown size={16} />
+              </button>
+              <p>{formatShortDate(new Date())}</p>
+            </div>
+            <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>
+              <button type="button" aria-label={t('mobile.nav.accounts')} onClick={() => setActiveTab('accounts')}>
+                <Shirt size={22} />
+              </button>
+              <button type="button" aria-label={t('mobile.a11y.searchTransactions')}>
+                <Search size={24} />
+              </button>
+              <button type="button" aria-label={t('mobile.a11y.moreOptions')}>
+                <MoreHorizontal size={25} />
+              </button>
+            </div>
+          </header>
+        )}
 
         {error ? <p className="mobileNotice mobileNoticeError">{error}</p> : null}
         {status ? <p className="mobileNotice">{status}</p> : null}
@@ -379,68 +395,6 @@ export function WacaiWorkspace({ actor, runtimeConfig, onLogout }: WacaiWorkspac
         </nav>
       </section>
     </main>
-  );
-}
-
-// AccountsView receives account data and returns the account management tab.
-function AccountsView({
-  accounts,
-  books,
-  currencyCode,
-  isBusy,
-  onPrepareAccount,
-  onUpdateBookCurrency,
-  selectedBookId,
-  setSelectedBookId,
-}: {
-  accounts: Account[];
-  books: BookListItem[];
-  currencyCode: string;
-  isBusy: boolean;
-  onPrepareAccount: () => void;
-  onUpdateBookCurrency: (currency: string) => void;
-  selectedBookId: string;
-  setSelectedBookId: (value: string) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <section className="tabPanel accountPanel" aria-label={t('mobile.nav.accounts')}>
-      <div className="panelIntro">
-        <p>{t('mobile.accounts.eyebrow')}</p>
-        <h1>{t('mobile.accounts.heading')}</h1>
-      </div>
-      <label className="mobileField">
-        <span>{t('mobile.accounts.book')}</span>
-        <select value={selectedBookId} onChange={(event) => setSelectedBookId(event.target.value)} disabled={!books.length}>
-          {books.length ? books.map((book) => <option key={book.id} value={book.id}>{book.name}</option>) : <option>{t('common.noBookYet')}</option>}
-        </select>
-      </label>
-      <label className="mobileField">
-        <span>{t('common.baseCurrency')}</span>
-        <select value={currencyCode} onChange={(event) => onUpdateBookCurrency(event.target.value)} disabled={!books.length || isBusy}>
-          {supportedCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
-        </select>
-      </label>
-      <div className="accountCards">
-        {accounts.length ? (
-          accounts.map((account) => (
-            <article key={account.id}>
-              <WalletCards size={24} />
-              <div>
-                <strong>{account.name}</strong>
-                <span>{account.type} / {account.currency}</span>
-              </div>
-              <b>{formatMoney(account.openingBalanceCents, account.currency)}</b>
-            </article>
-          ))
-        ) : (
-          <p className="emptyState">{t('mobile.accounts.noAccount')}</p>
-        )}
-      </div>
-      <button className="mobilePrimaryButton" type="button" disabled={isBusy} onClick={onPrepareAccount}>
-        {t('mobile.accounts.prepareAccount')}
-      </button>
-    </section>
   );
 }
 

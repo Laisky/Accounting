@@ -219,8 +219,10 @@ describe('App', () => {
     fireEvent.click(within(nav).getByRole('button', { name: 'Accounts' }));
 
     expect(await screen.findByRole('region', { name: 'Accounts' })).toBeInTheDocument();
-    expect(screen.getByText('Wallets shared with this book.')).toBeInTheDocument();
-    expect(screen.getByText('Cash')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Accounts' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Net assets' })).toBeInTheDocument();
+    expect(screen.getByText('Credit cards')).toBeInTheDocument();
+    expect(screen.getByText('Savings and IOUs')).toBeInTheDocument();
     expect(screen.getByText('cash / USD')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Prepare account' }));
     expect(await screen.findByText('Account ready.')).toBeInTheDocument();

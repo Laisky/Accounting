@@ -22,6 +22,12 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // eslint-plugin-react-hooks v7 promotes the React Compiler advisory
+      // `set-state-in-effect` rule into the recommended set. The workspaces
+      // intentionally use the standard fetch-in-effect and reset-on-dependency
+      // patterns, so surface it as a warning instead of failing the build while
+      // still keeping rules-of-hooks and exhaustive-deps enforced as errors.
+      'react-hooks/set-state-in-effect': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },

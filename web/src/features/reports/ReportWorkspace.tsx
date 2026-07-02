@@ -187,7 +187,7 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
     }
 
     event.preventDefault();
-    let nextIndex = index;
+    let nextIndex: number;
     if (event.key === 'Home') {
       nextIndex = 0;
     } else if (event.key === 'End') {

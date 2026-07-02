@@ -253,7 +253,7 @@ export async function fetchAllEntries(bookId: string): Promise<Entry[]> {
   const pageSize = 100;
   const entries: Entry[] = [];
   let page = 1;
-  let total = 0;
+  let total: number;
 
   do {
     const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/entries?page=${page}&page_size=${pageSize}`);
