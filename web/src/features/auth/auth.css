@@ -1,0 +1,131 @@
+.authShell {
+  display: grid;
+  align-items: center;
+}
+
+.authLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+  gap: 28px;
+  width: min(100%, 1100px);
+  margin: 0 auto;
+  align-items: center;
+}
+
+.authBrief {
+  display: grid;
+  gap: 18px;
+}
+
+.authPanel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid oklch(80% 0.045 104);
+  border-radius: 8px;
+  background: oklch(98% 0.014 110);
+}
+
+.authTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid oklch(82% 0.035 104);
+  border-radius: 8px;
+  background: oklch(94% 0.018 112);
+}
+
+.authTabs button,
+.secondaryAuthButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  border-radius: 6px;
+  background: transparent;
+  color: oklch(35% 0.04 238);
+  cursor: pointer;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.authTabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.authTabs .authTabActive {
+  background: oklch(99% 0.01 108);
+  color: oklch(24% 0.095 164);
+}
+
+.authForm {
+  display: grid;
+  gap: 14px;
+}
+
+.authForm label {
+  display: grid;
+  gap: 7px;
+}
+
+.authForm label span {
+  color: oklch(42% 0.047 238);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.authForm input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid oklch(76% 0.055 104);
+  border-radius: 8px;
+  background: oklch(99% 0.01 108);
+  color: oklch(20% 0.04 242);
+}
+
+.authForm input:focus {
+  border-color: oklch(57% 0.11 164);
+  outline: 3px solid oklch(88% 0.055 164);
+}
+
+.turnstileBox {
+  display: grid;
+  place-items: center;
+  min-height: 70px;
+  padding: 8px;
+  border: 1px solid oklch(82% 0.035 104);
+  border-radius: 8px;
+  background: oklch(99% 0.01 108);
+}
+
+.secondaryAuthButton {
+  border: 1px solid oklch(76% 0.055 104);
+  background: oklch(99% 0.01 108);
+}
+
+.secondaryAuthButton[aria-disabled='true'] {
+  pointer-events: none;
+  opacity: 0.48;
+}
+
+@media (max-width: 860px) {
+  .authLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .authPanel {
+    padding: 16px;
+  }
+
+  .authTabs {
+    grid-template-columns: 1fr;
+  }
+}

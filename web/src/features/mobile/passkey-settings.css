@@ -1,0 +1,80 @@
+.passkeySettings {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid oklch(90% 0.012 185);
+  border-radius: 8px;
+  background: oklch(100% 0 0);
+}
+
+.passkeySettings header {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: oklch(24% 0.034 235);
+}
+
+.passkeySettings header div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.passkeySettings header span,
+.passkeyMeta {
+  color: oklch(58% 0.028 230);
+  font-size: 0.84rem;
+  font-weight: 760;
+}
+
+.passkeyForm,
+.passkeyList,
+.passkeyList li {
+  display: grid;
+  gap: 12px;
+}
+
+.passkeyList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passkeyList li {
+  padding: 12px;
+  border: 1px solid oklch(91% 0.008 185);
+  border-radius: 8px;
+  background: oklch(98% 0.004 185);
+}
+
+.passkeyForm .mobileField input,
+.passkeyList .mobileField input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid oklch(86% 0.015 185);
+  border-radius: 8px;
+  background: oklch(100% 0 0);
+  color: oklch(20% 0.035 235);
+  font-weight: 760;
+}
+
+.passkeyMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.passkeyActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.passkeyEmpty {
+  color: oklch(60% 0.025 230);
+  font-size: 0.9rem;
+  font-weight: 760;
+}

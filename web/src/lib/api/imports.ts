@@ -1,3 +1,5 @@
+import type { Entry } from './ledger';
+
 export type ImportPreviewRow = {
   rowNumber: number;
   raw?: Record<string, string>;
@@ -40,6 +42,16 @@ export type ImportPreviewBatch = {
   };
 };
 
+export type ImportApplyResponse = {
+  batchId: string;
+  bookId: string;
+  status: string;
+  importedCount: number;
+  skippedCount: number;
+  entries: Entry[];
+  skippedRows?: Array<{ rowNumber: number; reason: string }>;
+};
+
 // previewWacaiImport receives a CSV file and uploads it to the Wacai preview API.
 export async function previewWacaiImport(file: File, signal?: AbortSignal): Promise<ImportPreviewBatch> {
   const form = new FormData();
@@ -55,4 +67,19 @@ export async function previewWacaiImport(file: File, signal?: AbortSignal): Prom
   }
 
   return response.json() as Promise<ImportPreviewBatch>;
+}
+
+// applyWacaiImport receives a book and preview batch fingerprint, then commits mapped rows into ledger entries.
+export async function applyWacaiImport(bookId: string, batch: ImportPreviewBatch, signal?: AbortSignal): Promise<ImportApplyResponse> {
+  const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/imports/${encodeURIComponent(batch.id)}/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sourceHash: batch.sourceHash }),
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(`import apply failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<ImportApplyResponse>;
 }

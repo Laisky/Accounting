@@ -338,6 +338,10 @@ func (s *Service) passkeyWebAuthn() (*webauthnlib.WebAuthn, error) {
 		RPID:          strings.TrimSpace(s.cfg.PasskeyRPID),
 		RPDisplayName: strings.TrimSpace(s.cfg.PasskeyRPDisplayName),
 		RPOrigins:     []string{strings.TrimSpace(s.cfg.PasskeyRPOrigin)},
+		Timeouts: webauthnlib.TimeoutsConfig{
+			Login:        webauthnlib.TimeoutConfig{Enforce: true},
+			Registration: webauthnlib.TimeoutConfig{Enforce: true},
+		},
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "configure passkeys")

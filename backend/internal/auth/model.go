@@ -195,6 +195,9 @@ type EmailCodeRecord struct {
 	ExpiresAt time.Time
 	CreatedAt time.Time
 	UsedAt    *time.Time
+	// Attempts counts failed verification guesses so a low-entropy code can be
+	// invalidated before it is brute-forced, independent of source IP.
+	Attempts int
 }
 
 // EmailCodeDelivery contains one-time code data intended only for the email delivery boundary.

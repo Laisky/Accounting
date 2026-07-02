@@ -91,14 +91,95 @@ func (s *Service) PreviewWacaiCSV(ctx context.Context, request PreviewRequest) (
 	return created, nil
 }
 
+// Batch receives an actor and batch id, verifies ownership, and returns the stored import batch.
+func (s *Service) Batch(ctx context.Context, request BatchRequest) (Batch, error) {
+	if request.Actor.UserID == "" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "actor user id is required")
+	}
+	if strings.TrimSpace(request.BatchID) == "" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "batch id is required")
+	}
+
+	batch, err := s.store.Batch(ctx, request.Actor.UserID, strings.TrimSpace(request.BatchID))
+	if err != nil {
+		return Batch{}, errors.Wrap(err, "load import batch")
+	}
+
+	return batch, nil
+}
+
+// MarkApplied receives commit metadata, verifies ownership, and stores an applied import batch.
+func (s *Service) MarkApplied(ctx context.Context, request MarkAppliedRequest) (Batch, error) {
+	if request.Actor.UserID == "" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "actor user id is required")
+	}
+	if strings.TrimSpace(request.BatchID) == "" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "batch id is required")
+	}
+	if strings.TrimSpace(request.BookID) == "" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "book id is required")
+	}
+
+	entryIDs := normalizeAppliedEntryIDs(request.EntryIDs)
+	if len(entryIDs) == 0 {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "applied entry ids are required")
+	}
+
+	batch, err := s.store.Batch(ctx, request.Actor.UserID, strings.TrimSpace(request.BatchID))
+	if err != nil {
+		return Batch{}, errors.Wrap(err, "load import batch")
+	}
+	if batch.Status == BatchStatusApplied {
+		if batch.AppliedBookID != strings.TrimSpace(request.BookID) {
+			return Batch{}, errors.Wrap(ErrInvalidInput, "import batch already applied to another book")
+		}
+
+		return batch, nil
+	}
+
+	now := time.Now().UTC()
+	batch.Status = BatchStatusApplied
+	batch.AppliedBookID = strings.TrimSpace(request.BookID)
+	batch.AppliedEntryIDs = entryIDs
+	batch.AppliedSkippedRows = cloneAppliedSkippedRows(request.SkippedRows)
+	batch.AppliedAt = &now
+	batch.UpdatedAt = now
+
+	updated, err := s.store.SaveBatch(ctx, batch)
+	if err != nil {
+		return Batch{}, errors.Wrap(err, "save applied import batch")
+	}
+
+	return updated, nil
+}
+
 // sourceHash receives source bytes and returns a SHA-256 hex digest.
 func sourceHash(data []byte) string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
 }
 
+// normalizeAppliedEntryIDs receives entry ids and returns trimmed unique non-empty ids in source order.
+func normalizeAppliedEntryIDs(entryIDs []string) []string {
+	normalized := make([]string, 0, len(entryIDs))
+	for _, entryID := range entryIDs {
+		entryID = strings.TrimSpace(entryID)
+		if entryID != "" && !slices.Contains(normalized, entryID) {
+			normalized = append(normalized, entryID)
+		}
+	}
+
+	return normalized
+}
+
 // parseWacaiCSV receives CSV bytes and returns preview rows, schema, detected values, and diagnostics.
 func parseWacaiCSV(data []byte) ([]PreviewRow, DetectedSchema, DetectedValues, int, int, error) {
+	// Wacai exports are commonly saved as UTF-8 with a byte-order mark. Strip a
+	// leading BOM so the first header cell (usually the date column) matches the
+	// alias table; otherwise schema detection misses it and every row fails with
+	// "occurredAt is required". The source hash is computed on the raw upload
+	// before this call, so trimming here does not affect idempotency.
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
 	reader := csv.NewReader(bytes.NewReader(data))
 	reader.FieldsPerRecord = -1
 	records, err := reader.ReadAll()

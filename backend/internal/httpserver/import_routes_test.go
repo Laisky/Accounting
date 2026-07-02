@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"mime/multipart"
 	"net/http"
@@ -88,6 +89,126 @@ func TestRegisterRoutesImportPreviewRejectsInvalidInput(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	require.Contains(t, rec.Body.String(), "invalid import input")
+}
+
+// TestRegisterRoutesImportApplyCreatesEntries verifies a preview batch can be applied into ledger entries.
+func TestRegisterRoutesImportApplyCreatesEntries(t *testing.T) {
+	service := ledger.NewService()
+	router, cfg := testEntryRouter(t, service, "user-owner")
+	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
+	body, contentType := multipartImportBody(t, "wacai.csv", "date,type,amount,currency,account,category,book,merchant,note,tags\n2026-07-01,expense,12.30,usd,Cash,Groceries,Household,Market,Import lunch,food|work\n")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req.Header.Set("Content-Type", contentType)
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	var batch importsvc.Batch
+	err := json.Unmarshal(rec.Body.Bytes(), &batch)
+	require.NoError(t, err)
+
+	applyBody := bytes.NewBufferString(`{"sourceHash":"` + batch.SourceHash + `"}`)
+	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", applyBody)
+	req.AddCookie(sessionCookie)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	var response struct {
+		BatchID       string         `json:"batchId"`
+		BookID        string         `json:"bookId"`
+		Status        string         `json:"status"`
+		ImportedCount int            `json:"importedCount"`
+		SkippedCount  int            `json:"skippedCount"`
+		Entries       []ledger.Entry `json:"entries"`
+	}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	require.NoError(t, err)
+	require.Equal(t, batch.ID, response.BatchID)
+	require.Equal(t, "book-household", response.BookID)
+	require.Equal(t, "applied", response.Status)
+	require.Equal(t, 1, response.ImportedCount)
+	require.Equal(t, 0, response.SkippedCount)
+	require.Len(t, response.Entries, 1)
+	require.Equal(t, int64(1230), response.Entries[0].AmountCents)
+	require.Equal(t, "USD", response.Entries[0].TransactionCurrency)
+	require.Equal(t, "Market", response.Entries[0].Merchant)
+	require.Equal(t, "Import lunch", response.Entries[0].Note)
+	require.Equal(t, []string{"food", "work"}, response.Entries[0].Tags)
+
+	entries, err := service.ListEntries(context.Background(), ledger.ListEntriesRequest{
+		Actor:    ledger.Actor{UserID: "user-owner"},
+		BookID:   "book-household",
+		Page:     1,
+		PageSize: 20,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 2, entries.Total)
+
+	applyBody = bytes.NewBufferString(`{"sourceHash":"` + batch.SourceHash + `"}`)
+	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", applyBody)
+	req.AddCookie(sessionCookie)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var replayed struct {
+		BatchID       string         `json:"batchId"`
+		BookID        string         `json:"bookId"`
+		Status        string         `json:"status"`
+		ImportedCount int            `json:"importedCount"`
+		Entries       []ledger.Entry `json:"entries"`
+	}
+	err = json.Unmarshal(rec.Body.Bytes(), &replayed)
+	require.NoError(t, err)
+	require.Equal(t, batch.ID, replayed.BatchID)
+	require.Equal(t, "book-household", replayed.BookID)
+	require.Equal(t, "applied", replayed.Status)
+	require.Equal(t, 1, replayed.ImportedCount)
+	require.Len(t, replayed.Entries, 1)
+	require.Equal(t, response.Entries[0].ID, replayed.Entries[0].ID)
+
+	entries, err = service.ListEntries(context.Background(), ledger.ListEntriesRequest{
+		Actor:    ledger.Actor{UserID: "user-owner"},
+		BookID:   "book-household",
+		Page:     1,
+		PageSize: 20,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 2, entries.Total)
+}
+
+// TestRegisterRoutesImportApplyRejectsStaleHashAndUnmappedRows verifies apply fails closed for unsafe requests.
+func TestRegisterRoutesImportApplyRejectsStaleHashAndUnmappedRows(t *testing.T) {
+	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner")
+	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
+	body, contentType := multipartImportBody(t, "wacai.csv", "date,type,amount,currency,account,category,book,note\n2026-07-01,expense,12.30,usd,Missing,Groceries,Household,Import lunch\n")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req.Header.Set("Content-Type", contentType)
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	var batch importsvc.Batch
+	err := json.Unmarshal(rec.Body.Bytes(), &batch)
+	require.NoError(t, err)
+
+	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", bytes.NewBufferString(`{"sourceHash":"stale"}`))
+	req.AddCookie(sessionCookie)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusConflict, rec.Code)
+
+	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", bytes.NewBufferString(`{"sourceHash":"`+batch.SourceHash+`"}`))
+	req.AddCookie(sessionCookie)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "invalid ledger input")
 }
 
 // multipartImportBody receives file data and returns a multipart request body with content type.

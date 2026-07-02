@@ -16,6 +16,15 @@ export type BookListItem = {
   updatedAt: string;
 };
 
+export type BookMember = {
+  bookId: string;
+  userId: string;
+  role: string;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AccountGroup = {
   id: string;
   userId: string;
@@ -83,6 +92,42 @@ export type EntryList = {
   page: number;
   pageSize: number;
   total: number;
+};
+
+export type EntryUpdateInput = {
+  type?: string;
+  accountId?: string;
+  destinationAccountId?: string;
+  categoryId?: string;
+  amountCents?: number;
+  transactionCurrency?: string;
+  exchangeRate?: string;
+  occurredAt?: string;
+  note?: string;
+  merchant?: string;
+  tags?: string[];
+};
+
+export type CategoryCreateInput = {
+  parentId?: string;
+  name: string;
+  direction: string;
+  sortOrder?: number;
+  rawSourceName?: string;
+};
+
+export type CategoryUpdateInput = {
+  parentId?: string;
+  name?: string;
+  direction?: string;
+  sortOrder?: number;
+  archived?: boolean;
+  rawSourceName?: string;
+};
+
+export type AccountGroupUpdateInput = {
+  name?: string;
+  sortOrder?: number;
 };
 
 type PaginatedList<T> = {
@@ -157,6 +202,17 @@ export async function updateBook(bookId: string, input: { name?: string; reporti
   return response.json() as Promise<BookListItem>;
 }
 
+// fetchBookMembers receives a book id and returns explicit members for that book.
+export async function fetchBookMembers(bookId: string): Promise<BookMember[]> {
+  const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/members?page=1&page_size=50`);
+  if (!response.ok) {
+    throw new Error(`book members request failed: ${response.status}`);
+  }
+
+  const list = await response.json() as PaginatedList<BookMember>;
+  return list.items;
+}
+
 // fetchAccountGroups receives no parameters and returns account groups owned by the actor.
 export async function fetchAccountGroups(): Promise<AccountGroup[]> {
   const response = await fetch('/api/accounts/groups?page=1&page_size=50');
@@ -182,6 +238,20 @@ export async function createAccountGroup(name: string): Promise<AccountGroup> {
   return response.json() as Promise<AccountGroup>;
 }
 
+// updateAccountGroup receives group identity and patch fields, then returns the updated account group.
+export async function updateAccountGroup(groupId: string, input: AccountGroupUpdateInput): Promise<AccountGroup> {
+  const response = await fetch(`/api/accounts/groups/${encodeURIComponent(groupId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(`account group update failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<AccountGroup>;
+}
+
 // fetchAccounts receives no parameters and returns accounts owned by the actor.
 export async function fetchAccounts(): Promise<Account[]> {
   const response = await fetch('/api/accounts?page=1&page_size=50');
@@ -200,11 +270,12 @@ export async function createAccount(input: {
   type: string;
   currency: string;
   sharedBookIds: string[];
+  openingBalanceCents?: number;
 }): Promise<Account> {
   const response = await fetch('/api/accounts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...input, openingBalanceCents: 0 }),
+    body: JSON.stringify({ ...input, openingBalanceCents: input.openingBalanceCents ?? 0 }),
   });
   if (!response.ok) {
     throw new Error(`account create failed: ${response.status}`);
@@ -225,14 +296,28 @@ export async function fetchCategories(bookId: string): Promise<Category[]> {
 }
 
 // createCategory receives category settings and returns the created category.
-export async function createCategory(bookId: string, name: string, direction: string): Promise<Category> {
+export async function createCategory(bookId: string, input: CategoryCreateInput): Promise<Category> {
   const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/categories`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, direction, sortOrder: 0 }),
+    body: JSON.stringify({ ...input, sortOrder: input.sortOrder ?? 0 }),
   });
   if (!response.ok) {
     throw new Error(`category create failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<Category>;
+}
+
+// updateCategory receives category patch fields and returns the updated category.
+export async function updateCategory(bookId: string, categoryId: string, input: CategoryUpdateInput): Promise<Category> {
+  const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/categories/${encodeURIComponent(categoryId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(`category update failed: ${response.status}`);
   }
 
   return response.json() as Promise<Category>;
@@ -293,4 +378,28 @@ export async function createEntry(bookId: string, input: {
   }
 
   return response.json() as Promise<Entry>;
+}
+
+// updateEntry receives entry patch fields and returns the updated book entry.
+export async function updateEntry(bookId: string, entryId: string, input: EntryUpdateInput): Promise<Entry> {
+  const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/entries/${encodeURIComponent(entryId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(`entry update failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<Entry>;
+}
+
+// deleteEntry receives entry identity and removes the matching book entry.
+export async function deleteEntry(bookId: string, entryId: string): Promise<void> {
+  const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/entries/${encodeURIComponent(entryId)}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`entry delete failed: ${response.status}`);
+  }
 }

@@ -13,6 +13,10 @@ import (
 	"github.com/Laisky/errors/v2"
 )
 
+// maxEmailCodeAttempts caps failed verification guesses per issued email code
+// before the code is invalidated, bounding brute-force of the six-digit value.
+const maxEmailCodeAttempts = 5
+
 // RequestEmailVerification receives an email address and returns a one-time verification code delivery.
 func (s *Service) RequestEmailVerification(ctx context.Context, request EmailCodeRequest) (EmailCodeDelivery, error) {
 	email, err := normalizeEmail(request.Email)
@@ -179,6 +183,18 @@ func (s *Service) consumeEmailCode(ctx context.Context, email string, purpose Em
 
 	actualHash := hashEmailCode(email, purpose, code)
 	if subtle.ConstantTimeCompare([]byte(actualHash), []byte(record.CodeHash)) != 1 {
+		// Count the wrong guess and invalidate the code once too many accumulate.
+		// A six-digit code has only 10^6 possibilities, so without a per-code cap
+		// it could be brute-forced within its TTL from rotating source IPs; the
+		// HTTP rate limiter alone (keyed on client IP) is not sufficient.
+		record.Attempts++
+		if record.Attempts >= maxEmailCodeAttempts {
+			if err := s.store.DeleteEmailCode(ctx, email, purpose); err != nil {
+				return errors.Wrap(err, "delete exhausted email code")
+			}
+		} else if err := s.store.StoreEmailCode(ctx, record); err != nil {
+			return errors.Wrap(err, "record failed email code attempt")
+		}
 		return errors.WithStack(ErrInvalidCredentials)
 	}
 	if err := s.store.DeleteEmailCode(ctx, email, purpose); err != nil {

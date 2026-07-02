@@ -14,8 +14,14 @@ import (
 
 const (
 	totpPeriodSeconds = 30
+	totpSkew          = 1
 	totpMaxFailures   = 5
 	totpSetupTTL      = 10 * time.Minute
+	// totpValidityWindow is the wall-clock span over which a single code stays
+	// valid: the current 30s step plus totpSkew steps on each side. The replay
+	// marker must outlive this window, otherwise a used code can be replayed
+	// after the marker expires but while it still validates.
+	totpValidityWindow = totpPeriodSeconds * (2*totpSkew + 1) * time.Second
 )
 
 // TOTPStatus receives an actor and returns whether TOTP is enabled for the user.
@@ -190,7 +196,14 @@ func (s *Service) verifyTOTPCode(ctx context.Context, record UserRecord, code st
 		return err
 	}
 
-	expiresAt := s.clock().UTC().Add(s.cfg.TOTPReplayCacheDuration).UTC()
+	// Keep the replay marker at least as long as the code stays valid so a
+	// captured code cannot be replayed once the configured cache duration is
+	// shorter than the skew validity window.
+	replayRetention := s.cfg.TOTPReplayCacheDuration
+	if replayRetention < totpValidityWindow {
+		replayRetention = totpValidityWindow
+	}
+	expiresAt := s.clock().UTC().Add(replayRetention).UTC()
 	if err := s.store.StoreTOTPReplay(ctx, record.ID, codeHash, expiresAt); err != nil {
 		return errors.Wrap(err, "store totp replay")
 	}
@@ -205,7 +218,7 @@ func (s *Service) verifyTOTPCode(ctx context.Context, record UserRecord, code st
 func (s *Service) validateTOTPValue(secret string, code string) error {
 	ok, err := totp.ValidateCustom(strings.TrimSpace(code), secret, s.clock().UTC(), totp.ValidateOpts{
 		Period:    totpPeriodSeconds,
-		Skew:      1,
+		Skew:      totpSkew,
 		Digits:    otp.DigitsSix,
 		Algorithm: otp.AlgorithmSHA1,
 	})

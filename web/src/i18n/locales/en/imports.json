@@ -30,6 +30,7 @@
       "tags": "Tags"
     },
     "error": {
+      "applyFailed": "Import apply failed",
       "previewFailed": "Import preview failed"
     },
     "exportDetected": "{{source}} export detected",
@@ -77,6 +78,10 @@
     },
     "spreadsheet": "Spreadsheet",
     "stage": {
+      "apply": "Apply import",
+      "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
+      "applying": "Applying import",
+      "applyComplete": "Import applied.",
       "stage": "Stage import",
       "staged": "Import staged",
       "staging": "Staging import"

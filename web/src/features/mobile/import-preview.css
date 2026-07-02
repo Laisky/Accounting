@@ -1,0 +1,180 @@
+.importPanel {
+  gap: 14px;
+}
+
+.mobileImportDrop {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  min-height: 150px;
+  padding: 22px 18px;
+  border: 1px dashed oklch(74% 0.055 190);
+  border-radius: 12px;
+  background: oklch(99% 0.006 180);
+  color: oklch(26% 0.04 230);
+  text-align: center;
+  cursor: pointer;
+}
+
+.mobileImportDrop input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.mobileImportDrop svg {
+  color: oklch(57% 0.11 190);
+}
+
+.mobileImportDrop strong {
+  font-size: 1rem;
+  font-weight: 890;
+  overflow-wrap: anywhere;
+}
+
+.mobileImportDrop span,
+.mobileImportEmpty span,
+.mobileImportRows small {
+  color: oklch(61% 0.026 230);
+  font-size: 0.84rem;
+  font-weight: 760;
+}
+
+.mobileImportDropReady {
+  border-color: oklch(64% 0.12 165);
+  background: oklch(96% 0.024 165);
+}
+
+.mobileImportActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.mobileImportMessage {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: oklch(95% 0.032 165);
+  color: oklch(34% 0.09 160);
+  font-size: 0.86rem;
+  font-weight: 830;
+}
+
+.mobileImportMessageError {
+  background: oklch(95% 0.035 25);
+  color: oklch(45% 0.17 28);
+}
+
+.mobileImportPreview {
+  display: grid;
+  gap: 12px;
+}
+
+.mobileImportApply {
+  display: grid;
+  gap: 10px;
+}
+
+.mobileImportMetrics,
+.mobileImportDetected {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: oklch(100% 0 0);
+}
+
+.mobileImportMetrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobileImportMetrics div,
+.mobileImportDetected div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mobileImportMetrics span,
+.mobileImportDetected span {
+  color: oklch(58% 0.025 230);
+  font-size: 0.72rem;
+  font-weight: 860;
+  text-transform: uppercase;
+}
+
+.mobileImportMetrics strong,
+.mobileImportDetected strong {
+  color: oklch(22% 0.034 235);
+  font-size: 0.95rem;
+  font-weight: 860;
+  overflow-wrap: anywhere;
+}
+
+.mobileImportEmpty {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  border-radius: 12px;
+  background: oklch(100% 0 0);
+}
+
+.mobileImportRows {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  border-radius: 12px;
+  background: oklch(100% 0 0);
+}
+
+.mobileImportRows li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  align-items: center;
+  min-height: 68px;
+  padding: 12px;
+  border-bottom: 1px solid oklch(93% 0.006 185);
+}
+
+.mobileImportRows li:last-child {
+  border-bottom: 0;
+}
+
+.mobileImportRows div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mobileImportRows span {
+  color: oklch(62% 0.025 230);
+  font-size: 0.76rem;
+  font-weight: 810;
+}
+
+.mobileImportRows strong {
+  color: oklch(23% 0.034 235);
+  font-size: 0.98rem;
+  overflow-wrap: anywhere;
+}
+
+.mobileImportRows b {
+  color: oklch(20% 0.035 235);
+  font-size: 0.94rem;
+  font-weight: 870;
+  white-space: nowrap;
+}
+
+.mobileImportRows small {
+  grid-column: 1 / -1;
+}

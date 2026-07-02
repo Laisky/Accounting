@@ -1,10 +1,12 @@
 import type { TFunction } from 'i18next';
 import { KeyRound, LogIn, Mail, ShieldCheck, UserPlus } from 'lucide-react';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   beginPasskeyLogin,
+  confirmEmailVerification,
   confirmPasswordReset,
+  finishPasskeyLogin,
   loginWithPassword,
   registerWithPassword,
   requestEmailVerification,
@@ -12,10 +14,14 @@ import {
   type AuthActor,
 } from '../../lib/api/auth';
 import { emptyRuntimeConfig, type RuntimeConfig } from '../../lib/api/runtimeConfig';
+import { credentialRequestOptionsFromJSON, isWebAuthnAvailable, publicKeyCredentialToJSON } from '../../lib/webauthn';
+import { TurnstileWidget } from './TurnstileWidget';
+import './auth.css';
 
 type AuthMode = 'login' | 'register' | 'recover';
 type RecoveryStep = 'request' | 'confirm';
 type LoginStep = 'password' | 'totp';
+type VerificationStep = 'credentials' | 'confirm';
 
 type AuthWorkspaceProps = {
   runtimeConfig: RuntimeConfig | null;
@@ -31,12 +37,19 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
   const [password, setPassword] = useState('');
   const [totpCode, setTOTPCode] = useState('');
   const [loginStep, setLoginStep] = useState<LoginStep>('password');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationStep, setVerificationStep] = useState<VerificationStep>('credentials');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>('request');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [loginTurnstileRequired, setLoginTurnstileRequired] = useState(false);
+  const turnstileRequired = shouldRequireTurnstile(config, mode, verificationStep, loginTurnstileRequired);
+  const canSubmit = !isBusy && !(mode === 'login' && !config.auth.emailLoginEnabled) && (!turnstileRequired || Boolean(turnstileToken));
 
   // handleSubmit receives a form submit event and runs the selected authentication workflow.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -44,10 +57,16 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
     setIsBusy(true);
     setError('');
     setStatus('');
+    const currentTurnstileToken = turnstileRequired ? turnstileToken : undefined;
+    if (turnstileRequired && !currentTurnstileToken) {
+      setError(t('auth.error.turnstileRequired'));
+      setIsBusy(false);
+      return;
+    }
 
     try {
       if (mode === 'login') {
-        const result = await loginWithPassword(email, password, loginStep === 'totp' ? totpCode : undefined);
+        const result = await loginWithPassword(email, password, loginStep === 'totp' ? totpCode : undefined, currentTurnstileToken);
         if (result.kind === 'totpRequired') {
           // Password verified and the account has TOTP enabled; reveal the code step.
           setLoginStep('totp');
@@ -63,9 +82,21 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
       }
 
       if (mode === 'register') {
-        const result = await registerWithPassword(email, password);
+        if (verificationStep === 'confirm') {
+          await confirmEmailVerification(email, verificationCode);
+          setMode('login');
+          setVerificationStep('credentials');
+          setVerificationCode('');
+          setPassword('');
+          setStatus(t('auth.status.emailVerified'));
+          return;
+        }
+
+        const result = await registerWithPassword(email, password, currentTurnstileToken);
         if (config.auth.emailVerificationRequired) {
           await requestEmailVerification(email);
+          setVerificationStep('confirm');
+          setVerificationCode('');
           setStatus(t('auth.status.verificationRequested'));
         } else {
           setStatus(t('auth.status.registrationComplete'));
@@ -92,20 +123,38 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
       setNewPassword('');
       setStatus(t('auth.status.passwordUpdated'));
     } catch {
-      setError(authErrorText(t, mode));
+      if (mode === 'login' && config.features.turnstileEnabled && config.turnstile.loginMode === 'after_failure') {
+        setLoginTurnstileRequired(true);
+      }
+      setError(authErrorText(t, mode, verificationStep));
     } finally {
+      if (turnstileRequired) {
+        resetTurnstileChallenge();
+      }
       setIsBusy(false);
     }
   }
 
-  // handlePasskeyLogin receives no parameters and starts a passkey login ceremony.
+  // handlePasskeyLogin receives no parameters and completes a passkey login ceremony.
   async function handlePasskeyLogin() {
     setIsBusy(true);
     setError('');
     setStatus('');
     try {
+      if (!isWebAuthnAvailable()) {
+        throw new Error('WebAuthn unavailable');
+      }
       const start = await beginPasskeyLogin();
-      setStatus(t('auth.status.passkeyChallengeReady', { flowId: start.flowId.slice(0, 8) }));
+      const credential = await navigator.credentials.get(credentialRequestOptionsFromJSON(start.options));
+      if (!credential) {
+        throw new Error('WebAuthn credential is required');
+      }
+      const result = await finishPasskeyLogin(start.flowId, publicKeyCredentialToJSON(credential as PublicKeyCredential));
+      onAuthenticated({
+        userId: result.user.id,
+        email: result.user.email,
+        status: result.user.status,
+      });
     } catch {
       setError(t('auth.error.passkeyUnavailable'));
     } finally {
@@ -117,7 +166,13 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
   function changeMode(next: AuthMode) {
     setMode(next);
     setLoginStep('password');
+    setVerificationStep('credentials');
     setTOTPCode('');
+    setVerificationCode('');
+    setResetCode('');
+    setNewPassword('');
+    setLoginTurnstileRequired(false);
+    resetTurnstileChallenge();
     setError('');
     setStatus('');
   }
@@ -130,6 +185,27 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
       setStatus('');
       setError('');
     }
+  }
+
+  // handleTurnstileToken receives a browser challenge token and stores it for the next protected submit.
+  const handleTurnstileToken = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  // handleTurnstileExpire receives no parameters and clears stale Turnstile tokens.
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken('');
+  }, []);
+
+  // handleTurnstileError receives no parameters and surfaces a generic challenge failure.
+  const handleTurnstileError = useCallback(() => {
+    setError(t('auth.error.turnstileFailed'));
+  }, [t]);
+
+  // resetTurnstileChallenge receives no parameters and requests a fresh Turnstile token.
+  function resetTurnstileChallenge() {
+    setTurnstileToken('');
+    setTurnstileResetKey((value) => value + 1);
   }
 
   return (
@@ -187,7 +263,7 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
               />
             </label>
 
-            {mode !== 'recover' ? (
+            {mode !== 'recover' && verificationStep !== 'confirm' ? (
               <label>
                 <span>{t('auth.fields.password')}</span>
                 <input
@@ -200,6 +276,21 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
                     setPassword(event.target.value);
                     resetLoginChallenge();
                   }}
+                />
+              </label>
+            ) : null}
+
+            {mode === 'register' && verificationStep === 'confirm' ? (
+              <label>
+                <span>{t('auth.fields.verificationCode')}</span>
+                <input
+                  type="text"
+                  value={verificationCode}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  required
+                  autoFocus
+                  onChange={(event) => setVerificationCode(event.target.value)}
                 />
               </label>
             ) : null}
@@ -246,11 +337,21 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
               </>
             ) : null}
 
+            {turnstileRequired && config.turnstile.siteKey ? (
+              <TurnstileWidget
+                siteKey={config.turnstile.siteKey}
+                resetKey={turnstileResetKey}
+                onToken={handleTurnstileToken}
+                onExpire={handleTurnstileExpire}
+                onError={handleTurnstileError}
+              />
+            ) : null}
+
             {error ? <p className="authError">{error}</p> : null}
             {status ? <p className="authStatus">{status}</p> : null}
 
-            <button className="primaryButton" type="submit" disabled={isBusy || (mode === 'login' && !config.auth.emailLoginEnabled)}>
-              <span>{submitLabel(t, mode, recoveryStep, loginStep, isBusy)}</span>
+            <button className="primaryButton" type="submit" disabled={!canSubmit}>
+              <span>{submitLabel(t, mode, recoveryStep, loginStep, verificationStep, isBusy)}</span>
             </button>
           </form>
 
@@ -272,12 +373,15 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
   );
 }
 
-// submitLabel receives the translator, current auth mode, recovery step, login step, and busy state and returns button copy.
-function submitLabel(t: TFunction, mode: AuthMode, recoveryStep: RecoveryStep, loginStep: LoginStep, isBusy: boolean): string {
+// submitLabel receives the translator and auth state and returns button copy for the current form step.
+function submitLabel(t: TFunction, mode: AuthMode, recoveryStep: RecoveryStep, loginStep: LoginStep, verificationStep: VerificationStep, isBusy: boolean): string {
   if (isBusy) {
     return t('auth.submit.working');
   }
   if (mode === 'register') {
+    if (verificationStep === 'confirm') {
+      return t('auth.submit.verifyEmail');
+    }
     return t('auth.submit.createAccount');
   }
   if (mode === 'recover') {
@@ -290,9 +394,12 @@ function submitLabel(t: TFunction, mode: AuthMode, recoveryStep: RecoveryStep, l
   return t('auth.submit.signInWithEmail');
 }
 
-// authErrorText receives the translator and current auth mode and returns a stable non-enumerating error message.
-function authErrorText(t: TFunction, mode: AuthMode): string {
+// authErrorText receives the translator and auth state and returns a stable non-enumerating error message.
+function authErrorText(t: TFunction, mode: AuthMode, verificationStep: VerificationStep): string {
   if (mode === 'register') {
+    if (verificationStep === 'confirm') {
+      return t('auth.error.verificationFailed');
+    }
     return t('auth.error.registrationFailed');
   }
   if (mode === 'recover') {
@@ -300,4 +407,19 @@ function authErrorText(t: TFunction, mode: AuthMode): string {
   }
 
   return t('auth.error.signInFailed');
+}
+
+// shouldRequireTurnstile receives runtime auth state and returns whether the current submit needs a challenge token.
+function shouldRequireTurnstile(config: RuntimeConfig, mode: AuthMode, verificationStep: VerificationStep, loginTurnstileRequired: boolean): boolean {
+  if (!config.features.turnstileEnabled) {
+    return false;
+  }
+  if (mode === 'register') {
+    return verificationStep !== 'confirm';
+  }
+  if (mode === 'login') {
+    return config.turnstile.loginMode !== 'after_failure' || loginTurnstileRequired;
+  }
+
+  return false;
 }

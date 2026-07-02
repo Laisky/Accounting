@@ -30,6 +30,7 @@
       "tags": "タグ"
     },
     "error": {
+      "applyFailed": "Import apply failed",
       "previewFailed": "インポートプレビューに失敗しました"
     },
     "exportDetected": "{{source}} のエクスポートを検出しました",
@@ -77,6 +78,10 @@
     },
     "spreadsheet": "スプレッドシート",
     "stage": {
+      "apply": "Apply import",
+      "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
+      "applying": "Applying import",
+      "applyComplete": "Import applied.",
       "stage": "インポートをステージング",
       "staged": "インポートをステージングしました",
       "staging": "インポートをステージング中"

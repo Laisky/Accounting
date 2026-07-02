@@ -1,0 +1,39 @@
+.entryDetailForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 0 2px;
+}
+
+.entryDetailForm label {
+  display: grid;
+  gap: 6px;
+}
+
+.entryDetailForm label:nth-last-of-type(-n + 2) {
+  grid-column: 1 / -1;
+}
+
+.entryDetailForm span {
+  color: oklch(56% 0.026 230);
+  font-size: 0.68rem;
+  font-weight: 860;
+  text-transform: uppercase;
+}
+
+.entryDetailForm input,
+.entryDetailForm select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid oklch(87% 0.012 185);
+  border-radius: 8px;
+  background: oklch(99% 0.002 180);
+  color: oklch(22% 0.034 235);
+  font-weight: 780;
+}
+
+.entryDetailForm button {
+  grid-column: 1 / -1;
+}

@@ -70,6 +70,8 @@ const (
 	ActionEntryDeleted Action = "entry.deleted"
 	// ActionImportPreviewCreated records an import preview batch creation or reuse.
 	ActionImportPreviewCreated Action = "import.preview_created"
+	// ActionImportCommitted records a staged import batch being committed into ledger entries.
+	ActionImportCommitted Action = "import.committed"
 )
 
 // Event represents a sanitized audit event visible to the affected user.

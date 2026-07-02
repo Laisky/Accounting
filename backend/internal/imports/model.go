@@ -21,6 +21,21 @@ type PreviewRequest struct {
 	Data        []byte
 }
 
+// BatchRequest contains actor identity and batch id for loading a stored import batch.
+type BatchRequest struct {
+	Actor   Actor
+	BatchID string
+}
+
+// MarkAppliedRequest contains actor identity and durable commit metadata for an import batch.
+type MarkAppliedRequest struct {
+	Actor       Actor
+	BatchID     string
+	BookID      string
+	EntryIDs    []string
+	SkippedRows []AppliedSkippedRow
+}
+
 // Actor carries the authenticated user identity for import ownership.
 type Actor struct {
 	UserID string
@@ -32,25 +47,38 @@ type BatchStatus string
 const (
 	// BatchStatusPreview identifies an import batch that has only been parsed for review.
 	BatchStatusPreview BatchStatus = "preview"
+
+	// BatchStatusApplied identifies an import batch that has already been committed to a book.
+	BatchStatusApplied BatchStatus = "applied"
 )
 
 // Batch contains stored import batch metadata and preview rows.
 type Batch struct {
-	ID             string         `json:"id"`
-	UserID         string         `json:"userId"`
-	Source         string         `json:"source"`
-	Filename       string         `json:"filename"`
-	ContentType    string         `json:"contentType"`
-	SourceHash     string         `json:"sourceHash"`
-	ParserVersion  string         `json:"parserVersion"`
-	Status         BatchStatus    `json:"status"`
-	DetectedSchema DetectedSchema `json:"detectedSchema"`
-	Rows           []PreviewRow   `json:"rows"`
-	Detected       DetectedValues `json:"detected"`
-	ErrorCount     int            `json:"errorCount"`
-	WarningCount   int            `json:"warningCount"`
-	CreatedAt      time.Time      `json:"createdAt"`
-	UpdatedAt      time.Time      `json:"updatedAt"`
+	ID                 string              `json:"id"`
+	UserID             string              `json:"userId"`
+	Source             string              `json:"source"`
+	Filename           string              `json:"filename"`
+	ContentType        string              `json:"contentType"`
+	SourceHash         string              `json:"sourceHash"`
+	ParserVersion      string              `json:"parserVersion"`
+	Status             BatchStatus         `json:"status"`
+	DetectedSchema     DetectedSchema      `json:"detectedSchema"`
+	Rows               []PreviewRow        `json:"rows"`
+	Detected           DetectedValues      `json:"detected"`
+	ErrorCount         int                 `json:"errorCount"`
+	WarningCount       int                 `json:"warningCount"`
+	AppliedBookID      string              `json:"appliedBookId,omitempty"`
+	AppliedEntryIDs    []string            `json:"appliedEntryIds,omitempty"`
+	AppliedSkippedRows []AppliedSkippedRow `json:"appliedSkippedRows,omitempty"`
+	AppliedAt          *time.Time          `json:"appliedAt,omitempty"`
+	CreatedAt          time.Time           `json:"createdAt"`
+	UpdatedAt          time.Time           `json:"updatedAt"`
+}
+
+// AppliedSkippedRow contains a row skipped during import apply and its stable reason.
+type AppliedSkippedRow struct {
+	RowNumber int    `json:"rowNumber"`
+	Reason    string `json:"reason"`
 }
 
 // DetectedSchema describes the source header mapping used by the parser.

@@ -10,6 +10,7 @@ import (
 // Store defines import preview persistence operations required by the service layer.
 type Store interface {
 	SaveBatch(ctx context.Context, batch Batch) (Batch, error)
+	Batch(ctx context.Context, userID string, batchID string) (Batch, error)
 	BatchByHash(ctx context.Context, userID string, source string, sourceHash string) (Batch, error)
 }
 
@@ -65,6 +66,19 @@ func (s *MemoryStore) SaveBatch(_ context.Context, batch Batch) (Batch, error) {
 	return cloneBatch(batch), nil
 }
 
+// Batch receives owner and batch id values and returns the matching batch.
+func (s *MemoryStore) Batch(_ context.Context, userID string, batchID string) (Batch, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	batch, ok := s.batches[batchID]
+	if !ok || batch.UserID != userID {
+		return Batch{}, errors.Wrap(ErrNotFound, "import batch not found")
+	}
+
+	return cloneBatch(batch), nil
+}
+
 // BatchByHash receives owner, source, and hash values and returns the matching batch.
 func (s *MemoryStore) BatchByHash(_ context.Context, userID string, source string, sourceHash string) (Batch, error) {
 	s.mu.RLock()
@@ -89,6 +103,12 @@ func cloneBatch(batch Batch) Batch {
 	batch.DetectedSchema.Columns = cloneStringMap(batch.DetectedSchema.Columns)
 	batch.DetectedSchema.Missing = append([]string(nil), batch.DetectedSchema.Missing...)
 	batch.Detected = cloneDetectedValues(batch.Detected)
+	batch.AppliedEntryIDs = append([]string(nil), batch.AppliedEntryIDs...)
+	batch.AppliedSkippedRows = cloneAppliedSkippedRows(batch.AppliedSkippedRows)
+	if batch.AppliedAt != nil {
+		appliedAt := batch.AppliedAt.UTC()
+		batch.AppliedAt = &appliedAt
+	}
 	return batch
 }
 
@@ -129,4 +149,9 @@ func cloneDetectedValues(values DetectedValues) DetectedValues {
 	values.Merchants = append([]string(nil), values.Merchants...)
 	values.Tags = append([]string(nil), values.Tags...)
 	return values
+}
+
+// cloneAppliedSkippedRows receives skipped row metadata and returns detached copies.
+func cloneAppliedSkippedRows(rows []AppliedSkippedRow) []AppliedSkippedRow {
+	return append([]AppliedSkippedRow(nil), rows...)
 }

@@ -1,0 +1,87 @@
+.categoryManager {
+  display: grid;
+  gap: 10px;
+  padding: 18px 16px 22px;
+  background: oklch(98.5% 0.004 180);
+}
+
+.categoryCreateForm,
+.categoryEditList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(104px, 0.48fr);
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: oklch(100% 0 0);
+  box-shadow: 0 10px 24px oklch(60% 0.03 220 / 10%);
+}
+
+.categoryCreateForm label,
+.categoryEditList label {
+  display: grid;
+  gap: 6px;
+}
+
+.categoryCreateForm span,
+.categoryEditList span {
+  color: oklch(58% 0.025 230);
+  font-size: 0.68rem;
+  font-weight: 860;
+  text-transform: uppercase;
+}
+
+.categoryCreateForm input,
+.categoryCreateForm select,
+.categoryEditList input,
+.categoryEditList select {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid oklch(86% 0.015 185);
+  border-radius: 8px;
+  background: oklch(99% 0.002 180);
+  color: oklch(20% 0.035 235);
+  font-weight: 780;
+}
+
+.categoryCreateForm button {
+  grid-column: 1 / -1;
+  min-height: 40px;
+  border-radius: 8px;
+  background: oklch(24% 0.035 235);
+  color: oklch(99% 0.002 180);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.categoryCreateForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.categoryEditList {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.categoryEditorActions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.categoryArchived {
+  opacity: 0.72;
+}
+
+@media (max-width: 380px) {
+  .categoryCreateForm,
+  .categoryEditList li,
+  .categoryEditorActions {
+    grid-template-columns: 1fr;
+  }
+}

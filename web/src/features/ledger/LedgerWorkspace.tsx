@@ -201,7 +201,7 @@ export function LedgerWorkspace({ onEntryCreated, onLedgerChanged }: LedgerWorks
       return;
     }
     await runLedgerAction(async () => {
-      const category = await createCategory(selectedBook.id, categoryName, entryType);
+      const category = await createCategory(selectedBook.id, { name: categoryName, direction: entryType });
       setCategories((current) => [...current, category]);
       setStatus(t('ledger.status.categoryReady'));
       onLedgerChanged?.();

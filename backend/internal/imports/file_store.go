@@ -50,6 +50,14 @@ func (s *FileStore) SaveBatch(ctx context.Context, batch Batch) (Batch, error) {
 	return stored, nil
 }
 
+// Batch receives owner and batch id values and returns the matching batch.
+func (s *FileStore) Batch(ctx context.Context, userID string, batchID string) (Batch, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.memory.Batch(ctx, userID, batchID)
+}
+
 // BatchByHash receives owner, source, and hash values and returns the matching batch.
 func (s *FileStore) BatchByHash(ctx context.Context, userID string, source string, sourceHash string) (Batch, error) {
 	s.mu.Lock()

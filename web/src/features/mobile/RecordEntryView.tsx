@@ -16,8 +16,10 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type BookListItem, type Category, type Entry } from '../../lib/api/ledger';
+import { type Account, type BookListItem, type Category, type CategoryCreateInput, type CategoryUpdateInput, type Entry, type EntryUpdateInput } from '../../lib/api/ledger';
 import { formatMoney, supportedCurrencies } from '../../lib/money';
+import { CategoryManager } from './CategoryManager';
+import { EntryDetailEditor } from './EntryDetailEditor';
 import './record-entry.css';
 
 type RecordType = 'income' | 'expense' | 'transfer' | 'borrow';
@@ -38,9 +40,14 @@ export type RecordEntryInput = {
 type RecordEntryViewProps = {
   accounts: Account[];
   books: BookListItem[];
+  canManageCategories: boolean;
   categories: Category[];
   isBusy: boolean;
+  onCreateCategory: (input: CategoryCreateInput) => Promise<void>;
   onCreateEntry: (input: RecordEntryInput) => Promise<void>;
+  onDeleteEntry: (entryId: string) => Promise<void>;
+  onUpdateCategory: (categoryId: string, input: CategoryUpdateInput) => Promise<void>;
+  onUpdateEntry: (entryId: string, input: EntryUpdateInput) => Promise<void>;
   rates: Map<string, number>;
   recentEntries: Entry[];
   selectedBookCurrency: string;
@@ -66,9 +73,14 @@ const members = ['Family', 'Me'];
 export function RecordEntryView({
   accounts,
   books,
+  canManageCategories,
   categories,
   isBusy,
+  onCreateCategory,
   onCreateEntry,
+  onDeleteEntry,
+  onUpdateCategory,
+  onUpdateEntry,
   rates,
   recentEntries,
   selectedBookCurrency,
@@ -269,6 +281,75 @@ export function RecordEntryView({
         onKeyPress={handleKeyPress}
         onSave={handleSave}
       />
+
+      <RecentEntryList
+        accounts={accounts}
+        categories={categories}
+        entries={recentEntries}
+        isBusy={isBusy}
+        onDeleteEntry={onDeleteEntry}
+        onUpdateEntry={onUpdateEntry}
+      />
+
+      <CategoryManager
+        canManageCategories={canManageCategories}
+        categories={categories}
+        isBusy={isBusy}
+        onCreateCategory={onCreateCategory}
+        onUpdateCategory={onUpdateCategory}
+      />
+    </section>
+  );
+}
+
+// RecentEntryList receives recent entries and returns editable transaction review controls.
+function RecentEntryList({
+  accounts,
+  categories,
+  entries,
+  isBusy,
+  onDeleteEntry,
+  onUpdateEntry,
+}: {
+  accounts: Account[];
+  categories: Category[];
+  entries: Entry[];
+  isBusy: boolean;
+  onDeleteEntry: (entryId: string) => Promise<void>;
+  onUpdateEntry: (entryId: string, input: EntryUpdateInput) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+
+  if (!entries.length) {
+    return (
+      <section className="recordRecentList" aria-label={t('mobile.transactions.title')}>
+        <div className="sectionTitle">
+          <h2>{t('mobile.transactions.title')}</h2>
+        </div>
+        <p className="emptyState">{t('mobile.transactions.empty')}</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="recordRecentList" aria-label={t('mobile.transactions.title')}>
+      <div className="sectionTitle">
+        <h2>{t('mobile.transactions.title')}</h2>
+      </div>
+      <ul>
+        {entries.slice(0, 8).map((entry) => (
+          <EntryDetailEditor
+            key={`${entry.id}:${entry.updatedAt}`}
+            account={accounts.find((item) => item.id === entry.accountId)}
+            accounts={accounts}
+            categories={categories}
+            entry={entry}
+            isBusy={isBusy}
+            onDeleteEntry={onDeleteEntry}
+            onUpdateEntry={onUpdateEntry}
+          />
+        ))}
+      </ul>
     </section>
   );
 }

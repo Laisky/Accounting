@@ -11,15 +11,23 @@
 }
 
 .recordTypeTabs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
   min-height: 58px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   margin-top: -58px;
   color: oklch(100% 0 0);
 }
 
+.recordTypeTabs::-webkit-scrollbar {
+  display: none;
+}
+
 .recordTypeTabs button {
   position: relative;
+  flex: 1 0 88px;
+  min-width: 0;
   background: transparent;
   color: oklch(100% 0 0 / 76%);
   cursor: pointer;
@@ -230,6 +238,97 @@
 .calculatorGrid .saveKey:disabled {
   cursor: not-allowed;
   opacity: 0.52;
+}
+
+.recordRecentList {
+  display: grid;
+  gap: 10px;
+  padding: 18px 16px 20px;
+  background: oklch(98.5% 0.004 180);
+}
+
+.sectionTitle h2 {
+  margin: 0;
+  color: oklch(21% 0.034 235);
+  font-size: 1.04rem;
+  font-weight: 900;
+}
+
+.recordRecentList ul {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.recordRecentList li {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: oklch(100% 0 0);
+  box-shadow: 0 10px 24px oklch(60% 0.03 220 / 10%);
+}
+
+.recordRecentSummary {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.recordRecentSummary div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.recordRecentSummary strong {
+  color: oklch(23% 0.034 235);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.recordRecentSummary small {
+  color: oklch(61% 0.026 230);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.recordRecentSummary b {
+  color: oklch(20% 0.035 235);
+  font-size: 0.98rem;
+  font-weight: 880;
+  white-space: nowrap;
+}
+
+.recordRecentActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.recordRecentActions label {
+  display: grid;
+  gap: 5px;
+}
+
+.recordRecentActions span {
+  color: oklch(58% 0.025 230);
+  font-size: 0.72rem;
+  font-weight: 860;
+  text-transform: uppercase;
+}
+
+.recordRecentActions input {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid oklch(86% 0.015 185);
+  border-radius: 8px;
+  background: oklch(100% 0 0);
+  color: oklch(20% 0.035 235);
+  font-weight: 760;
 }
 
 @media (max-width: 380px) {

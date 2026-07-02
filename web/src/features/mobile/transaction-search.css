@@ -1,0 +1,126 @@
+.transactionSearchPanel {
+  gap: 14px;
+}
+
+.transactionSearchHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.transactionSearchHeader p {
+  color: oklch(59% 0.03 230);
+  font-size: 0.82rem;
+  font-weight: 860;
+}
+
+.transactionSearchHeader h1 {
+  margin: 0;
+  color: oklch(19% 0.038 235);
+  font-size: 1.5rem;
+  line-height: 1.08;
+}
+
+.transactionSearchHeader button {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid oklch(88% 0.012 185);
+  border-radius: 999px;
+  background: oklch(100% 0 0);
+  color: oklch(23% 0.034 235);
+  cursor: pointer;
+}
+
+.transactionSearchBox {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid oklch(86% 0.015 185);
+  border-radius: 12px;
+  background: oklch(100% 0 0);
+  color: oklch(58% 0.03 230);
+}
+
+.transactionSearchBox input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: oklch(20% 0.035 235);
+  font-size: 1rem;
+  font-weight: 760;
+}
+
+.transactionSearchBox input::placeholder {
+  color: oklch(62% 0.024 230);
+}
+
+.mobileSearchMessage {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: oklch(95% 0.032 165);
+  color: oklch(34% 0.09 160);
+  font-size: 0.86rem;
+  font-weight: 830;
+}
+
+.mobileSearchMessageError {
+  background: oklch(95% 0.035 25);
+  color: oklch(45% 0.17 28);
+}
+
+.transactionSearchResults {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  border-radius: 12px;
+  background: oklch(100% 0 0);
+}
+
+.transactionSearchResults li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 68px;
+  padding: 12px;
+  border-bottom: 1px solid oklch(93% 0.006 185);
+}
+
+.transactionSearchResults li:last-child {
+  border-bottom: 0;
+}
+
+.transactionSearchResults div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.transactionSearchResults strong {
+  color: oklch(23% 0.034 235);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.transactionSearchResults span {
+  color: oklch(61% 0.026 230);
+  font-size: 0.82rem;
+  font-weight: 760;
+  text-transform: capitalize;
+}
+
+.transactionSearchResults b {
+  color: oklch(20% 0.035 235);
+  font-size: 0.98rem;
+  font-weight: 880;
+  white-space: nowrap;
+}

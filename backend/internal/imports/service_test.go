@@ -61,6 +61,77 @@ func TestPreviewWacaiCSVIsIdempotentByHash(t *testing.T) {
 	require.Equal(t, first.SourceHash, second.SourceHash)
 }
 
+// TestBatchLoadsOnlyActorOwnedBatches verifies batch lookup enforces import ownership.
+func TestBatchLoadsOnlyActorOwnedBatches(t *testing.T) {
+	service := NewService(NewMemoryStore())
+	created, err := service.PreviewWacaiCSV(context.Background(), PreviewRequest{
+		Actor:    Actor{UserID: "user-owner"},
+		Filename: "wacai.csv",
+		Data:     []byte("date,type,amount\n2026-07-01,expense,12.30\n"),
+	})
+	require.NoError(t, err)
+
+	loaded, err := service.Batch(context.Background(), BatchRequest{
+		Actor:   Actor{UserID: "user-owner"},
+		BatchID: created.ID,
+	})
+	require.NoError(t, err)
+	require.Equal(t, created.ID, loaded.ID)
+
+	_, err = service.Batch(context.Background(), BatchRequest{
+		Actor:   Actor{UserID: "user-other"},
+		BatchID: created.ID,
+	})
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrNotFound))
+}
+
+// TestMarkAppliedStoresCommitMetadata verifies applied import metadata is durable and actor-scoped.
+func TestMarkAppliedStoresCommitMetadata(t *testing.T) {
+	service := NewService(NewMemoryStore())
+	created, err := service.PreviewWacaiCSV(context.Background(), PreviewRequest{
+		Actor:    Actor{UserID: "user-owner"},
+		Filename: "wacai.csv",
+		Data:     []byte("date,type,amount\n2026-07-01,expense,12.30\n"),
+	})
+	require.NoError(t, err)
+
+	applied, err := service.MarkApplied(context.Background(), MarkAppliedRequest{
+		Actor:    Actor{UserID: "user-owner"},
+		BatchID:  created.ID,
+		BookID:   "book-household",
+		EntryIDs: []string{" entry-1 ", "entry-1", "entry-2"},
+		SkippedRows: []AppliedSkippedRow{
+			{RowNumber: 3, Reason: "account is not mapped"},
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, BatchStatusApplied, applied.Status)
+	require.Equal(t, "book-household", applied.AppliedBookID)
+	require.Equal(t, []string{"entry-1", "entry-2"}, applied.AppliedEntryIDs)
+	require.Len(t, applied.AppliedSkippedRows, 1)
+	require.NotNil(t, applied.AppliedAt)
+	require.True(t, applied.AppliedAt.Equal(applied.AppliedAt.UTC()))
+
+	replayed, err := service.MarkApplied(context.Background(), MarkAppliedRequest{
+		Actor:    Actor{UserID: "user-owner"},
+		BatchID:  created.ID,
+		BookID:   "book-household",
+		EntryIDs: []string{"entry-3"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"entry-1", "entry-2"}, replayed.AppliedEntryIDs)
+
+	_, err = service.MarkApplied(context.Background(), MarkAppliedRequest{
+		Actor:    Actor{UserID: "user-owner"},
+		BatchID:  created.ID,
+		BookID:   "book-other",
+		EntryIDs: []string{"entry-3"},
+	})
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrInvalidInput))
+}
+
 // TestPreviewWacaiCSVRejectsInvalidInput verifies preview requests fail closed.
 func TestPreviewWacaiCSVRejectsInvalidInput(t *testing.T) {
 	service := NewService(NewMemoryStore())

@@ -96,7 +96,10 @@ func (s *Service) List(ctx context.Context, request ListRequest) (ListResult, er
 	}
 
 	start := (page - 1) * pageSize
-	if start > len(events) {
+	// Guard against out-of-range pages and int overflow: a very large page makes
+	// (page-1)*pageSize wrap negative, which would produce a negative slice bound
+	// and panic. Treat any such page as past the end (empty result).
+	if start < 0 || start > len(events) {
 		start = len(events)
 	}
 	end := start + pageSize

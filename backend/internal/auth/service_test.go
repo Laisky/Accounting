@@ -491,6 +491,47 @@ func TestServiceRejectsExpiredSessions(t *testing.T) {
 	require.Contains(t, err.Error(), "session expired")
 }
 
+// TestServicePasskeyCeremoniesExpireInFuture verifies WebAuthn ceremony state stores an enforced future expiry.
+func TestServicePasskeyCeremoniesExpireInFuture(t *testing.T) {
+	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	store := NewMemoryStore()
+	service := NewService(Config{
+		EmailLoginEnabled:         true,
+		EmailRegisterEnabled:      true,
+		EmailVerificationRequired: false,
+		PasskeyEnabled:            true,
+		PasskeyRPDisplayName:      "Accounting Test",
+		PasskeyRPID:               "example.test",
+		PasskeyRPOrigin:           "http://example.test",
+	}, store, NoopTurnstileVerifier{}).WithClock(func() time.Time {
+		return now
+	})
+
+	user, err := service.Register(context.Background(), RegisterRequest{
+		Email:    "person@example.test",
+		Password: "correct horse battery staple",
+	})
+	require.NoError(t, err)
+
+	registrationStart, err := service.BeginPasskeyRegistration(context.Background(), Actor{
+		UserID: user.ID,
+		Email:  user.Email,
+		Status: user.Status,
+	})
+	require.NoError(t, err)
+	registrationCeremony, err := store.PasskeyCeremony(context.Background(), registrationStart.FlowID)
+	require.NoError(t, err)
+	require.True(t, registrationCeremony.ExpiresAt.After(now))
+	require.False(t, registrationCeremony.Session.Expires.IsZero())
+
+	loginStart, err := service.BeginPasskeyLogin(context.Background())
+	require.NoError(t, err)
+	loginCeremony, err := store.PasskeyCeremony(context.Background(), loginStart.FlowID)
+	require.NoError(t, err)
+	require.True(t, loginCeremony.ExpiresAt.After(now))
+	require.False(t, loginCeremony.Session.Expires.IsZero())
+}
+
 // TestServiceListPasskeysPaginates verifies passkey metadata is sorted and returned in a bounded page.
 func TestServiceListPasskeysPaginates(t *testing.T) {
 	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)

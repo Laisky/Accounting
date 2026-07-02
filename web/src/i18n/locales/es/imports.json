@@ -30,6 +30,7 @@
       "tags": "Etiquetas"
     },
     "error": {
+      "applyFailed": "Import apply failed",
       "previewFailed": "La vista previa de importación ha fallado"
     },
     "exportDetected": "Exportación de {{source}} detectada",
@@ -77,6 +78,10 @@
     },
     "spreadsheet": "Hoja de cálculo",
     "stage": {
+      "apply": "Apply import",
+      "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
+      "applying": "Applying import",
+      "applyComplete": "Import applied.",
       "stage": "Preparar importación",
       "staged": "Importación preparada",
       "staging": "Preparando importación"

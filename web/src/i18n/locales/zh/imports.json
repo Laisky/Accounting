@@ -30,6 +30,7 @@
       "tags": "标签"
     },
     "error": {
+      "applyFailed": "Import apply failed",
       "previewFailed": "导入预览失败"
     },
     "exportDetected": "已检测到 {{source}} 导出",
@@ -77,6 +78,10 @@
     },
     "spreadsheet": "电子表格",
     "stage": {
+      "apply": "Apply import",
+      "applied": "Imported {{imported}} rows, skipped {{skipped}}.",
+      "applying": "Applying import",
+      "applyComplete": "Import applied.",
       "stage": "暂存导入",
       "staged": "导入已暂存",
       "staging": "正在暂存导入"
