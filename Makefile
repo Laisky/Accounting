@@ -1,4 +1,4 @@
-.PHONY: build backend-build cli-build frontend-build clean dev ensure-web-deps lint backend-lint cli-lint frontend-lint test backend-test cli-test frontend-test
+.PHONY: build backend-build cli-build frontend-build clean dev ensure-web-deps lint backend-lint cli-lint frontend-lint test backend-test cli-test frontend-test e2e frontend-e2e
 
 BACKEND_ADDR ?= :8080
 FRONTEND_PORT ?= 5173
@@ -48,6 +48,7 @@ cli-lint:
 
 frontend-lint: ensure-web-deps
 	npm --prefix web run lint
+	npm --prefix web run check:i18n
 
 test: backend-test cli-test frontend-test
 
@@ -59,3 +60,8 @@ cli-test:
 
 frontend-test: ensure-web-deps
 	npm --prefix web run test
+
+e2e: frontend-e2e
+
+frontend-e2e: ensure-web-deps
+	npm --prefix web run test:e2e

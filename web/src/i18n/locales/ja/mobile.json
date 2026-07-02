@@ -1,0 +1,60 @@
+{
+  "mobile": {
+    "a11y": {
+      "workspace": "会計モバイルワークスペース",
+      "currentBook": "現在の帳簿",
+      "workspaceTools": "ワークスペースツール",
+      "searchTransactions": "取引を検索",
+      "moreOptions": "その他のオプション",
+      "mainNavigation": "メインナビゲーション",
+      "selectLanguage": "言語を選択"
+    },
+    "defaultBookName": "家計",
+    "nav": {
+      "accounts": "口座",
+      "record": "記録",
+      "reports": "レポート",
+      "me": "マイ"
+    },
+    "accounts": {
+      "eyebrow": "口座",
+      "heading": "この帳簿で共有されているウォレット。",
+      "book": "帳簿",
+      "noAccount": "接続されている口座がまだありません。",
+      "prepareAccount": "口座を準備"
+    },
+    "budget": {
+      "title": "今月の支出予算",
+      "remaining": "残り",
+      "total": "合計 {{amount}}",
+      "spent": "支出 {{amount}}"
+    },
+    "record": {
+      "notePlaceholder": "何の支出ですか?"
+    },
+    "transactions": {
+      "title": "取引",
+      "empty": "取引がまだありません。",
+      "dayTotals": "収入 {{income}} 支出 {{expense}}",
+      "accountFallback": "口座",
+      "entryMeta": "{{time}} {{account}} / {{book}}"
+    },
+    "me": {
+      "emailLogin": "メールログイン {{state}}",
+      "passkeys": "パスキー {{state}}",
+      "totp": "TOTP {{state}}",
+      "loadActivity": "アクティビティを読み込む"
+    },
+    "status": {
+      "baseCurrencyUpdated": "基準通貨を更新しました。"
+    },
+    "error": {
+      "accountSetupFailed": "口座のセットアップに失敗しました。",
+      "createAccountBeforeRecording": "記録する前に口座を作成してください。",
+      "entryFailed": "記帳できませんでした。",
+      "baseCurrencyFailed": "基準通貨を更新できませんでした。",
+      "ledgerDataFailed": "台帳データを読み込めませんでした。",
+      "entriesFailed": "記帳を読み込めませんでした。"
+    }
+  }
+}

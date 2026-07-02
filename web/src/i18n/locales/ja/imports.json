@@ -1,0 +1,88 @@
+{
+  "imports": {
+    "eyebrow": "会計ワークスペース",
+    "heading": "Wacai の帳簿をクリーンな台帳にインポートします。",
+    "a11y": {
+      "currentSession": "現在のセッション",
+      "openActivity": "アクティビティを開く",
+      "closeActivity": "アクティビティを閉じる",
+      "activityLog": "アクティビティログ",
+      "ledgerSummary": "台帳サマリー",
+      "importData": "データをインポート",
+      "importReview": "インポートのレビュー",
+      "uploadFile": "Wacai のエクスポートファイルをアップロード",
+      "previewSummary": "インポートプレビューのサマリー",
+      "detectedValues": "検出されたインポート値",
+      "rowDiagnostics": "インポート行の診断"
+    },
+    "recentActivity": "最近のアクティビティ",
+    "auditEvents": "監査イベント",
+    "noAuditEvents": "監査イベントはまだありません。",
+    "totalEvents": "合計 {{value}} 件のイベント",
+    "dataImport": "データインポート",
+    "chooseSource": "ソースを選択し、エクスポートをアップロードして、コミット前にレビューします。",
+    "csvPreviewReady": "CSV プレビューの準備が整いました",
+    "dataSource": "データソース",
+    "uploadPrompt": "Wacai のエクスポートファイルをアップロード",
+    "acceptedFormat": "対応形式: CSV",
+    "clearFile": "ファイルをクリア",
+    "reviewQueue": "レビューキュー",
+    "noFileSelected": "ファイルが選択されていません",
+    "exportDetected": "{{source}} のエクスポートを検出しました",
+    "spreadsheet": "スプレッドシート",
+    "fileSummary": "{{type}} - {{size}} MB",
+    "none": "なし",
+    "missingFields": "不足しているソースフィールド: {{fields}}",
+    "schemaReady": "検出されたスキーマのレビュー準備が整いました。",
+    "rowDiagnostics": "行の診断",
+    "rowNumber": "{{value}} 行目",
+    "unmappedRow": "未マッピングの行",
+    "readyForMapping": "マッピングの準備完了",
+    "noPreviewRows": "解析されたプレビュー行はありません",
+    "sources": {
+      "wacai": {
+        "label": "Wacai",
+        "description": "Wacai の帳簿、口座、明細記録からのスプレッドシートエクスポート。"
+      }
+    },
+    "stage": {
+      "stage": "インポートをステージング",
+      "staging": "インポートをステージング中",
+      "staged": "インポートをステージングしました"
+    },
+    "facts": {
+      "source": "ソース",
+      "rows": "行数",
+      "pending": "保留中",
+      "fingerprint": "フィンガープリント",
+      "pendingHash": "保留中のハッシュ",
+      "metadata": "メタデータ",
+      "batch": "バッチ {{id}}",
+      "previewBatch": "プレビューバッチ"
+    },
+    "preview": {
+      "warnings": "{{value}} 件の警告",
+      "errors": "{{value}} 件のエラー",
+      "accounts": "{{value}} 件の口座",
+      "categories": "{{value}} 件のカテゴリ"
+    },
+    "detected": {
+      "books": "帳簿",
+      "accounts": "口座",
+      "categories": "カテゴリ",
+      "currencies": "通貨",
+      "members": "メンバー",
+      "merchants": "取引先",
+      "tags": "タグ"
+    },
+    "pipeline": {
+      "validate": "ソース形式を検証",
+      "hash": "ソースハッシュを計算",
+      "batch": "プレビューバッチを作成",
+      "map": "カテゴリと口座をマッピング"
+    },
+    "error": {
+      "previewFailed": "インポートプレビューに失敗しました"
+    }
+  }
+}

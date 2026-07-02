@@ -15,10 +15,17 @@ type Config struct {
 	Auth        AuthConfig
 	Debug       bool
 	Frontend    FrontendConfig
+	Persistence PersistenceConfig
 	Pprof       PprofConfig
 	ServerName  string
 	Shutdown    ShutdownConfig
 	Telemetry   TelemetryConfig
+}
+
+// PersistenceConfig contains process storage backend settings.
+type PersistenceConfig struct {
+	Driver string
+	Dir    string
 }
 
 // FrontendConfig contains settings for serving the built React application.
@@ -34,12 +41,22 @@ type AlertPusherConfig struct {
 	Type  string
 }
 
-// AuthConfig contains authentication, email, Turnstile, TOTP, and passkey settings.
+// AuthConfig contains authentication, email, external SSO, Turnstile, TOTP, and passkey settings.
 type AuthConfig struct {
 	Email     EmailAuthConfig
+	External  ExternalSSOConfig
 	Passkey   PasskeyConfig
+	RateLimit AuthRateLimitConfig
+	Session   SessionConfig
 	TOTP      TOTPConfig
 	Turnstile TurnstileConfig
+}
+
+// AuthRateLimitConfig contains fixed-window public authentication route limits.
+type AuthRateLimitConfig struct {
+	Enabled bool
+	Limit   int
+	Window  time.Duration
 }
 
 // EmailAuthConfig contains email/password authentication and SMTP settings.
@@ -57,12 +74,31 @@ type EmailAuthConfig struct {
 	AllowedRegistrationDomains []string
 }
 
+// ExternalSSOConfig contains settings for delegating login to an external SSO provider.
+type ExternalSSOConfig struct {
+	AutoProvisionEnabled bool
+	CallbackURL          string
+	Enabled              bool
+	GraphQLEndpoint      string
+	LoginURL             string
+	StateCookieName      string
+	StateTTL             time.Duration
+	SuccessRedirectURL   string
+}
+
 // PasskeyConfig contains WebAuthn passkey settings.
 type PasskeyConfig struct {
 	Enabled       bool
 	RPDisplayName string
 	RPID          string
 	RPOrigin      string
+}
+
+// SessionConfig contains browser session cookie and lifetime settings.
+type SessionConfig struct {
+	CookieName   string
+	CookieSecure bool
+	TTL          time.Duration
 }
 
 // PprofConfig contains settings for the dedicated net/http/pprof listener.
@@ -126,11 +162,31 @@ func LoadFromEnv() Config {
 				VerificationRequired:       readBool("ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED", true),
 				VerificationTTL:            readDuration("ACCOUNTING_AUTH_EMAIL_VERIFICATION_TTL", 10*time.Minute),
 			},
+			External: ExternalSSOConfig{
+				AutoProvisionEnabled: readBool("ACCOUNTING_AUTH_EXTERNAL_SSO_AUTO_PROVISION_ENABLED", true),
+				CallbackURL:          readString("ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL", ""),
+				Enabled:              readBool("ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED", false),
+				GraphQLEndpoint:      readString("ACCOUNTING_AUTH_EXTERNAL_SSO_GRAPHQL_ENDPOINT", "https://sso.laisky.com/query"),
+				LoginURL:             readString("ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL", "https://sso.laisky.com/"),
+				StateCookieName:      readString("ACCOUNTING_AUTH_EXTERNAL_SSO_STATE_COOKIE_NAME", "accounting_sso_state"),
+				StateTTL:             readDuration("ACCOUNTING_AUTH_EXTERNAL_SSO_STATE_TTL", 5*time.Minute),
+				SuccessRedirectURL:   readString("ACCOUNTING_AUTH_EXTERNAL_SSO_SUCCESS_REDIRECT_URL", "/"),
+			},
 			Passkey: PasskeyConfig{
 				Enabled:       readBool("ACCOUNTING_AUTH_PASSKEY_ENABLED", true),
 				RPDisplayName: readString("ACCOUNTING_AUTH_PASSKEY_RP_DISPLAY_NAME", "Accounting"),
 				RPID:          readString("ACCOUNTING_AUTH_PASSKEY_RP_ID", "localhost"),
 				RPOrigin:      readString("ACCOUNTING_AUTH_PASSKEY_RP_ORIGIN", "http://localhost:5173"),
+			},
+			RateLimit: AuthRateLimitConfig{
+				Enabled: readBool("ACCOUNTING_AUTH_RATE_LIMIT_ENABLED", true),
+				Limit:   readInt("ACCOUNTING_AUTH_RATE_LIMIT_LIMIT", 20),
+				Window:  readDuration("ACCOUNTING_AUTH_RATE_LIMIT_WINDOW", time.Minute),
+			},
+			Session: SessionConfig{
+				CookieName:   readString("ACCOUNTING_AUTH_SESSION_COOKIE_NAME", "accounting_session"),
+				CookieSecure: readBool("ACCOUNTING_AUTH_SESSION_COOKIE_SECURE", true),
+				TTL:          readDuration("ACCOUNTING_AUTH_SESSION_TTL", 24*time.Hour),
 			},
 			TOTP: TOTPConfig{
 				Enabled:             readBool("ACCOUNTING_AUTH_TOTP_ENABLED", true),
@@ -148,6 +204,10 @@ func LoadFromEnv() Config {
 		Frontend: FrontendConfig{
 			DistDir: readString("ACCOUNTING_WEB_DIST_DIR", "../web/dist"),
 			DevURL:  readString("ACCOUNTING_WEB_DEV_URL", ""),
+		},
+		Persistence: PersistenceConfig{
+			Driver: readString("ACCOUNTING_PERSISTENCE_DRIVER", "memory"),
+			Dir:    readString("ACCOUNTING_PERSISTENCE_DIR", "./var/accounting"),
 		},
 		Pprof: PprofConfig{
 			Enabled: readBool("ACCOUNTING_ENABLE_PPROF", false),

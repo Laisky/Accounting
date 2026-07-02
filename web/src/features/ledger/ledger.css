@@ -1,0 +1,158 @@
+.ledgerConsole {
+  display: grid;
+  gap: 16px;
+}
+
+.ledgerToolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 16px;
+  align-items: end;
+}
+
+.ledgerToolbar label,
+.ledgerPanel label {
+  display: grid;
+  gap: 7px;
+}
+
+.ledgerToolbar span,
+.ledgerPanel label span {
+  color: oklch(42% 0.047 238);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ledgerToolbar select,
+.ledgerPanel input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid oklch(76% 0.055 104);
+  border-radius: 8px;
+  background: oklch(99% 0.01 108);
+  color: oklch(20% 0.04 242);
+  font-weight: 760;
+}
+
+.ledgerGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ledgerPanel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-height: 178px;
+  padding: 18px;
+  border: 1px solid oklch(80% 0.045 104);
+  border-radius: 8px;
+  background: oklch(98% 0.014 110);
+}
+
+.ledgerPanel p {
+  color: oklch(43% 0.04 238);
+  font-weight: 750;
+}
+
+.quickEntry {
+  grid-column: span 2;
+}
+
+.transactionPanel {
+  grid-column: span 2;
+}
+
+.panelTitle {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.panelTitle > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: oklch(91% 0.045 164);
+  color: oklch(31% 0.1 164);
+}
+
+.compactForm {
+  display: grid;
+  gap: 10px;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid oklch(82% 0.035 104);
+  border-radius: 8px;
+  background: oklch(94% 0.018 112);
+}
+
+.segmented button {
+  min-height: 34px;
+  border-radius: 6px;
+  background: transparent;
+  color: oklch(35% 0.04 238);
+  cursor: pointer;
+  font-weight: 850;
+  text-transform: capitalize;
+}
+
+.segmented .segmentActive {
+  background: oklch(99% 0.01 108);
+  color: oklch(24% 0.095 164);
+}
+
+.entryList {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.entryList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid oklch(82% 0.035 104);
+  border-radius: 8px;
+  background: oklch(99% 0.01 108);
+}
+
+.entryList span {
+  color: oklch(25% 0.04 242);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.entryList strong {
+  color: oklch(30% 0.095 164);
+}
+
+@media (max-width: 980px) {
+  .ledgerToolbar,
+  .ledgerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .quickEntry,
+  .transactionPanel {
+    grid-column: auto;
+  }
+}

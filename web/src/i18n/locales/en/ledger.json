@@ -1,0 +1,41 @@
+{
+  "ledger": {
+    "a11y": {
+      "workspace": "Ledger workspace"
+    },
+    "eyebrow": "Ledger operations",
+    "heading": "Books, accounts, quick entry, and review.",
+    "activeBook": "Active book",
+    "panels": {
+      "bookSwitcher": "Book switcher",
+      "accountContext": "Account context",
+      "quickEntry": "Quick entry"
+    },
+    "fields": {
+      "bookName": "Book name",
+      "account": "Account"
+    },
+    "actions": {
+      "createBook": "Create book",
+      "updateSettings": "Update settings",
+      "createGroup": "Create group",
+      "shareAccount": "Share account",
+      "addCategory": "Add category"
+    },
+    "noAccountConnected": "No account connected",
+    "transactionReview": "Transaction review ({{value}})",
+    "noEntriesYet": "No entries yet",
+    "status": {
+      "bookReady": "Book ready.",
+      "bookSettingsUpdated": "Book settings updated.",
+      "accountGroupReady": "Account group ready.",
+      "categoryReady": "Category ready."
+    },
+    "error": {
+      "requestFailed": "Ledger request failed.",
+      "createBookFirst": "Create a book first.",
+      "createBookAndGroupFirst": "Create a book and account group first.",
+      "createBookAndAccountFirst": "Create a book and account first."
+    }
+  }
+}

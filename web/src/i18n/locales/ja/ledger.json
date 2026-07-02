@@ -1,0 +1,41 @@
+{
+  "ledger": {
+    "a11y": {
+      "workspace": "台帳ワークスペース"
+    },
+    "eyebrow": "台帳操作",
+    "heading": "帳簿、口座、クイック記帳、レビュー。",
+    "activeBook": "使用中の帳簿",
+    "panels": {
+      "bookSwitcher": "帳簿の切り替え",
+      "accountContext": "口座コンテキスト",
+      "quickEntry": "クイック記帳"
+    },
+    "fields": {
+      "bookName": "帳簿名",
+      "account": "口座"
+    },
+    "actions": {
+      "createBook": "帳簿を作成",
+      "updateSettings": "設定を更新",
+      "createGroup": "グループを作成",
+      "shareAccount": "口座を共有",
+      "addCategory": "カテゴリを追加"
+    },
+    "noAccountConnected": "口座が接続されていません",
+    "transactionReview": "取引レビュー ({{value}})",
+    "noEntriesYet": "記帳がまだありません",
+    "status": {
+      "bookReady": "帳簿の準備が整いました。",
+      "bookSettingsUpdated": "帳簿の設定を更新しました。",
+      "accountGroupReady": "口座グループの準備が整いました。",
+      "categoryReady": "カテゴリの準備が整いました。"
+    },
+    "error": {
+      "requestFailed": "台帳のリクエストに失敗しました。",
+      "createBookFirst": "先に帳簿を作成してください。",
+      "createBookAndGroupFirst": "先に帳簿と口座グループを作成してください。",
+      "createBookAndAccountFirst": "先に帳簿と口座を作成してください。"
+    }
+  }
+}

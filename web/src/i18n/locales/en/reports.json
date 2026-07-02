@@ -1,0 +1,66 @@
+{
+  "reports": {
+    "title": "Reports",
+    "eyebrow": "Reports",
+    "heading": "Analyze spending with Wacai-style drilldowns.",
+    "a11y": {
+      "book": "Report book",
+      "filters": "Report filters",
+      "activeFilters": "Active report filters",
+      "controls": "Report controls",
+      "flowFilter": "Flow filter",
+      "timeMode": "Time mode",
+      "period": "Report period",
+      "prevPeriod": "Previous period",
+      "nextPeriod": "Next period",
+      "dimensions": "Report dimensions"
+    },
+    "noBook": "No book",
+    "cashflow": "cashflow",
+    "loading": "Loading reports.",
+    "conversionIssue": "{{value}} entries need exchange rates to appear in base-currency totals.",
+    "showAll": "Show all",
+    "showLess": "Show less",
+    "rankedEmpty": "No entries match this period and filter.",
+    "filter": {
+      "book": "Book",
+      "flow": "Flow",
+      "period": "Period",
+      "total": "Total"
+    },
+    "timeMode": {
+      "year": "year",
+      "month": "month"
+    },
+    "tabs": {
+      "trend": "Trend",
+      "category": "Category",
+      "subcategory": "Subcategory",
+      "member": "Member",
+      "account": "Account",
+      "merchant": "Merchant",
+      "tag": "Tag"
+    },
+    "panel": {
+      "eyebrow": "{{dimension}} {{flow}}",
+      "heading": "{{dimension}} {{target}}"
+    },
+    "donut": {
+      "desc": "{{value}} ranked slices totaling {{amount}}.",
+      "empty": "No entries in this report period.",
+      "emptyCaption": "No entries in this period."
+    },
+    "trend": {
+      "heading": "Period movement",
+      "filteredTotal": "filtered total"
+    },
+    "labels": {
+      "uncategorized": "Uncategorized",
+      "noMember": "No member",
+      "unassignedAccount": "Unassigned account",
+      "noMerchant": "No merchant",
+      "noTag": "No tag",
+      "other": "Other"
+    }
+  }
+}

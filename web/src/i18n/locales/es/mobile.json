@@ -1,0 +1,60 @@
+{
+  "mobile": {
+    "a11y": {
+      "workspace": "Espacio de trabajo móvil de Contabilidad",
+      "currentBook": "Libro actual",
+      "workspaceTools": "Herramientas del espacio de trabajo",
+      "searchTransactions": "Buscar transacciones",
+      "moreOptions": "Más opciones",
+      "mainNavigation": "Navegación principal",
+      "selectLanguage": "Seleccionar idioma"
+    },
+    "defaultBookName": "Hogar",
+    "nav": {
+      "accounts": "Cuentas",
+      "record": "Registrar",
+      "reports": "Informes",
+      "me": "Yo"
+    },
+    "accounts": {
+      "eyebrow": "Cuentas",
+      "heading": "Carteras compartidas con este libro.",
+      "book": "Libro",
+      "noAccount": "Aún no hay ninguna cuenta conectada.",
+      "prepareAccount": "Preparar cuenta"
+    },
+    "budget": {
+      "title": "Presupuesto de gasto mensual",
+      "remaining": "Restante",
+      "total": "Total {{amount}}",
+      "spent": "Gastado {{amount}}"
+    },
+    "record": {
+      "notePlaceholder": "¿Para qué fue esto?"
+    },
+    "transactions": {
+      "title": "Transacciones",
+      "empty": "Aún no hay transacciones.",
+      "dayTotals": "Ingreso {{income}} Gasto {{expense}}",
+      "accountFallback": "Cuenta",
+      "entryMeta": "{{time}} {{account}} / {{book}}"
+    },
+    "me": {
+      "emailLogin": "Inicio de sesión por correo {{state}}",
+      "passkeys": "Claves de acceso {{state}}",
+      "totp": "TOTP {{state}}",
+      "loadActivity": "Cargar actividad"
+    },
+    "status": {
+      "baseCurrencyUpdated": "Moneda base actualizada."
+    },
+    "error": {
+      "accountSetupFailed": "La configuración de la cuenta ha fallado.",
+      "createAccountBeforeRecording": "Crea una cuenta antes de registrar.",
+      "entryFailed": "No se pudo registrar el movimiento.",
+      "baseCurrencyFailed": "No se pudo actualizar la moneda base.",
+      "ledgerDataFailed": "No se pudieron cargar los datos del libro contable.",
+      "entriesFailed": "No se pudieron cargar los movimientos."
+    }
+  }
+}

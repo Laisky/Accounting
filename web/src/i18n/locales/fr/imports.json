@@ -1,0 +1,88 @@
+{
+  "imports": {
+    "eyebrow": "Espace de comptabilité",
+    "heading": "Importez les livres Wacai dans un grand livre propre.",
+    "a11y": {
+      "currentSession": "Session en cours",
+      "openActivity": "Ouvrir l'activité",
+      "closeActivity": "Fermer l'activité",
+      "activityLog": "Journal d'activité",
+      "ledgerSummary": "Résumé du grand livre",
+      "importData": "Importer des données",
+      "importReview": "Révision de l'import",
+      "uploadFile": "Téléverser le fichier d'export Wacai",
+      "previewSummary": "Résumé de l'aperçu d'import",
+      "detectedValues": "Valeurs d'import détectées",
+      "rowDiagnostics": "Diagnostics des lignes d'import"
+    },
+    "recentActivity": "Activité récente",
+    "auditEvents": "Événements d'audit",
+    "noAuditEvents": "Aucun événement d'audit pour l'instant.",
+    "totalEvents": "{{value}} événements au total",
+    "dataImport": "Import de données",
+    "chooseSource": "Choisissez la source, téléversez l'export, révisez avant de valider.",
+    "csvPreviewReady": "Aperçu CSV prêt",
+    "dataSource": "Source de données",
+    "uploadPrompt": "Téléversez un fichier d'export Wacai",
+    "acceptedFormat": "Format accepté : CSV",
+    "clearFile": "Effacer le fichier",
+    "reviewQueue": "File d'attente de révision",
+    "noFileSelected": "Aucun fichier sélectionné",
+    "exportDetected": "Export {{source}} détecté",
+    "spreadsheet": "Feuille de calcul",
+    "fileSummary": "{{type}} - {{size}} MB",
+    "none": "Aucun",
+    "missingFields": "Champs source manquants : {{fields}}",
+    "schemaReady": "Schéma détecté prêt pour la révision.",
+    "rowDiagnostics": "Diagnostics des lignes",
+    "rowNumber": "Ligne {{value}}",
+    "unmappedRow": "Ligne non mappée",
+    "readyForMapping": "Prêt pour le mappage",
+    "noPreviewRows": "Aucune ligne d'aperçu analysée",
+    "sources": {
+      "wacai": {
+        "label": "Wacai",
+        "description": "Exports de feuilles de calcul des livres, comptes et enregistrements de factures Wacai."
+      }
+    },
+    "stage": {
+      "stage": "Préparer l'import",
+      "staging": "Préparation de l'import",
+      "staged": "Import préparé"
+    },
+    "facts": {
+      "source": "Source",
+      "rows": "Lignes",
+      "pending": "En attente",
+      "fingerprint": "Empreinte",
+      "pendingHash": "Hachage en attente",
+      "metadata": "Métadonnées",
+      "batch": "Lot {{id}}",
+      "previewBatch": "Lot d'aperçu"
+    },
+    "preview": {
+      "warnings": "{{value}} avertissements",
+      "errors": "{{value}} erreurs",
+      "accounts": "{{value}} comptes",
+      "categories": "{{value}} catégories"
+    },
+    "detected": {
+      "books": "Livres",
+      "accounts": "Comptes",
+      "categories": "Catégories",
+      "currencies": "Devises",
+      "members": "Membres",
+      "merchants": "Marchands",
+      "tags": "Étiquettes"
+    },
+    "pipeline": {
+      "validate": "Valider le format source",
+      "hash": "Calculer le hachage source",
+      "batch": "Créer le lot d'aperçu",
+      "map": "Mapper les catégories et les comptes"
+    },
+    "error": {
+      "previewFailed": "Échec de l'aperçu d'import"
+    }
+  }
+}

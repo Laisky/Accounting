@@ -1,0 +1,88 @@
+{
+  "imports": {
+    "eyebrow": "Accounting workspace",
+    "heading": "Import Wacai books into a clean ledger.",
+    "a11y": {
+      "currentSession": "Current session",
+      "openActivity": "Open activity",
+      "closeActivity": "Close activity",
+      "activityLog": "Activity log",
+      "ledgerSummary": "Ledger summary",
+      "importData": "Import data",
+      "importReview": "Import review",
+      "uploadFile": "Upload Wacai export file",
+      "previewSummary": "Import preview summary",
+      "detectedValues": "Detected import values",
+      "rowDiagnostics": "Import row diagnostics"
+    },
+    "recentActivity": "Recent activity",
+    "auditEvents": "Audit events",
+    "noAuditEvents": "No audit events yet.",
+    "totalEvents": "{{value}} total events",
+    "dataImport": "Data import",
+    "chooseSource": "Choose the source, upload the export, review before commit.",
+    "csvPreviewReady": "CSV preview ready",
+    "dataSource": "Data source",
+    "uploadPrompt": "Upload a Wacai export file",
+    "acceptedFormat": "Accepted format: CSV",
+    "clearFile": "Clear file",
+    "reviewQueue": "Review queue",
+    "noFileSelected": "No file selected",
+    "exportDetected": "{{source}} export detected",
+    "spreadsheet": "Spreadsheet",
+    "fileSummary": "{{type}} - {{size}} MB",
+    "none": "None",
+    "missingFields": "Missing source fields: {{fields}}",
+    "schemaReady": "Detected schema ready for review.",
+    "rowDiagnostics": "Row diagnostics",
+    "rowNumber": "Row {{value}}",
+    "unmappedRow": "Unmapped row",
+    "readyForMapping": "Ready for mapping",
+    "noPreviewRows": "No preview rows parsed",
+    "sources": {
+      "wacai": {
+        "label": "Wacai",
+        "description": "Spreadsheet exports from Wacai books, accounts, and bill records."
+      }
+    },
+    "stage": {
+      "stage": "Stage import",
+      "staging": "Staging import",
+      "staged": "Import staged"
+    },
+    "facts": {
+      "source": "Source",
+      "rows": "Rows",
+      "pending": "Pending",
+      "fingerprint": "Fingerprint",
+      "pendingHash": "Pending hash",
+      "metadata": "Metadata",
+      "batch": "Batch {{id}}",
+      "previewBatch": "Preview batch"
+    },
+    "preview": {
+      "warnings": "{{value}} warnings",
+      "errors": "{{value}} errors",
+      "accounts": "{{value}} accounts",
+      "categories": "{{value}} categories"
+    },
+    "detected": {
+      "books": "Books",
+      "accounts": "Accounts",
+      "categories": "Categories",
+      "currencies": "Currencies",
+      "members": "Members",
+      "merchants": "Merchants",
+      "tags": "Tags"
+    },
+    "pipeline": {
+      "validate": "Validate source format",
+      "hash": "Compute source hash",
+      "batch": "Create preview batch",
+      "map": "Map categories and accounts"
+    },
+    "error": {
+      "previewFailed": "Import preview failed"
+    }
+  }
+}

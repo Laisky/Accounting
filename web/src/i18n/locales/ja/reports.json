@@ -1,0 +1,66 @@
+{
+  "reports": {
+    "title": "レポート",
+    "eyebrow": "レポート",
+    "heading": "Wacai 風のドリルダウンで支出を分析します。",
+    "a11y": {
+      "book": "レポート帳簿",
+      "filters": "レポートフィルター",
+      "activeFilters": "適用中のレポートフィルター",
+      "controls": "レポートコントロール",
+      "flowFilter": "フローフィルター",
+      "timeMode": "期間モード",
+      "period": "レポート期間",
+      "prevPeriod": "前の期間",
+      "nextPeriod": "次の期間",
+      "dimensions": "レポートディメンション"
+    },
+    "noBook": "帳簿なし",
+    "cashflow": "キャッシュフロー",
+    "loading": "レポートを読み込み中。",
+    "conversionIssue": "{{value}} 件の記帳は、基準通貨の合計に表示するために為替レートが必要です。",
+    "showAll": "すべて表示",
+    "showLess": "折りたたむ",
+    "rankedEmpty": "この期間とフィルターに一致する記帳はありません。",
+    "filter": {
+      "book": "帳簿",
+      "flow": "フロー",
+      "period": "期間",
+      "total": "合計"
+    },
+    "timeMode": {
+      "year": "年",
+      "month": "月"
+    },
+    "tabs": {
+      "trend": "トレンド",
+      "category": "カテゴリ",
+      "subcategory": "サブカテゴリ",
+      "member": "メンバー",
+      "account": "口座",
+      "merchant": "取引先",
+      "tag": "タグ"
+    },
+    "panel": {
+      "eyebrow": "{{dimension}} {{flow}}",
+      "heading": "{{dimension}} {{target}}"
+    },
+    "donut": {
+      "desc": "{{value}} 個のランク付けされたスライス、合計 {{amount}}。",
+      "empty": "このレポート期間に記帳はありません。",
+      "emptyCaption": "この期間に記帳はありません。"
+    },
+    "trend": {
+      "heading": "期間の推移",
+      "filteredTotal": "フィルター後の合計"
+    },
+    "labels": {
+      "uncategorized": "未分類",
+      "noMember": "メンバーなし",
+      "unassignedAccount": "未割り当ての口座",
+      "noMerchant": "取引先なし",
+      "noTag": "タグなし",
+      "other": "その他"
+    }
+  }
+}

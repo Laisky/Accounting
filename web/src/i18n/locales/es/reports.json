@@ -1,0 +1,66 @@
+{
+  "reports": {
+    "title": "Informes",
+    "eyebrow": "Informes",
+    "heading": "Analiza los gastos con desgloses al estilo de Wacai.",
+    "a11y": {
+      "book": "Libro del informe",
+      "filters": "Filtros del informe",
+      "activeFilters": "Filtros activos del informe",
+      "controls": "Controles del informe",
+      "flowFilter": "Filtro de flujo",
+      "timeMode": "Modo de tiempo",
+      "period": "Periodo del informe",
+      "prevPeriod": "Periodo anterior",
+      "nextPeriod": "Periodo siguiente",
+      "dimensions": "Dimensiones del informe"
+    },
+    "noBook": "Sin libro",
+    "cashflow": "flujo de caja",
+    "loading": "Cargando informes.",
+    "conversionIssue": "{{value}} movimientos necesitan tipos de cambio para aparecer en los totales en moneda base.",
+    "showAll": "Mostrar todo",
+    "showLess": "Mostrar menos",
+    "rankedEmpty": "Ningún movimiento coincide con este periodo y filtro.",
+    "filter": {
+      "book": "Libro",
+      "flow": "Flujo",
+      "period": "Periodo",
+      "total": "Total"
+    },
+    "timeMode": {
+      "year": "año",
+      "month": "mes"
+    },
+    "tabs": {
+      "trend": "Tendencia",
+      "category": "Categoría",
+      "subcategory": "Subcategoría",
+      "member": "Miembro",
+      "account": "Cuenta",
+      "merchant": "Comercio",
+      "tag": "Etiqueta"
+    },
+    "panel": {
+      "eyebrow": "{{dimension}} {{flow}}",
+      "heading": "{{dimension}} {{target}}"
+    },
+    "donut": {
+      "desc": "{{value}} secciones ordenadas que suman {{amount}}.",
+      "empty": "No hay movimientos en este periodo del informe.",
+      "emptyCaption": "No hay movimientos en este periodo."
+    },
+    "trend": {
+      "heading": "Movimiento del periodo",
+      "filteredTotal": "total filtrado"
+    },
+    "labels": {
+      "uncategorized": "Sin categoría",
+      "noMember": "Sin miembro",
+      "unassignedAccount": "Cuenta sin asignar",
+      "noMerchant": "Sin comercio",
+      "noTag": "Sin etiqueta",
+      "other": "Otro"
+    }
+  }
+}

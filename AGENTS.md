@@ -1,5 +1,6 @@
 # Agent Instructions
 
+- This is a brand new project, no need to consider backwards compatibility, always aim for the best solution.
 - **English only:** Always output **English** for all code, comments, chat, documents, logs, and UI text regardless of input language.
 - **Sensitive local info:** Local tools and debugging sensitive information is stored in `.github/instructions/laisky.instructions.md`; treat it as sensitive and never leak it.
 - **File length limits:** No manually written code file may exceed **800 lines**; for Go prefer files ≤**600 lines**; split by responsibility when needed; generated files are exempt.

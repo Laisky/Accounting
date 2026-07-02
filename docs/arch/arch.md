@@ -37,8 +37,10 @@ The product target is a browser-first personal finance system with users, authen
 ├── backend/                 # Go web server module.
 │   ├── cmd/accounting-server
 │   └── internal/
+│       ├── audit            # User-visible audit events for security and data changes.
 │       ├── config           # Environment-backed runtime settings.
 │       ├── httpserver       # Gin router, middleware, API handlers, SPA serving.
+│       ├── imports          # Import preview parsing and import-batch staging.
 │       ├── ledger           # Accounting domain use cases.
 │       └── logger           # Global logger foundation and context logger fallback.
 ├── cli/                     # Go CLI module for operator and automation workflows.
@@ -94,10 +96,11 @@ Wacai compatibility is a migration requirement, not a dependency. Public Wacai-f
 
 The import system should support:
 
-- Spreadsheet imports, especially `.xlsx` and `.csv` files exported from Wacai or manually converted from Wacai exports.
-- A staging preview that shows parsed rows, detected books, accounts, categories, currencies, members, merchants, tags, and unmapped fields before writing durable records.
-- Idempotent imports keyed by source file hash, source row identity when present, normalized timestamp, amount, account, book, and source-specific identifiers.
-- Per-row validation errors and warnings. Invalid rows must not block valid rows from being reviewed, but committed imports must be explicit.
+- Initial authenticated CSV preview for Wacai exports through `POST /api/imports/wacai/preview`, using a multipart upload field named `file`.
+- Later spreadsheet imports, especially `.xlsx` files exported from Wacai or manually converted from Wacai exports.
+- A staging preview that shows parsed rows, detected books, accounts, categories, currencies, members, merchants, tags, and unmapped fields before writing committed ledger records.
+- Idempotent preview batches keyed by user, source, and source file hash, with later committed imports also considering source row identity when present, normalized timestamp, amount, account, book, and source-specific identifiers.
+- Per-row validation errors and warnings. Invalid rows must not block valid rows from being reviewed, but committed imports must remain explicit.
 - Mapping tables for source book, account, category, member, merchant, tag, and currency values.
 - Raw-source retention for imported rows so future parser improvements can repair or enrich historical imports.
 - Rollback or compensating delete for an import batch before the user starts editing imported entries individually.
@@ -133,10 +136,12 @@ The backend uses Gin because the reference projects already use Gin, `github.com
 Key responsibilities:
 
 - `cmd/accounting-server`: process startup, signal handling, graceful shutdown.
+- `internal/audit`: sanitized audit event recording and actor-scoped audit reads.
 - `internal/config`: environment parsing with explicit defaults.
 - `internal/logger`: global structured logger foundation plus `FromContext` for non-Gin business code.
 - `internal/httpserver`: middleware, route registration, SPA fallback, and development proxy hooks.
-- `internal/ledger`: domain use cases for books, entries, accounts, categories, imports, reporting, and future double-entry rules.
+- `internal/imports`: import preview parsing, source hashing, parser diagnostics, and import-batch staging.
+- `internal/ledger`: domain use cases for books, entries, accounts, categories, reporting, and future double-entry rules.
 
 Request handlers must retrieve the request logger with `gmw.GetLogger(c)` once per handler and pass `c.Request.Context()` into business services. Business logic should use context-aware loggers, not package globals.
 
@@ -161,8 +166,9 @@ Accounting should follow the proven `one-api` authentication shape while keeping
 - TOTP verification must be rate-limited and must reject recently reused codes through a short replay cache, using PostgreSQL or Redis-compatible storage once available. The fallback in-memory cache is acceptable only for local development.
 - Passkey login is an optional WebAuthn flow. Users can register multiple passkeys after login, and passkey login should support discoverable credentials.
 - Passkey credentials must store raw credential id, public key, sign count, backup flags, transports, AAGUID, human label, and timestamps. Private key material is never stored by the server.
+- External SSO login is optional and configuration-driven. When enabled, the backend redirects users to the configured SSO login URL, validates the returned `sso_token` server-side through the configured SSO GraphQL `WhoAmI` endpoint, maps the SSO username to a local active user, and can provision that local user automatically when configured.
 - Admins may disable another user's TOTP or passkeys for account recovery, but these actions must be audited.
-- The webapp must show available login methods based on public runtime config, but public config must expose only non-secret values such as Turnstile site key and passkey relying-party metadata.
+- The webapp must show available login methods based on public runtime config, but public config must expose only non-secret values such as Turnstile site key, passkey relying-party metadata, and the local SSO start path.
 
 Initial auth API shape:
 
@@ -178,7 +184,9 @@ Initial auth API shape:
 - `POST /api/auth/totp/disable`: verifies a TOTP code and disables TOTP.
 - `POST /api/auth/passkeys/login/begin`: starts a discoverable WebAuthn login ceremony.
 - `POST /api/auth/passkeys/login/finish`: completes a discoverable WebAuthn login ceremony and creates a session.
-- `GET /api/auth/passkeys`: lists the authenticated user's passkeys.
+- `GET /api/auth/sso/start`: creates a short-lived anti-CSRF state cookie and redirects to the configured external SSO login URL.
+- `GET /api/auth/sso/callback`: validates state and `sso_token`, creates a local session cookie, and redirects to a clean application URL.
+- `GET /api/auth/passkeys`: lists the authenticated user's passkeys with bounded pagination.
 - `POST /api/auth/passkeys/register/begin`: starts WebAuthn registration for the authenticated user.
 - `POST /api/auth/passkeys/register/finish`: stores the confirmed passkey credential.
 - `PUT /api/auth/passkeys/{id}`: renames a passkey owned by the authenticated user.
@@ -209,19 +217,87 @@ Initial endpoints:
 | `GET` | `/api/health` | Process health check. |
 | `GET` | `/api/runtime-config` | Public runtime settings for the frontend. |
 | `GET` | `/api/ledger/summary` | Placeholder ledger aggregate for the first UI. |
+| `POST` | `/api/auth/register` | Email/password registration with optional pending email verification. |
+| `POST` | `/api/auth/login` | Email/password login that creates an HttpOnly session cookie. |
+| `POST` | `/api/auth/logout` | Session revocation and cookie clearing. |
+| `GET` | `/api/auth/session` | Authenticated session and actor read. |
+| `GET` | `/api/auth/email/verification` | Email verification code request with generic non-secret response. |
+| `POST` | `/api/auth/email/verification` | Email verification code confirmation that activates pending users. |
+| `POST` | `/api/auth/password-reset/request` | Password reset code request with generic non-secret response. |
+| `POST` | `/api/auth/password-reset/confirm` | Password reset code confirmation that updates the password. |
+| `GET` | `/api/auth/totp/status` | Authenticated TOTP enabled-state read. |
+| `POST` | `/api/auth/totp/setup` | Authenticated TOTP setup start with pending session-scoped secret and otpauth URI. |
+| `POST` | `/api/auth/totp/confirm` | Authenticated TOTP setup confirmation with one-time code validation. |
+| `POST` | `/api/auth/totp/disable` | Authenticated TOTP disable with one-time code validation. |
+| `POST` | `/api/auth/passkeys/login/begin` | Starts a discoverable WebAuthn passkey login ceremony. |
+| `POST` | `/api/auth/passkeys/login/finish` | Completes a discoverable WebAuthn passkey login ceremony and creates an HttpOnly session cookie. |
+| `GET` | `/api/auth/sso/start` | Starts configured external SSO login with a short-lived state cookie and provider redirect. |
+| `GET` | `/api/auth/sso/callback` | Validates the external SSO token server-side, creates a local session cookie, and redirects to a clean URL. |
+| `GET` | `/api/auth/passkeys` | Authenticated paginated list of public passkey metadata for the current user. |
+| `POST` | `/api/auth/passkeys/register/begin` | Starts an authenticated WebAuthn passkey registration ceremony. |
+| `POST` | `/api/auth/passkeys/register/finish` | Completes an authenticated WebAuthn passkey registration ceremony and stores the public credential. |
+| `PUT` | `/api/auth/passkeys/{id}` | Authenticated passkey label update for an owned passkey. |
+| `DELETE` | `/api/auth/passkeys/{id}` | Authenticated passkey deletion for an owned passkey. |
+| `GET` | `/api/audit` | Authenticated user-visible audit event list for the current actor. |
+| `GET` | `/api/books` | Authenticated paginated list of books where the current user has explicit membership, including the current user's role. |
+| `POST` | `/api/books` | Authenticated book creation with server-controlled id, owner, owner membership, and timestamps. |
+| `GET` | `/api/books/{bookID}` | Authenticated role-aware book settings read for explicit book members. |
+| `PATCH` | `/api/books/{bookID}` | Authenticated book settings update for owners and administrators, currently name and reporting currency. |
+| `GET` | `/api/books/{bookID}/members` | Authenticated paginated explicit member list for book members. |
+| `GET` | `/api/books/{bookID}/ledger/summary` | Authenticated book-scoped summary using explicit membership policy and optional UTC `start_date` / `end_date` day filters. |
+| `GET` | `/api/accounts` | Authenticated paginated list of personal accounts owned by the current user. |
+| `POST` | `/api/accounts` | Authenticated personal account creation with server-controlled id, owner, and timestamps. |
+| `GET` | `/api/accounts/groups` | Authenticated paginated list of personal account groups owned by the current user. |
+| `POST` | `/api/accounts/groups` | Authenticated personal account group creation with server-controlled id, owner, and timestamps. |
+| `PATCH` | `/api/accounts/groups/{groupID}` | Authenticated personal account group update for the owning user. |
+| `GET` | `/api/books/{bookID}/categories` | Authenticated paginated category tree list for explicit book members. |
+| `POST` | `/api/books/{bookID}/categories` | Authenticated category creation for book owners and administrators. |
+| `PATCH` | `/api/books/{bookID}/categories/{categoryID}` | Authenticated category update and soft archive for book owners and administrators. |
+| `GET` | `/api/books/{bookID}/entries` | Authenticated paginated entry list for explicit book members. |
+| `POST` | `/api/books/{bookID}/entries` | Authenticated entry creation for owners, administrators, and members, with server-controlled creator and book fields. |
+| `PATCH` | `/api/books/{bookID}/entries/{entryID}` | Authenticated partial entry update with owner/administrator override and member creator-only policy. |
+| `DELETE` | `/api/books/{bookID}/entries/{entryID}` | Authenticated entry deletion with owner/administrator override and member creator-only policy. |
+| `POST` | `/api/imports/wacai/preview` | Authenticated Wacai CSV import preview from multipart field `file`, returning `201` with a staged preview batch. |
 
 Future APIs should be grouped by domain and versioned once the first persistent contract is ready:
 
-- `/api/auth`: email registration, login, logout, session refresh, email verification, account recovery, TOTP, passkeys, and invite acceptance.
+- `/api/auth`: session refresh, recovery-code administration, passkey admin recovery, and invite acceptance beyond the initial email/password, verification, password-reset, TOTP, and user-owned passkey contract.
 - `/api/users`: profile, preferences, and identity-safe user lookup for invitations.
-- `/api/books`: book creation, settings, base currency, membership, invitations, and role management.
+- `/api/books`: invitations, invitation acceptance, role changes, and member removal beyond the initial book workspace/settings/member-read contract.
 - `/api/books/{bookID}/entries`: income, expense, transfer, refund, reimbursement, borrow, lend, and repayment entries.
-- `/api/books/{bookID}/categories`: income and expense category trees, category mapping, and display metadata.
-- `/api/accounts`: personal accounts, account groups, balances, currency, credit-card settings, and visibility settings.
-- `/api/imports`: upload, parse, preview, mapping, commit, rollback, and import-batch status.
+- `/api/books/{bookID}/categories`: category mapping and display metadata beyond the initial create/update/archive contract.
+- `/api/accounts`: account balances, credit-card settings, and visibility settings beyond the initial account and group create/list/update contract.
+- `/api/imports`: mapping, commit, rollback, durable raw-file storage, `.xlsx` parsing, and import-batch status beyond the initial Wacai CSV preview contract.
 - `/api/reconciliation`: statement-period matching and lock records.
 - `/api/reports`: book-level and personal reports by category, account, member, merchant, tag, and time range.
-- `/api/audit`: user-visible audit events for sensitive account, book, membership, and import changes.
+- `/api/audit`: membership, import commit/rollback, reconciliation, and admin recovery audit events beyond the initial auth, ledger mutation, and import-preview feed.
+
+Initial auth, book, account, category, entry, and import request contracts:
+
+- `POST /api/auth/register` accepts `email`, `password`, and optional `turnstile_token`. The response returns public user data only. Password hashes and plaintext passwords are never returned.
+- `POST /api/auth/login` accepts `email`, `password`, and optional `turnstile_token`. The response returns public user and session metadata and sets the configured HttpOnly session cookie.
+- `GET /api/auth/email/verification` accepts `email` as a query parameter and returns a generic `202 Accepted` response with expiry metadata. The response never includes the verification code.
+- `POST /api/auth/email/verification` accepts `email` and `code`, consumes the one-time code, and returns public user data after activation.
+- `POST /api/auth/password-reset/request` accepts `email` and returns a generic `202 Accepted` response with expiry metadata. The response never includes the reset code or reveals whether the email exists.
+- `POST /api/auth/password-reset/confirm` accepts `email`, `code`, and `newPassword`, consumes the one-time code, and returns public user data. Plaintext passwords are never returned.
+- `GET /api/auth/totp/status` returns whether the authenticated user has TOTP enabled.
+- `POST /api/auth/totp/setup` stores a pending TOTP secret against the current session and returns an otpauth URI and expiry. The response does not expose a separate secret field.
+- `POST /api/auth/totp/confirm` accepts `code`, validates the pending session-scoped secret, stores the confirmed secret on the user, and clears the pending setup.
+- `POST /api/auth/totp/disable` accepts `code`, validates the current TOTP secret, and clears the stored secret. Login for TOTP-enabled users requires `totp_code`, rejects replayed codes, and applies per-user failed-code limits.
+- Passkey begin endpoints return a server-side `flowId` plus WebAuthn public-key options. Finish endpoints accept `flowId` and a nested browser credential response. Registration requires an authenticated session and stores credential id, public key, sign count, backup flags, transports, AAGUID, label, and timestamps without private key material.
+- External SSO start accepts no body, stores only a hashed state value in an HttpOnly cookie, and redirects to the configured SSO login URL with `redirect_to`. The callback accepts `state` and `sso_token` query values, validates state with a constant-time comparison, validates the token server-side, clears the state cookie, creates the local session cookie, and never returns the token in a response body.
+- Paginated list endpoints accept optional `page` and `page_size`, reject unknown query filters, and bound `page_size` to at most `100`. New list endpoints return an envelope with `items`, `page`, `pageSize`, and `total`; the existing entry list keeps its domain-specific `entries` field with the same pagination metadata.
+- `GET /api/audit` accepts optional `page` and `page_size`, returns only audit events for the authenticated actor, and omits secret metadata such as passwords, tokens, secrets, and one-time codes. The initial feed records registration, login, logout, login failures, verification and password-reset requests and confirmations, TOTP setup/enable/disable, passkey registration/login/rename/delete, book create/update, account group create/update, account create, category create/update, entry create/update/delete, and Wacai import-preview creation.
+- `POST /api/books` accepts `name` and `reportingCurrency`. The response returns the created book as a role-aware book list item with owner role for the creator.
+- `PATCH /api/books/{bookID}` accepts optional `name` and `reportingCurrency`. At least one field is required. The server controls book id, owner, role, and timestamps.
+- `GET /api/books/{bookID}/members` returns paginated explicit members for the book. Membership mutation, invitations, and invite acceptance remain future work until user lookup and invite contracts are defined.
+- `POST /api/accounts` accepts `groupId`, `name`, `type`, `currency`, `sharedBookIds`, and `openingBalanceCents`. The supported initial account types are `cash`, `savings`, `credit_card`, `loan`, `investment`, and `payment_platform`; stored-value, receivable, and payable variants remain import/modeling targets until explicit product contracts are added.
+- `POST /api/accounts/groups` accepts `name` and `sortOrder`; `PATCH /api/accounts/groups/{groupID}` accepts optional `name` and `sortOrder`. Account groups are personal to the authenticated user, and ownership is server-controlled.
+- `POST /api/books/{bookID}/categories` accepts `parentId`, `name`, `direction`, `sortOrder`, and `rawSourceName`. Category direction must be `income` or `expense`.
+- `PATCH /api/books/{bookID}/categories/{categoryID}` accepts optional `parentId`, `name`, `direction`, `sortOrder`, `archived`, and `rawSourceName`. Category removal is archival by setting `archived=true`; hard delete is deferred to avoid breaking historical entry references.
+- `PATCH /api/books/{bookID}/entries/{entryID}` accepts optional `type`, `accountId`, `destinationAccountId`, `categoryId`, `amountCents`, `transactionCurrency`, `exchangeRate`, `occurredAt`, `note`, `merchant`, and `tags`. At least one field is required. The server controls id, book id, creator, account currency, book reporting currency, raw source, and timestamps.
+- `POST /api/imports/wacai/preview` accepts authenticated `multipart/form-data` with a required `file` field. Initial support is CSV-only and returns `201 Created` with a preview batch containing source hash, parser version, detected schema, preview rows, row-level warnings/errors, and detected accounts, categories, currencies, and tags. Re-uploading the same file for the same user and source returns the same idempotent preview batch.
+- Mutating book, account, category, and entry requests reject unknown JSON fields, return `201` for creates and `200` for updates, map validation failures to `400`, policy failures to `403`, and missing referenced resources to `404`.
 
 API design rules:
 
@@ -252,7 +328,7 @@ Core entities:
 - Account group: user-owned grouping for personal accounts.
 - Account: user-owned financial account with type, group, currency, name, provider metadata, balance settings, and optional credit or statement settings.
 - Exchange rate: rate source, base currency, quote currency, effective time, and precision metadata.
-- Import batch: uploaded source file, parser version, source hash, detected schema, mapping decisions, row results, commit status, and rollback state.
+- Import batch: source upload metadata, parser version, source hash, detected schema, preview rows, row diagnostics, and idempotent preview status, with mapping decisions, commit status, raw-file object storage, and rollback state added when committed imports become durable.
 - Audit event: security-relevant and data-changing events with actor, target, action, timestamp, and sanitized metadata.
 
 Entry types should include at least:
@@ -273,7 +349,9 @@ The future double-entry layer can model:
 - Posting: one debit or credit line within a journal entry.
 - Reconciliation: statement-period matching, balance checks, and lock records.
 
-The first persistent store should be hidden behind repository interfaces owned by the relevant domain package. Controllers should not build SQL directly. Repositories must validate untrusted inputs, bind query parameters, and avoid building queries from raw user-provided strings.
+The first persistent store is hidden behind repository interfaces owned by the relevant domain package. The default `memory` driver is for local development. The `file` driver stores atomic JSON snapshots for auth, ledger, audit, and import-preview state under `ACCOUNTING_PERSISTENCE_DIR`; files are written with owner-only permissions because they contain password hashes, TOTP secrets, session hashes, and other server-side state. This single-node file driver is a durable bootstrap path, not the final multi-process database layer.
+
+Controllers must not build SQL directly. Future SQL repositories must validate untrusted inputs, bind query parameters, and avoid building queries from raw user-provided strings.
 
 ## Configuration
 
@@ -286,6 +364,8 @@ Current backend environment variables:
 | `ACCOUNTING_SERVER_NAME` | `accounting` | Public server label returned in runtime config. |
 | `ACCOUNTING_WEB_DIST_DIR` | `../web/dist` | Built SPA directory served by the Go process. |
 | `ACCOUNTING_WEB_DEV_URL` | empty | Optional reverse proxy target for non-API frontend routes. |
+| `ACCOUNTING_PERSISTENCE_DRIVER` | `memory` | Storage driver: `memory` for process-local state or `file` for atomic JSON snapshots. |
+| `ACCOUNTING_PERSISTENCE_DIR` | `./var/accounting` | Directory for file-backed auth, ledger, audit, and import-preview snapshots. |
 | `ACCOUNTING_AUTH_EMAIL_REGISTER_ENABLED` | `true` | Enables self-service email/password registration. |
 | `ACCOUNTING_AUTH_EMAIL_LOGIN_ENABLED` | `true` | Enables email/password login for existing users. |
 | `ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED` | `true` | Requires email verification during registration. |
@@ -297,6 +377,9 @@ Current backend environment variables:
 | `ACCOUNTING_AUTH_EMAIL_SMTP_PASSWORD` | empty | SMTP password; never log or return this value. |
 | `ACCOUNTING_AUTH_EMAIL_SMTP_FROM` | empty | Sender address for auth emails. |
 | `ACCOUNTING_AUTH_EMAIL_FORCE_SMTP_TLS_VERIFY` | `true` | Requires SMTP TLS certificate verification. |
+| `ACCOUNTING_AUTH_RATE_LIMIT_ENABLED` | `true` | Enables fixed-window limits on public authentication routes. |
+| `ACCOUNTING_AUTH_RATE_LIMIT_LIMIT` | `20` | Maximum attempts per auth route, client IP, and email/flow subject within the window. |
+| `ACCOUNTING_AUTH_RATE_LIMIT_WINDOW` | `1m` | Public auth route rate-limit window. |
 | `ACCOUNTING_AUTH_TURNSTILE_ENABLED` | `false` | Enables Cloudflare Turnstile checks for auth flows. |
 | `ACCOUNTING_AUTH_TURNSTILE_LOGIN_MODE` | `always` | Login Turnstile mode: `always` or `after_failure`. |
 | `ACCOUNTING_AUTH_TURNSTILE_SITE_KEY` | empty | Public Turnstile site key for the webapp. |
@@ -309,6 +392,9 @@ Current backend environment variables:
 | `ACCOUNTING_AUTH_PASSKEY_RP_DISPLAY_NAME` | `Accounting` | WebAuthn relying-party display name. |
 | `ACCOUNTING_AUTH_PASSKEY_RP_ID` | `localhost` | WebAuthn relying-party id; must match the serving domain. |
 | `ACCOUNTING_AUTH_PASSKEY_RP_ORIGIN` | `http://localhost:5173` | WebAuthn origin for browser ceremonies. |
+| `ACCOUNTING_AUTH_SESSION_COOKIE_NAME` | `accounting_session` | Browser session cookie name. |
+| `ACCOUNTING_AUTH_SESSION_COOKIE_SECURE` | `true` | Adds the Secure attribute to session cookies; keep enabled for production. |
+| `ACCOUNTING_AUTH_SESSION_TTL` | `24h` | Browser session lifetime. |
 | `ACCOUNTING_ENABLE_PPROF` | `false` | Enables a dedicated `net/http/pprof` listener. |
 | `ACCOUNTING_PPROF_LISTEN` | `localhost:6060` | pprof bind address; keep loopback unless protected by a firewall or auth proxy. |
 | `ACCOUNTING_OTEL_ENABLED` | `false` | Enables OpenTelemetry tracing with Gin instrumentation. |
@@ -354,6 +440,7 @@ make dev
 make build
 make lint
 make test
+make e2e
 ```
 
 Required final gates after code changes:
@@ -362,6 +449,7 @@ Required final gates after code changes:
 make lint
 cd backend && go test -race -cover ./...
 cd ../cli && go test -race -cover ./...
+npm --prefix web run test:e2e
 ```
 
 Equivalent separate invocations are also acceptable:
@@ -369,6 +457,7 @@ Equivalent separate invocations are also acceptable:
 ```sh
 cd backend && go test -race -cover ./...
 cd cli && go test -race -cover ./...
+npm --prefix web run test:e2e
 ```
 
 ## Operational Notes
@@ -385,6 +474,6 @@ cd cli && go test -race -cover ./...
 - Define authentication and session strategy.
 - Define the first durable API versioning strategy and request/response schema format.
 - Specify the double-entry posting invariants.
-- Specify the Wacai import parser strategy, sample-file collection process, mapping UX, and rollback behavior.
+- Extend the initial Wacai CSV preview parser with sample-file collection, mapping UX, commit behavior, rollback behavior, `.xlsx` support, and broader format coverage.
 - Add import/export formats for bank statements after the Wacai migration path is defined.
 - Add a deployment document once Docker and CI exist.

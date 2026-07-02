@@ -1,0 +1,66 @@
+{
+  "reports": {
+    "title": "报表",
+    "eyebrow": "报表",
+    "heading": "以 Wacai 风格的下钻分析支出。",
+    "a11y": {
+      "book": "报表账本",
+      "filters": "报表筛选",
+      "activeFilters": "已启用的报表筛选",
+      "controls": "报表控件",
+      "flowFilter": "收支筛选",
+      "timeMode": "时间模式",
+      "period": "报表周期",
+      "prevPeriod": "上一周期",
+      "nextPeriod": "下一周期",
+      "dimensions": "报表维度"
+    },
+    "noBook": "无账本",
+    "cashflow": "现金流",
+    "loading": "正在加载报表。",
+    "conversionIssue": "{{value}} 条记录需要汇率才能计入本位币合计。",
+    "showAll": "显示全部",
+    "showLess": "收起",
+    "rankedEmpty": "没有记录符合此周期和筛选条件。",
+    "filter": {
+      "book": "账本",
+      "flow": "收支",
+      "period": "周期",
+      "total": "合计"
+    },
+    "timeMode": {
+      "year": "年",
+      "month": "月"
+    },
+    "tabs": {
+      "trend": "趋势",
+      "category": "分类",
+      "subcategory": "子分类",
+      "member": "成员",
+      "account": "账户",
+      "merchant": "商家",
+      "tag": "标签"
+    },
+    "panel": {
+      "eyebrow": "{{dimension}} {{flow}}",
+      "heading": "{{dimension}} {{target}}"
+    },
+    "donut": {
+      "desc": "{{value}} 个排名分片，合计 {{amount}}。",
+      "empty": "此报表周期内没有记录。",
+      "emptyCaption": "此周期内没有记录。"
+    },
+    "trend": {
+      "heading": "周期变动",
+      "filteredTotal": "筛选后合计"
+    },
+    "labels": {
+      "uncategorized": "未分类",
+      "noMember": "无成员",
+      "unassignedAccount": "未分配账户",
+      "noMerchant": "无商家",
+      "noTag": "无标签",
+      "other": "其他"
+    }
+  }
+}

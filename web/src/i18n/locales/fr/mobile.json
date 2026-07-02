@@ -1,0 +1,60 @@
+{
+  "mobile": {
+    "a11y": {
+      "workspace": "Espace de comptabilité mobile",
+      "currentBook": "Livre actuel",
+      "workspaceTools": "Outils de l'espace de travail",
+      "searchTransactions": "Rechercher des transactions",
+      "moreOptions": "Plus d'options",
+      "mainNavigation": "Navigation principale",
+      "selectLanguage": "Choisir la langue"
+    },
+    "defaultBookName": "Foyer",
+    "nav": {
+      "accounts": "Comptes",
+      "record": "Saisir",
+      "reports": "Rapports",
+      "me": "Moi"
+    },
+    "accounts": {
+      "eyebrow": "Comptes",
+      "heading": "Portefeuilles partagés avec ce livre.",
+      "book": "Livre",
+      "noAccount": "Aucun compte connecté pour l'instant.",
+      "prepareAccount": "Préparer un compte"
+    },
+    "budget": {
+      "title": "Budget de dépenses mensuel",
+      "remaining": "Restant",
+      "total": "Total {{amount}}",
+      "spent": "Dépensé {{amount}}"
+    },
+    "record": {
+      "notePlaceholder": "À quoi cela correspondait-il ?"
+    },
+    "transactions": {
+      "title": "Transactions",
+      "empty": "Aucune transaction pour l'instant.",
+      "dayTotals": "Revenu {{income}} Dépense {{expense}}",
+      "accountFallback": "Compte",
+      "entryMeta": "{{time}} {{account}} / {{book}}"
+    },
+    "me": {
+      "emailLogin": "Connexion par e-mail {{state}}",
+      "passkeys": "Clés d'accès {{state}}",
+      "totp": "TOTP {{state}}",
+      "loadActivity": "Charger l'activité"
+    },
+    "status": {
+      "baseCurrencyUpdated": "Devise de base mise à jour."
+    },
+    "error": {
+      "accountSetupFailed": "Échec de la configuration du compte.",
+      "createAccountBeforeRecording": "Créez un compte avant de saisir.",
+      "entryFailed": "Impossible d'enregistrer l'écriture.",
+      "baseCurrencyFailed": "Impossible de mettre à jour la devise de base.",
+      "ledgerDataFailed": "Impossible de charger les données du grand livre.",
+      "entriesFailed": "Impossible de charger les écritures."
+    }
+  }
+}

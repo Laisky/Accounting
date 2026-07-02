@@ -1,0 +1,34 @@
+{
+  "common": {
+    "accessEyebrow": "会計へのアクセス",
+    "checkingSession": "現在のセッションを確認しています。",
+    "loadingSessionLabel": "セッションを読み込み中",
+    "signOut": "サインアウト",
+    "balance": "現在の残高",
+    "currency": "通貨",
+    "entries": "記帳",
+    "entriesCount": "{{value}} 件の記帳",
+    "amount": "金額",
+    "category": "カテゴリ",
+    "note": "メモ",
+    "baseCurrency": "基準通貨",
+    "postEntry": "記帳する",
+    "noBookYet": "帳簿がまだありません",
+    "total": "合計",
+    "on": "オン",
+    "off": "オフ",
+    "loadingActivity": "アクティビティを読み込み中。",
+    "flow": {
+      "all": "すべて",
+      "expense": "支出",
+      "income": "収入"
+    },
+    "status": {
+      "accountReady": "口座の準備が整いました。",
+      "entryPosted": "記帳しました。"
+    },
+    "error": {
+      "activityFailed": "アクティビティを読み込めませんでした。"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "ledger": {
+    "a11y": {
+      "workspace": "账本工作区"
+    },
+    "eyebrow": "账本操作",
+    "heading": "账本、账户、快速记账与审核。",
+    "activeBook": "当前账本",
+    "panels": {
+      "bookSwitcher": "账本切换",
+      "accountContext": "账户上下文",
+      "quickEntry": "快速记账"
+    },
+    "fields": {
+      "bookName": "账本名称",
+      "account": "账户"
+    },
+    "actions": {
+      "createBook": "创建账本",
+      "updateSettings": "更新设置",
+      "createGroup": "创建分组",
+      "shareAccount": "共享账户",
+      "addCategory": "添加分类"
+    },
+    "noAccountConnected": "未连接账户",
+    "transactionReview": "交易审核（{{value}}）",
+    "noEntriesYet": "暂无记录",
+    "status": {
+      "bookReady": "账本已就绪。",
+      "bookSettingsUpdated": "账本设置已更新。",
+      "accountGroupReady": "账户分组已就绪。",
+      "categoryReady": "分类已就绪。"
+    },
+    "error": {
+      "requestFailed": "账本请求失败。",
+      "createBookFirst": "请先创建账本。",
+      "createBookAndGroupFirst": "请先创建账本和账户分组。",
+      "createBookAndAccountFirst": "请先创建账本和账户。"
+    }
+  }
+}

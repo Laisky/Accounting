@@ -1,0 +1,60 @@
+{
+  "mobile": {
+    "a11y": {
+      "workspace": "Accounting mobile workspace",
+      "currentBook": "Current book",
+      "workspaceTools": "Workspace tools",
+      "searchTransactions": "Search transactions",
+      "moreOptions": "More options",
+      "mainNavigation": "Main navigation",
+      "selectLanguage": "Select language"
+    },
+    "defaultBookName": "Household",
+    "nav": {
+      "accounts": "Accounts",
+      "record": "Record",
+      "reports": "Reports",
+      "me": "Me"
+    },
+    "accounts": {
+      "eyebrow": "Accounts",
+      "heading": "Wallets shared with this book.",
+      "book": "Book",
+      "noAccount": "No account connected yet.",
+      "prepareAccount": "Prepare account"
+    },
+    "budget": {
+      "title": "Monthly spending budget",
+      "remaining": "Remaining",
+      "total": "Total {{amount}}",
+      "spent": "Spent {{amount}}"
+    },
+    "record": {
+      "notePlaceholder": "What was this for?"
+    },
+    "transactions": {
+      "title": "Transactions",
+      "empty": "No transactions yet.",
+      "dayTotals": "Income {{income}} Expense {{expense}}",
+      "accountFallback": "Account",
+      "entryMeta": "{{time}} {{account}} / {{book}}"
+    },
+    "me": {
+      "emailLogin": "Email login {{state}}",
+      "passkeys": "Passkeys {{state}}",
+      "totp": "TOTP {{state}}",
+      "loadActivity": "Load activity"
+    },
+    "status": {
+      "baseCurrencyUpdated": "Base currency updated."
+    },
+    "error": {
+      "accountSetupFailed": "Account setup failed.",
+      "createAccountBeforeRecording": "Create an account before recording.",
+      "entryFailed": "Entry could not be posted.",
+      "baseCurrencyFailed": "Base currency could not be updated.",
+      "ledgerDataFailed": "Ledger data could not be loaded.",
+      "entriesFailed": "Entries could not be loaded."
+    }
+  }
+}
