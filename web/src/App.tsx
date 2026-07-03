@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation } from 'react-router';
 import { AuthWorkspace } from './features/auth/AuthWorkspace';
+import { LandingPage } from './features/landing/LandingPage';
 import { MobileWorkspace } from './features/mobile/MobileWorkspace';
 import { fetchSession, logout, type AuthActor } from './lib/api/auth';
 import { emptyRuntimeConfig, fetchRuntimeConfig, type RuntimeConfig } from './lib/api/runtimeConfig';
@@ -17,6 +18,7 @@ export function App() {
   const runtimeConfig = useRuntimeConfig();
   const [actor, setActor] = useState<AuthActor | null>(null);
   const [isSessionLoaded, setIsSessionLoaded] = useState(false);
+  const [skipAuthReturn, setSkipAuthReturn] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -31,7 +33,14 @@ export function App() {
   // handleLogout receives no parameters, clears the active session, and returns no value.
   async function handleLogout() {
     await logout();
+    setSkipAuthReturn(true);
     setActor(null);
+  }
+
+  // handleAuthenticated receives the signed-in actor and clears any logout-only redirect state.
+  function handleAuthenticated(nextActor: AuthActor) {
+    setSkipAuthReturn(false);
+    setActor(nextActor);
   }
 
   // Hold on the splash until the session resolves so an authenticated deep link
@@ -54,17 +63,25 @@ export function App() {
   // Unauthenticated: a single AuthWorkspace instance drives every auth step, so the
   // multi-step form state survives navigation between /login, /login/totp, etc.
   if (!actor) {
+    if (location.pathname === '/') {
+      return <LandingPage runtimeConfig={runtimeConfig} />;
+    }
+
     return onAuthPath ? (
-      <AuthWorkspace runtimeConfig={runtimeConfig} onAuthenticated={setActor} />
+      <AuthWorkspace runtimeConfig={runtimeConfig} onAuthenticated={handleAuthenticated} />
     ) : (
-      <Navigate to="/login" replace />
+      <Navigate to={skipAuthReturn ? '/' : '/login'} replace state={skipAuthReturn ? undefined : { returnTo: location.pathname + location.search }} />
     );
   }
 
   // Authenticated: keep logged-in users out of the auth screens; MobileWorkspace owns
   // all in-app routing for the remaining paths.
   if (onAuthPath) {
-    return <Navigate to="/record" replace />;
+    return <Navigate to={authReturnPath(location.state) ?? '/home'} replace />;
+  }
+
+  if (location.pathname === '/') {
+    return <Navigate to="/home" replace />;
   }
 
   return <MobileWorkspace actor={actor} runtimeConfig={runtimeConfig} onLogout={handleLogout} />;
@@ -84,4 +101,15 @@ function useRuntimeConfig(): RuntimeConfig {
   }, []);
 
   return runtimeConfig;
+}
+
+function authReturnPath(state: unknown): string | null {
+  if (!state || typeof state !== 'object' || !('returnTo' in state)) {
+    return null;
+  }
+  const returnTo = (state as { returnTo?: unknown }).returnTo;
+  if (typeof returnTo !== 'string' || !returnTo.startsWith('/') || authPaths.includes(returnTo.split('?')[0])) {
+    return null;
+  }
+  return returnTo;
 }

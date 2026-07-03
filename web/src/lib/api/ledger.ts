@@ -66,6 +66,7 @@ export type Entry = {
   creatorUserId: string;
   type: string;
   accountId?: string;
+  destinationAccountId?: string;
   categoryId?: string;
   amountCents: number;
   transactionCurrency: string;

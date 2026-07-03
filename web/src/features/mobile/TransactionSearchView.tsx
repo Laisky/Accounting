@@ -1,7 +1,7 @@
 import { Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type Category, type Entry } from '../../lib/api/ledger';
+import { type Account, type BookMember, type Category, type Entry } from '../../lib/api/ledger';
 import { formatMoney } from '../../lib/money';
 import './transaction-search.css';
 
@@ -11,7 +11,9 @@ type TransactionSearchViewProps = {
   entries: Entry[];
   isLoading: boolean;
   error: string;
+  members?: BookMember[];
   onClose: () => void;
+  title?: string;
 };
 
 // TransactionSearchView receives ledger entries and returns a searchable mobile transaction panel.
@@ -21,18 +23,20 @@ export function TransactionSearchView({
   entries,
   error,
   isLoading,
+  members = [],
   onClose,
+  title,
 }: TransactionSearchViewProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const results = useMemo(() => filterEntries(entries, accounts, categories, query), [accounts, categories, entries, query]);
+  const results = useMemo(() => filterEntries(entries, accounts, categories, members, query), [accounts, categories, entries, members, query]);
 
   return (
-    <section className="tabPanel transactionSearchPanel" aria-label={t('mobile.search.title')}>
+    <section className="tabPanel transactionSearchPanel" aria-label={title ?? t('mobile.search.title')}>
       <div className="transactionSearchHeader">
         <div>
           <p>{t('mobile.search.eyebrow')}</p>
-          <h1>{t('mobile.search.title')}</h1>
+          <h1>{title ?? t('mobile.search.title')}</h1>
         </div>
         <button type="button" aria-label={t('mobile.search.close')} onClick={onClose}>
           <X size={22} />
@@ -79,7 +83,7 @@ export function TransactionSearchView({
 }
 
 // filterEntries receives entries, ledger dimensions, and a query, and returns matching entries.
-function filterEntries(entries: Entry[], accounts: Account[], categories: Category[], query: string): Entry[] {
+function filterEntries(entries: Entry[], accounts: Account[], categories: Category[], members: BookMember[], query: string): Entry[] {
   const normalized = query.trim().toLowerCase();
   if (!normalized) {
     return sortEntries(entries);
@@ -87,15 +91,24 @@ function filterEntries(entries: Entry[], accounts: Account[], categories: Catego
 
   return sortEntries(entries.filter((entry) => {
     const account = accounts.find((item) => item.id === entry.accountId);
+    const destinationAccount = accounts.find((item) => item.id === entry.destinationAccountId);
     const category = categories.find((item) => item.id === entry.categoryId);
+    const parentCategory = categories.find((item) => item.id === category?.parentId);
+    const member = members.find((item) => item.userId === entry.creatorUserId);
     const haystack = [
       entry.note,
       entry.merchant,
       entry.type,
       entry.transactionCurrency,
       String(entry.amountCents / 100),
+      formatMoney(entry.amountCents, entry.transactionCurrency),
       account?.name,
+      destinationAccount?.name,
+      parentCategory?.name,
       category?.name,
+      member?.displayName,
+      member?.userId,
+      entry.creatorUserId,
       ...(entry.tags ?? []),
     ]
       .filter(Boolean)

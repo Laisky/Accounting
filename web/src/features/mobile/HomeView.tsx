@@ -10,6 +10,7 @@ type HomeViewProps = {
   categories: Category[];
   currencyCode: string;
   entries: Entry[];
+  onOpenEntry?: (entryId: string) => void;
   summary: LedgerSummary;
 };
 
@@ -22,13 +23,13 @@ type EntryDayGroup = {
 };
 
 // HomeView receives the current ledger snapshot and returns the mobile transaction feed.
-export function HomeView({ accounts, bookName, categories, currencyCode, entries, summary }: HomeViewProps) {
+export function HomeView({ accounts, bookName, categories, currencyCode, entries, onOpenEntry, summary }: HomeViewProps) {
   const { t } = useTranslation();
   const groups = useMemo(() => groupEntriesByDay(entries), [entries]);
   const monthlyExpenseCents = useMemo(() => currentMonthExpenseCents(entries), [entries]);
-  const budgetTotalCents = Math.max(monthlyExpenseCents, summary.balanceCents, 1);
+  const budgetTotalCents = Math.max(monthlyExpenseCents, summary.balanceCents, 0);
   const remainingCents = Math.max(0, budgetTotalCents - monthlyExpenseCents);
-  const progress = Math.min(100, Math.round((monthlyExpenseCents / budgetTotalCents) * 100));
+  const progress = budgetTotalCents > 0 ? Math.min(100, Math.round((monthlyExpenseCents / budgetTotalCents) * 100)) : 0;
 
   return (
     <section className="tabPanel homePanel" aria-label={t('mobile.home.title')}>
@@ -65,15 +66,22 @@ export function HomeView({ accounts, bookName, categories, currencyCode, entries
                   const signedAmount = entry.type === 'expense' ? -entry.amountCents : entry.amountCents;
 
                   return (
-                    <li key={entry.id} aria-label={t('mobile.transactions.entryLabel', { title })}>
-                      <span className="transactionIcon">
-                        <Package size={20} />
-                      </span>
-                      <div>
-                        <strong>{title}</strong>
-                        <small>{t('mobile.transactions.entryMeta', { time: formatEntryTime(entry.occurredAt), account: account?.name ?? t('mobile.transactions.accountFallback'), book: bookName })}</small>
-                      </div>
-                      <b>{formatMoney(signedAmount, entry.transactionCurrency || currencyCode)}</b>
+                    <li key={entry.id}>
+                      <button
+                        type="button"
+                        className="transactionRowButton"
+                        aria-label={t('mobile.transactions.openEntry', { title })}
+                        onClick={() => onOpenEntry?.(entry.id)}
+                      >
+                        <span className="transactionIcon">
+                          <Package size={20} />
+                        </span>
+                        <div>
+                          <strong>{title}</strong>
+                          <small>{t('mobile.transactions.entryMeta', { time: formatEntryTime(entry.occurredAt), account: account?.name ?? t('mobile.transactions.accountFallback'), book: bookName })}</small>
+                        </div>
+                        <b>{formatMoney(signedAmount, entry.transactionCurrency || currencyCode)}</b>
+                      </button>
                     </li>
                   );
                 })}

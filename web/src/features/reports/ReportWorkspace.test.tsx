@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { ReportWorkspace } from './ReportWorkspace';
 import type { Account, BookListItem, BookMember, Category, Entry } from '../../lib/api/ledger';
@@ -142,25 +143,48 @@ vi.mock('../../lib/api/ledger', async (importOriginal) => {
   };
 });
 
-describe('ReportWorkspace', () => {
-  it('splits category reports into expense and income sections when all flow is selected', async () => {
-    render(<ReportWorkspace />);
+function renderReport(path = '/reports/category') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <ReportWorkspace />
+    </MemoryRouter>,
+  );
+}
 
-    fireEvent.click(await screen.findByRole('button', { name: 'all' }));
+describe('ReportWorkspace', () => {
+  it('shows category expense, income, and balance sections by default', async () => {
+    renderReport();
 
     const panel = await screen.findByRole('tabpanel', { name: 'Category' });
     expect(within(panel).getByRole('heading', { name: 'Category expense' })).toBeInTheDocument();
     expect(within(panel).getByRole('heading', { name: 'Category income' })).toBeInTheDocument();
+    expect(within(panel).getByRole('heading', { name: 'Category balance' })).toBeInTheDocument();
+    expect(await within(panel).findAllByText('Dining')).not.toHaveLength(0);
     expect(panel).toHaveTextContent('Dining');
     expect(panel).toHaveTextContent('$241.00');
     expect(panel).toHaveTextContent('Salary');
     expect(panel).toHaveTextContent('$1,750.00');
+    expect(panel).toHaveTextContent('$1,509.00');
+  });
+
+  it('shows subcategory expense, income, and balance sections when all flow is selected', async () => {
+    renderReport();
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Subcategory' }));
+
+    const panel = await screen.findByRole('tabpanel', { name: 'Subcategory' });
+    expect(within(panel).getByRole('heading', { name: 'Subcategory expense' })).toBeInTheDocument();
+    expect(within(panel).getByRole('heading', { name: 'Subcategory income' })).toBeInTheDocument();
+    expect(within(panel).getByRole('heading', { name: 'Subcategory balance' })).toBeInTheDocument();
+    expect(await within(panel).findAllByText('Dining')).not.toHaveLength(0);
+    expect(panel).toHaveTextContent('$241.00');
+    expect(panel).toHaveTextContent('$1,750.00');
+    expect(panel).toHaveTextContent('$1,509.00');
   });
 
   it('shows member expense, income, and balance sections with a generated shared total row', async () => {
-    render(<ReportWorkspace />);
+    renderReport();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'all' }));
     fireEvent.click(await screen.findByRole('tab', { name: 'Member' }));
 
     const panel = await screen.findByRole('tabpanel', { name: 'Member' });
@@ -176,14 +200,13 @@ describe('ReportWorkspace', () => {
   });
 
   it('shows income, expense, and balance summaries with a trend chart', async () => {
-    render(<ReportWorkspace />);
-
-    fireEvent.click(await screen.findByRole('tab', { name: 'Trend' }));
+    renderReport('/reports/trend');
 
     const panel = await screen.findByRole('tabpanel', { name: 'Trend' });
     expect(within(panel).getByRole('heading', { name: 'Income, expense, and balance trend' })).toBeInTheDocument();
     const summary = within(panel).getByLabelText('Trend summary');
     expect(summary).toHaveTextContent('Income');
+    expect(await within(summary).findByText('$1,750.00')).toBeInTheDocument();
     expect(summary).toHaveTextContent('$1,750.00');
     expect(summary).toHaveTextContent('Expense');
     expect(summary).toHaveTextContent('$241.00');

@@ -195,20 +195,43 @@
   color: oklch(100% 0 0);
 }
 
-.calculatorPad output {
-  display: block;
-  min-height: 36px;
-  padding: 8px 18px 0;
+.calculatorDisplay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 10px 6px 18px;
+}
+
+.calculatorDisplay output {
+  min-width: 0;
   color: oklch(86% 0.018 260);
   font-size: 0.9rem;
   font-weight: 820;
   text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.calculatorDisplay button {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: oklch(100% 0 0 / 12%);
+  color: oklch(100% 0 0);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 860;
 }
 
 .calculatorGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-auto-rows: 60px;
+}
+
+.calculatorGridOpen {
+  grid-auto-rows: 54px;
 }
 
 .calculatorGrid button {
@@ -221,16 +244,16 @@
   font-weight: 820;
 }
 
-.calculatorGrid button:nth-child(5n + 1) {
+.calculatorGrid button:nth-child(4n + 1) {
   border-left: 0;
 }
 
-.calculatorGrid .keyAgain {
-  font-size: 0.98rem;
+.calculatorGrid .calculatorToggleKey {
+  color: oklch(82% 0.14 178);
 }
 
 .calculatorGrid .saveKey {
-  grid-row: span 2;
+  grid-column: span 2;
   background: oklch(70% 0.19 32);
   font-size: 1.02rem;
 }
@@ -349,8 +372,8 @@
 /*
  * Desktop record layout (>=1024px, via the Foundation `appMain` inline-size container
  * on `.mobileContent`, which only exists at >=1024px so nothing below matches).
- * The panel splits into a composer column (left) and a stacked recent-list + category
- * manager aside (right). The wrapper divs default to display:contents so, below the
+ * The panel splits into a composer column (left) and a category manager aside
+ * (right). The wrapper divs default to display:contents so, below the
  * query, their children flow as direct grid items of `.recordEntryPanel` exactly as
  * on phones (pixel-identical). At desktop the wrappers become real boxes and split.
  */
@@ -412,22 +435,20 @@
   }
 
   /* Keep the touch keypad compact so it does not balloon across the wide column. */
-  .calculatorPad output,
+  .calculatorDisplay,
   .calculatorGrid {
     max-width: 360px;
     margin-inline: auto;
   }
 
   /* Round the aside cards so they read as panels, not full-bleed phone sections. */
-  .recordRecentList,
   .categoryManager {
     border-radius: 16px;
     box-shadow: 0 10px 24px oklch(60% 0.03 220 / 10%);
   }
 
   /* Align money figures by digit width. */
-  .selectedCategoryCard b,
-  .recordRecentSummary b {
+  .selectedCategoryCard b {
     font-variant-numeric: tabular-nums;
   }
 }

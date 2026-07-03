@@ -1,0 +1,90 @@
+{
+  "landing": {
+    "header": {
+      "brand": "Accounting",
+      "brandAria": "Accounting home",
+      "model": "Model",
+      "navLabel": "Product sections",
+      "signIn": "Sign in",
+      "trust": "Trust",
+      "workflows": "Workflows"
+    },
+    "hero": {
+      "eyebrow": "Browser-first bookkeeping",
+      "lead": "Run personal, family, shared-living, trip, project, and small-team ledgers with clear ownership, reviewable records, and data you can take with you.",
+      "primaryRegister": "Create a ledger",
+      "primarySignIn": "View sign-in options",
+      "secondary": "See the data model",
+      "title": "A ledger for every shared money story."
+    },
+    "model": {
+      "body": "Accounting keeps users, books, accounts, categories, entries, imports, and audit events as explicit objects. That model keeps personal accounts private by default while still supporting collaborative books and source-preserving imports.",
+      "eyebrow": "Product model",
+      "title": "Built around ownership, not just transactions."
+    },
+    "productShot": {
+      "audit": "Audit trail records who changed what.",
+      "balanceLabel": "Household balance",
+      "balanceValue": "$12,500",
+      "entryOneMeta": "Expense · Dining · USD",
+      "entryOneNote": "Creator-only edit policy",
+      "entryOneTitle": "Team lunch",
+      "entryTwoMeta": "Income · Reimbursement · CNY/USD",
+      "entryTwoNote": "Exchange-rate evidence preserved",
+      "entryTwoTitle": "Roommate paid back",
+      "label": "Sample ledger preview",
+      "status": "Reviewed",
+      "windowTitle": "Shared living ledger"
+    },
+    "proof": {
+      "audit": {
+        "body": "Sensitive authentication and data changes produce sanitized audit events for later review.",
+        "kicker": "Traceable",
+        "title": "Every important action leaves evidence."
+      },
+      "currency": {
+        "body": "Entries carry transaction, account, and reporting currencies with exchange-rate metadata.",
+        "kicker": "Multi-currency",
+        "title": "Travel and cross-border records stay explainable."
+      },
+      "label": "Accounting strengths",
+      "ownership": {
+        "body": "Books can be personal or collaborative, while accounts stay user-owned unless intentionally shared.",
+        "kicker": "User-owned",
+        "title": "Your accounts remain yours."
+      }
+    },
+    "trust": {
+      "auth": {
+        "body": "Email/password, TOTP, passkeys, Turnstile, and optional external SSO are surfaced from runtime configuration.",
+        "title": "Auth that fits the deployment"
+      },
+      "eyebrow": "Data integrity",
+      "imports": {
+        "body": "Wacai imports stage a preview first, preserve raw source context, and require an explicit commit.",
+        "title": "Imports are reviewed before write"
+      },
+      "portable": {
+        "body": "The app is designed around documented JSON APIs and persistence boundaries instead of a single hidden database assumption.",
+        "title": "Data ownership stays visible"
+      },
+      "title": "Trust is expressed in the workflow."
+    },
+    "workflow": {
+      "eyebrow": "Use cases",
+      "personal": {
+        "body": "Track accounts, categories, income, expenses, and reports without forcing every record into a shared workspace.",
+        "title": "Personal finance"
+      },
+      "shared": {
+        "body": "Use member roles and creator-aware edit rules for households, roommates, projects, and small teams.",
+        "title": "Shared books"
+      },
+      "title": "One system for different money contexts.",
+      "travel": {
+        "body": "Keep multi-currency entries, reimbursements, and source details together when a trip or project gets messy.",
+        "title": "Trips and reimbursements"
+      }
+    }
+  }
+}

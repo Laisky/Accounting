@@ -1,16 +1,7 @@
-import {
-  BarChart3,
-  ChevronDown,
-  CircleUserRound,
-  House,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Shirt,
-  WalletCards,
-} from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronLeft, MoreHorizontal, Plus, Search, Shirt } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { fetchAuditEvents, type AuditEvent } from '../../lib/api/audit';
 import { type AuthActor } from '../../lib/api/auth';
@@ -20,7 +11,6 @@ import {
   createBook,
   createCategory,
   createEntry,
-  deleteEntry,
   emptyLedgerSummary,
   fetchAccountGroups,
   fetchAccounts,
@@ -32,7 +22,6 @@ import {
   fetchExchangeRates,
   fetchLedgerSummary,
   updateCategory,
-  updateEntry,
   updateAccountGroup,
   updateBook,
   type Account,
@@ -43,23 +32,34 @@ import {
   type CategoryCreateInput,
   type CategoryUpdateInput,
   type Entry,
-  type EntryUpdateInput,
   type ExchangeRate,
   type LedgerSummary,
 } from '../../lib/api/ledger';
 import { type RuntimeConfig } from '../../lib/api/runtimeConfig';
 import { buildRateIndex } from '../../lib/money';
 import { ReportWorkspace } from '../reports/ReportWorkspace';
+import { AccountTransactionsView } from './AccountTransactionsView';
+import { accountEntries } from './account-transaction-utils';
 import { AccountsView } from './AccountsView';
 import type { AccountCreateInput } from './AccountsView';
+import { EntryDetailView } from './EntryDetailView';
+import { entryDetailTitle } from './entry-detail-utils';
 import { HomeView } from './HomeView';
 import { ImportPreviewView } from './ImportPreviewView';
 import { MeView } from './MeView';
+import { MobileBottomNav } from './MobileBottomNav';
+import {
+  accountIdFromTransactionsPath,
+  categoryDirection,
+  entryIdFromDetailPath,
+  formatShortDate,
+  mobileRoutes,
+  mobileTabFromPath,
+  type MobileTab,
+} from './mobile-workspace-utils';
 import { RecordEntryView, type RecordEntryInput } from './RecordEntryView';
 import { TransactionSearchView } from './TransactionSearchView';
 import './mobile-shell.css';
-
-type MobileTab = 'home' | 'accounts' | 'record' | 'reports' | 'imports' | 'me';
 
 type MobileWorkspaceProps = {
   actor: AuthActor;
@@ -78,16 +78,14 @@ type LedgerSnapshot = {
   totalEntries: number;
 };
 
-const sideNavItems: Array<{ id: Exclude<MobileTab, 'home' | 'record' | 'imports'>; icon: ReactNode }> = [
-  { id: 'accounts', icon: <WalletCards size={22} /> },
-  { id: 'reports', icon: <BarChart3 size={22} /> },
-  { id: 'me', icon: <CircleUserRound size={22} /> },
-];
-
 // MobileWorkspace renders the authenticated mobile-first accounting shell.
 export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorkspaceProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<MobileTab>('home');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const accountDetailId = accountIdFromTransactionsPath(location.pathname);
+  const entryDetailId = entryIdFromDetailPath(location.pathname);
+  const activeTab = entryDetailId ? 'home' : mobileTabFromPath(location.pathname) ?? 'home';
   const [summary, setSummary] = useState<LedgerSummary>(emptyLedgerSummary);
   const [snapshot, setSnapshot] = useState<LedgerSnapshot>({
     groups: [],
@@ -112,6 +110,10 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [searchEntries, setSearchEntries] = useState<Entry[]>([]);
   const [searchError, setSearchError] = useState('');
+  const [accountDetailEntries, setAccountDetailEntries] = useState<Entry[]>([]);
+  const [isAccountDetailLoading, setIsAccountDetailLoading] = useState(false);
+  const [entryDetailEntry, setEntryDetailEntry] = useState<Entry | undefined>();
+  const [isEntryDetailLoading, setIsEntryDetailLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const selectedBook = snapshot.books.find((book) => book.id === selectedBookId) ?? snapshot.books[0];
@@ -122,10 +124,43 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     () => snapshot.accounts.filter((account) => !selectedBook || account.sharedBookIds?.includes(selectedBook.id)),
     [selectedBook, snapshot.accounts],
   );
+  const accountDetailAccount = sharedAccounts.find((account) => account.id === accountDetailId);
+  const visibleEntryDetail = entryDetailEntry?.id === entryDetailId ? entryDetailEntry : snapshot.entries.find((entry) => entry.id === entryDetailId);
   const primaryAccount = sharedAccounts[0] ?? snapshot.accounts[0];
   // A single blocking label drives the shell overlay: import work reports its own label, other
   // server mutations fall back to a generic processing message so duplicate submits are prevented.
   const processingLabel = importProcessing || (isBusy ? t('common.processing') : '');
+
+  // openTab receives a top-level page id and navigates to that page's canonical URL.
+  function openTab(tab: MobileTab) {
+    setIsSearchOpen(false);
+    navigate(mobileRoutes[tab]);
+  }
+
+  // handleOpenAccount receives an account id and opens that account's transaction detail route.
+  function handleOpenAccount(accountId: string) {
+    setIsSearchOpen(false);
+    navigate(`/accounts/${encodeURIComponent(accountId)}/transactions`);
+  }
+
+  // handleCloseAccountDetail receives no parameters and returns to the account list route.
+  function handleCloseAccountDetail() {
+    setIsSearchOpen(false);
+    navigate('/accounts');
+  }
+
+  // handleOpenEntry receives an entry id and opens that entry's canonical detail route.
+  function handleOpenEntry(entryId: string) {
+    setIsSearchOpen(false);
+    setEntryDetailEntry(snapshot.entries.find((entry) => entry.id === entryId));
+    navigate(`/entries/${encodeURIComponent(entryId)}`);
+  }
+
+  // handleCloseEntryDetail receives no parameters and returns to the home transaction feed.
+  function handleCloseEntryDetail() {
+    setIsSearchOpen(false);
+    navigate('/home');
+  }
 
   const loadFoundation = useCallback(async () => {
     const [loadedSummary, books, groups, accounts, rates] = await Promise.all([
@@ -189,10 +224,97 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
   }, [loadBookContext, refreshKey, selectedBookId, t]);
 
   useEffect(() => {
+    if (location.pathname === '/' || (!entryIdFromDetailPath(location.pathname) && !mobileTabFromPath(location.pathname))) {
+      navigate(mobileRoutes.home, { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
-  }, [activeTab]);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    let isActive = true;
+    if (!accountDetailId || !selectedBook) {
+      queueMicrotask(() => {
+        if (isActive) {
+          setAccountDetailEntries([]);
+          setIsAccountDetailLoading(false);
+        }
+      });
+      return () => {
+        isActive = false;
+      };
+    }
+
+    queueMicrotask(() => {
+      if (isActive) {
+        setIsAccountDetailLoading(true);
+      }
+    });
+    fetchAllEntries(selectedBook.id)
+      .then((entries) => {
+        if (isActive) {
+          setAccountDetailEntries(accountEntries(accountDetailId, entries));
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setError(t('mobile.accountDetail.error'));
+          setAccountDetailEntries([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsAccountDetailLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accountDetailId, refreshKey, selectedBook, t]);
+
+  useEffect(() => {
+    if (!entryDetailId || !selectedBook) {
+      return;
+    }
+
+    if (snapshot.entries.some((entry) => entry.id === entryDetailId)) {
+      return;
+    }
+
+    let isActive = true;
+    Promise.resolve()
+      .then(() => {
+        if (isActive) {
+          setIsEntryDetailLoading(true);
+        }
+        return fetchAllEntries(selectedBook.id);
+      })
+      .then((entries) => {
+        if (isActive) {
+          setEntryDetailEntry(entries.find((entry) => entry.id === entryDetailId));
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setError(t('mobile.entryDetail.error'));
+          setEntryDetailEntry(undefined);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsEntryDetailLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [entryDetailId, selectedBook, snapshot.entries, t]);
 
   // handlePrepareAccount receives no parameters and creates missing starter ledger entities.
   async function handlePrepareAccount() {
@@ -246,8 +368,9 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
       setSelectedBookId(book.id);
       setStatus(t('mobile.status.accountCreated'));
       setRefreshKey((current) => current + 1);
-    } catch {
+    } catch (createError) {
       setError(t('mobile.error.accountCreateFailed'));
+      throw createError;
     } finally {
       setIsBusy(false);
     }
@@ -428,59 +551,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     return book.id;
   }
 
-  // handleUpdateEntry receives entry identity and patch fields, updates the entry, and refreshes visible ledgers.
-  async function handleUpdateEntry(entryId: string, input: EntryUpdateInput) {
-    const entry = snapshot.entries.find((item) => item.id === entryId);
-    if (!entry) {
-      setError(t('mobile.error.entryUpdateFailed'));
-      return;
-    }
-
-    setIsBusy(true);
-    setStatus('');
-    setError('');
-    try {
-      const updated = await updateEntry(entry.bookId, entry.id, input);
-      setSnapshot((current) => ({
-        ...current,
-        entries: current.entries.map((item) => (item.id === updated.id ? updated : item)),
-      }));
-      setStatus(t('mobile.status.entryUpdated'));
-      setRefreshKey((current) => current + 1);
-    } catch {
-      setError(t('mobile.error.entryUpdateFailed'));
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  // handleDeleteEntry receives entry identity, deletes the entry, and refreshes visible ledgers.
-  async function handleDeleteEntry(entryId: string) {
-    const entry = snapshot.entries.find((item) => item.id === entryId);
-    if (!entry) {
-      setError(t('mobile.error.entryDeleteFailed'));
-      return;
-    }
-
-    setIsBusy(true);
-    setStatus('');
-    setError('');
-    try {
-      await deleteEntry(entry.bookId, entry.id);
-      setSnapshot((current) => ({
-        ...current,
-        entries: current.entries.filter((item) => item.id !== entry.id),
-        totalEntries: Math.max(0, current.totalEntries - 1),
-      }));
-      setStatus(t('mobile.status.entryDeleted'));
-      setRefreshKey((current) => current + 1);
-    } catch {
-      setError(t('mobile.error.entryDeleteFailed'));
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
   // handleLoadActivity receives no parameters and refreshes audit events for the profile tab.
   async function handleLoadActivity() {
     setIsActivityLoading(true);
@@ -507,7 +577,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     setIsSearchLoading(true);
     try {
       const entries = await fetchAllEntries(selectedBook.id);
-      setSearchEntries(entries);
+      setSearchEntries(accountDetailId ? accountEntries(accountDetailId, entries) : entries);
     } catch {
       setSearchError(t('mobile.search.error'));
     } finally {
@@ -540,16 +610,43 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
   return (
     <main className="mobileShell">
       <section className="phoneFrame" aria-label={t('mobile.a11y.workspace')}>
-        {activeTab === 'accounts' ? (
+        {entryDetailId ? (
           <header className="mobileHeader accountHeader">
-            <button type="button" aria-label={t('mobile.a11y.searchTransactions')} aria-expanded={isSearchOpen} onClick={handleOpenSearch}>
-              <Search size={22} />
+            <button type="button" aria-label={t('mobile.entryDetail.back')} onClick={handleCloseEntryDetail}>
+              <ChevronLeft size={25} />
             </button>
-            <h1>Accounts</h1>
+            <h1>{entryDetailTitle(visibleEntryDetail, t('mobile.entryDetail.title'), t)}</h1>
             <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>
-              <button type="button" aria-label="Add account" onClick={handlePrepareAccount}>
-                <Plus size={25} />
+              <button type="button" aria-label={t('mobile.a11y.searchTransactions')} aria-expanded={isSearchOpen} onClick={handleOpenSearch}>
+                <Search size={22} />
               </button>
+              <button type="button" aria-label={t('mobile.a11y.moreOptions')}>
+                <MoreHorizontal size={25} />
+              </button>
+            </div>
+          </header>
+        ) : activeTab === 'accounts' ? (
+          <header className="mobileHeader accountHeader">
+            {accountDetailId ? (
+              <button type="button" aria-label={t('mobile.accountDetail.back')} onClick={handleCloseAccountDetail}>
+                <ChevronLeft size={25} />
+              </button>
+            ) : (
+              <button type="button" aria-label={t('mobile.a11y.searchTransactions')} aria-expanded={isSearchOpen} onClick={handleOpenSearch}>
+                <Search size={22} />
+              </button>
+            )}
+            <h1>{accountDetailAccount?.name ?? t('mobile.nav.accounts')}</h1>
+            <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>
+              {accountDetailId ? (
+                <button type="button" aria-label={t('mobile.accountDetail.searchAccount')} aria-expanded={isSearchOpen} onClick={handleOpenSearch}>
+                  <Search size={22} />
+                </button>
+              ) : (
+                <button type="button" aria-label={t('mobile.accounts.prepareAccount')} onClick={handlePrepareAccount}>
+                  <Plus size={25} />
+                </button>
+              )}
               <button type="button" aria-label={t('mobile.a11y.moreOptions')}>
                 <MoreHorizontal size={25} />
               </button>
@@ -565,7 +662,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
               <p>{formatShortDate(new Date())}</p>
             </div>
             <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>
-              <button type="button" aria-label={t('mobile.nav.accounts')} onClick={() => setActiveTab('accounts')}>
+              <button type="button" aria-label={t('mobile.nav.accounts')} onClick={() => openTab('accounts')}>
                 <Shirt size={22} />
               </button>
               <button
@@ -594,20 +691,43 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
               entries={searchEntries}
               error={searchError}
               isLoading={isSearchLoading}
+              members={snapshot.members}
               onClose={handleCloseSearch}
+              title={accountDetailAccount ? t('mobile.accountDetail.searchTitle', { name: accountDetailAccount.name }) : undefined}
             />
           ) : null}
           {!isSearchOpen && activeTab === 'home' ? (
-            <HomeView
-              accounts={snapshot.accounts}
-              bookName={selectedBook?.name ?? t('mobile.defaultBookName')}
+            entryDetailId ? (
+              <EntryDetailView
+                accounts={snapshot.accounts}
+                books={snapshot.books}
+                categories={snapshot.categories}
+                entry={visibleEntryDetail}
+                isLoading={isEntryDetailLoading && !visibleEntryDetail}
+                members={snapshot.members}
+              />
+            ) : (
+              <HomeView
+                accounts={snapshot.accounts}
+                bookName={selectedBook?.name ?? t('mobile.defaultBookName')}
+                categories={snapshot.categories}
+                currencyCode={bookCurrency}
+                entries={snapshot.entries}
+                onOpenEntry={handleOpenEntry}
+                summary={summary}
+              />
+            )
+          ) : null}
+          {!isSearchOpen && activeTab === 'accounts' && accountDetailId ? (
+            <AccountTransactionsView
+              account={accountDetailAccount}
               categories={snapshot.categories}
-              currencyCode={bookCurrency}
-              entries={snapshot.entries}
-              summary={summary}
+              entries={accountDetailEntries}
+              isLoading={isAccountDetailLoading}
+              members={snapshot.members}
             />
           ) : null}
-          {!isSearchOpen && activeTab === 'accounts' ? (
+          {!isSearchOpen && activeTab === 'accounts' && !accountDetailId ? (
             <AccountsView
               accounts={sharedAccounts}
               books={snapshot.books}
@@ -616,6 +736,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
               isBusy={isBusy}
               members={snapshot.members}
               onCreateAccount={handleCreateAccount}
+              onOpenAccount={handleOpenAccount}
               onPrepareAccount={handlePrepareAccount}
               onUpdateAccountGroupName={handleUpdateAccountGroupName}
               onUpdateBookName={handleUpdateBookName}
@@ -633,9 +754,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
               isBusy={isBusy}
               onCreateCategory={handleCreateCategory}
               onCreateEntry={handleCreateEntry}
-              onDeleteEntry={handleDeleteEntry}
               onUpdateCategory={handleUpdateCategory}
-              onUpdateEntry={handleUpdateEntry}
               rates={rateIndex}
               recentEntries={snapshot.entries}
               selectedBookCurrency={bookCurrency}
@@ -664,78 +783,16 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
               isLoggingOut={isLoggingOut}
               onLoadActivity={handleLoadActivity}
               onLogout={handleLogoutClick}
-              onOpenImports={() => setActiveTab('imports')}
+              onOpenImports={() => openTab('imports')}
               runtimeConfig={runtimeConfig}
             />
           ) : null}
         </div>
 
-        <nav className="bottomNav" aria-label={t('mobile.a11y.mainNavigation')}>
-          <div className="navBrand">
-            <WalletCards size={22} aria-hidden="true" />
-            <span>{t('mobile.brand')}</span>
-          </div>
-          <button
-            type="button"
-            className={activeTab === 'accounts' ? 'bottomNavActive' : ''}
-            aria-current={activeTab === 'accounts' ? 'page' : undefined}
-            onClick={() => {
-              setIsSearchOpen(false);
-              setActiveTab('accounts');
-            }}
-          >
-            <span>{sideNavItems[0].icon}</span>
-            <b>{t('mobile.nav.accounts')}</b>
-          </button>
-          <button
-            type="button"
-            className={activeTab === 'home' ? 'recordNavButton' : ''}
-            aria-label={activeTab === 'home' ? t('mobile.nav.record') : t('mobile.nav.home')}
-            onClick={() => {
-              setIsSearchOpen(false);
-              setActiveTab(activeTab === 'home' ? 'record' : 'home');
-            }}
-          >
-            <span>{activeTab === 'home' ? <Plus size={30} /> : <House size={22} />}</span>
-            <b>{activeTab === 'home' ? t('mobile.nav.record') : t('mobile.nav.home')}</b>
-          </button>
-          {sideNavItems.slice(1).map((item) => {
-            // The imports view is reached from the Me tab, so keep Me highlighted while it is open.
-            const isActive = activeTab === item.id || (item.id === 'me' && activeTab === 'imports');
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={isActive ? 'bottomNavActive' : ''}
-                aria-current={isActive ? 'page' : undefined}
-                onClick={() => {
-                  setIsSearchOpen(false);
-                  setActiveTab(item.id);
-                }}
-              >
-                <span>{item.icon}</span>
-                <b>{t(`mobile.nav.${item.id}`)}</b>
-              </button>
-            );
-          })}
-        </nav>
+        <MobileBottomNav activeTab={activeTab} onOpenTab={openTab} />
 
         <LoadingOverlay active={Boolean(processingLabel)} label={processingLabel} />
       </section>
     </main>
   );
-}
-
-// formatShortDate receives a date and returns the UTC header date.
-function formatShortDate(value: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: '2-digit',
-    timeZone: 'UTC',
-  }).format(value);
-}
-
-// categoryDirection receives an entry type and returns the category direction needed for fallback category creation.
-function categoryDirection(type: string): string {
-  return type === 'income' || type === 'borrow' ? 'income' : 'expense';
 }

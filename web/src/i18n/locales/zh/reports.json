@@ -26,6 +26,9 @@
       "period": "周期",
       "total": "合计"
     },
+    "flow": {
+      "balance": "结余"
+    },
     "heading": "通过交互式下钻分析支出。",
     "labels": {
       "noMember": "无成员",

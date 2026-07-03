@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router';
 import {
   fetchAccounts,
   fetchAllEntries,
@@ -30,9 +31,15 @@ import { reportColors } from './reportColors';
 import './reports.css';
 
 type FlowFilter = 'all' | 'expense' | 'income';
+type ReportFlow = 'expense' | 'income' | 'balance';
 type TimeMode = 'year' | 'month';
 type ReportTab = 'trend' | 'category' | 'subcategory' | 'member' | 'account' | 'merchant' | 'tag';
-type MemberReportFlow = 'expense' | 'income' | 'balance';
+type SectionReportTab = Extract<ReportTab, 'category' | 'subcategory' | 'member'>;
+type ReportFlowSection = {
+  flow: ReportFlow;
+  items: RankedItem[];
+  segments: DonutSegment[];
+};
 
 type ReportData = {
   books: BookListItem[];
@@ -60,18 +67,20 @@ const reportTabs: Array<{ id: ReportTab }> = [
 // ReportWorkspace renders interactive reporting over real ledger entries.
 export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [data, setData] = useState<ReportData>({ books: [], members: [], accounts: [], categories: [], entries: [], rates: [] });
   const [selectedBookId, setSelectedBookId] = useState('');
-  const [flowFilter, setFlowFilter] = useState<FlowFilter>('expense');
+  const [flowFilter, setFlowFilter] = useState<FlowFilter>('all');
   const [timeMode, setTimeMode] = useState<TimeMode>('month');
   const [cursorDate, setCursorDate] = useState(() => startOfMonth(new Date()));
-  const [activeTab, setActiveTab] = useState<ReportTab>('category');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const selectedBook = data.books.find((book) => book.id === selectedBookId) ?? data.books[0];
+  const activeTab = reportTabFromPath(location.pathname) ?? 'category';
   const reportCurrency = selectedBook?.reportingCurrency ?? 'USD';
   const filteredEntries = useMemo(
     () => filterEntries(data.entries, flowFilter, timeMode, cursorDate),
@@ -87,39 +96,30 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
   const entryCount = filteredEntries.length;
   const conversionIssueCount = filteredEntries.filter((entry) => convertEntryAmountCents(entry, reportCurrency, rateIndex) === null).length;
   const segments = useMemo(() => buildDonutSegments(rankedItems), [rankedItems]);
-  const categoryExpenseItems = useMemo(
-    () => buildRankedItems(t, filterEntries(data.entries, 'expense', timeMode, cursorDate), 'category', data.categories, data.accounts, reportCurrency, rateIndex),
+  const categorySections = useMemo(
+    () => buildDimensionFlowSections(t, data.entries, 'category', data.categories, data.accounts, timeMode, cursorDate, reportCurrency, rateIndex),
     [cursorDate, data.accounts, data.categories, data.entries, rateIndex, reportCurrency, t, timeMode],
   );
-  const categoryIncomeItems = useMemo(
-    () => buildRankedItems(t, filterEntries(data.entries, 'income', timeMode, cursorDate), 'category', data.categories, data.accounts, reportCurrency, rateIndex),
+  const subcategorySections = useMemo(
+    () => buildDimensionFlowSections(t, data.entries, 'subcategory', data.categories, data.accounts, timeMode, cursorDate, reportCurrency, rateIndex),
     [cursorDate, data.accounts, data.categories, data.entries, rateIndex, reportCurrency, t, timeMode],
   );
-  const categoryExpenseSegments = useMemo(() => buildDonutSegments(categoryExpenseItems), [categoryExpenseItems]);
-  const categoryIncomeSegments = useMemo(() => buildDonutSegments(categoryIncomeItems), [categoryIncomeItems]);
-  const memberExpenseItems = useMemo(
-    () => buildMemberItems(t, data.entries, data.members, 'expense', timeMode, cursorDate, reportCurrency, rateIndex),
+  const memberSections = useMemo(
+    () => buildMemberFlowSections(t, data.entries, data.members, timeMode, cursorDate, reportCurrency, rateIndex),
     [cursorDate, data.entries, data.members, rateIndex, reportCurrency, t, timeMode],
   );
-  const memberIncomeItems = useMemo(
-    () => buildMemberItems(t, data.entries, data.members, 'income', timeMode, cursorDate, reportCurrency, rateIndex),
-    [cursorDate, data.entries, data.members, rateIndex, reportCurrency, t, timeMode],
-  );
-  const memberBalanceItems = useMemo(
-    () => buildMemberItems(t, data.entries, data.members, 'balance', timeMode, cursorDate, reportCurrency, rateIndex),
-    [cursorDate, data.entries, data.members, rateIndex, reportCurrency, t, timeMode],
-  );
-  const memberExpenseSegments = useMemo(() => buildDonutSegments(memberExpenseItems.slice(1)), [memberExpenseItems]);
-  const memberIncomeSegments = useMemo(() => buildDonutSegments(memberIncomeItems.slice(1)), [memberIncomeItems]);
-  const memberBalanceSegments = useMemo(() => buildDonutSegments(memberBalanceItems.slice(1)), [memberBalanceItems]);
   const trendRows = useMemo(
     () => buildTrendData(data.entries, timeMode, cursorDate, reportCurrency, rateIndex),
     [cursorDate, data.entries, rateIndex, reportCurrency, timeMode],
   );
   const memberSingleFlow: Extract<FlowFilter, 'expense' | 'income'> = flowFilter === 'income' ? 'income' : 'expense';
-  const memberSingleItems = memberSingleFlow === 'income' ? memberIncomeItems : memberExpenseItems;
-  const memberSingleSegments = memberSingleFlow === 'income' ? memberIncomeSegments : memberExpenseSegments;
-  const visibleTotalCents = activeTab === 'trend' ? trendRows.balanceCents : totalCents;
+  const memberSingleSection = memberSections.find((section) => section.flow === memberSingleFlow) ?? memberSections[0];
+  const memberSingleItems = memberSingleSection?.items ?? [];
+  const memberSingleSegments = memberSingleSection?.segments ?? [];
+  const sectionReportTab: SectionReportTab = isSectionReportTab(activeTab) ? activeTab : 'category';
+  const allFlowSections = sectionReportTab === 'category' ? categorySections : sectionReportTab === 'subcategory' ? subcategorySections : memberSections;
+  const visibleTotalCents = activeTab === 'trend' || flowFilter === 'all' ? trendRows.balanceCents : totalCents;
+  const shouldShowFlowSections = flowFilter === 'all' && isSectionReportTab(activeTab);
   const activeTabPanelId = `report-panel-${activeTab}`;
   const activeTabButtonId = `report-tab-${activeTab}`;
 
@@ -182,6 +182,12 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
     };
   }, [refreshKey, selectedBookId, t]);
 
+  useEffect(() => {
+    if (location.pathname === '/reports' || !reportTabFromPath(location.pathname)) {
+      navigate(reportTabPath('category'), { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
   // handleTimeStep receives a direction and moves the report cursor by month or year.
   function handleTimeStep(direction: -1 | 1) {
     setCursorDate((current) => {
@@ -219,7 +225,7 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
     }
 
     const nextTab = reportTabs[nextIndex];
-    setActiveTab(nextTab.id);
+    navigate(reportTabPath(nextTab.id));
     setIsExpanded(false);
     window.requestAnimationFrame(() => document.getElementById(`report-tab-${nextTab.id}`)?.focus());
   }
@@ -329,7 +335,7 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
             tabIndex={activeTab === tab.id ? 0 : -1}
             onKeyDown={(event) => handleTabKeyDown(event, index)}
             onClick={() => {
-              setActiveTab(tab.id);
+              navigate(reportTabPath(tab.id));
               setIsExpanded(false);
             }}
           >
@@ -351,53 +357,29 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
           panelId={activeTabPanelId}
           trend={trendRows}
         />
-      ) : activeTab === 'category' && flowFilter === 'all' ? (
+      ) : shouldShowFlowSections ? (
         <section className="categorySplitPanel" id={activeTabPanelId} role="tabpanel" aria-labelledby={activeTabButtonId}>
-          {([
-            { flow: 'expense' as const, items: categoryExpenseItems, segments: categoryExpenseSegments },
-            { flow: 'income' as const, items: categoryIncomeItems, segments: categoryIncomeSegments },
-          ]).map((section) => {
-            const sectionTotalCents = section.items.reduce((sum, item) => sum + item.amountCents, 0);
+          {allFlowSections.map((section) => {
+            const isMemberSection = sectionReportTab === 'member';
+            const sectionTotalCents = isMemberSection ? section.items[0]?.amountCents ?? 0 : section.items.reduce((sum, item) => sum + item.amountCents, 0);
+            const sectionEntryCount = isMemberSection ? section.items[0]?.count ?? 0 : section.items.reduce((sum, item) => sum + item.count, 0);
             return (
               <ReportBreakdownPanel
                 className="reportPanel categoryFlowPanel"
                 currencyCode={reportCurrency}
-                entryCount={section.items.reduce((sum, item) => sum + item.count, 0)}
-                heading={reportHeading(t, 'category', section.flow)}
+                entryCount={sectionEntryCount}
+                heading={flowSectionHeading(t, sectionReportTab, section.flow)}
                 isExpanded={isExpanded}
                 items={section.items}
                 key={section.flow}
                 onToggleExpanded={() => setIsExpanded((current) => !current)}
                 segments={section.segments}
-                title={reportTitle(t, 'category', section.flow)}
+                title={flowSectionTitle(t, sectionReportTab, section.flow)}
                 totalCents={sectionTotalCents}
                 visibleItems={isExpanded ? section.items : section.items.slice(0, 5)}
               />
             );
           })}
-        </section>
-      ) : activeTab === 'member' && flowFilter === 'all' ? (
-        <section className="categorySplitPanel" id={activeTabPanelId} role="tabpanel" aria-labelledby={activeTabButtonId}>
-          {([
-            { flow: 'expense' as const, items: memberExpenseItems, segments: memberExpenseSegments },
-            { flow: 'income' as const, items: memberIncomeItems, segments: memberIncomeSegments },
-            { flow: 'balance' as const, items: memberBalanceItems, segments: memberBalanceSegments },
-          ]).map((section) => (
-            <ReportBreakdownPanel
-              className="reportPanel categoryFlowPanel"
-              currencyCode={reportCurrency}
-              entryCount={section.items[0]?.count ?? 0}
-              heading={memberReportHeading(t, section.flow)}
-              isExpanded={isExpanded}
-              items={section.items}
-              key={section.flow}
-              onToggleExpanded={() => setIsExpanded((current) => !current)}
-              segments={section.segments}
-              title={memberReportHeading(t, section.flow)}
-              totalCents={section.items[0]?.amountCents ?? 0}
-              visibleItems={isExpanded ? section.items : section.items.slice(0, 5)}
-            />
-          ))}
         </section>
       ) : activeTab === 'member' ? (
         <ReportBreakdownPanel
@@ -436,7 +418,6 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
   );
 }
 
-// filterEntries receives entries and report controls and returns matching rows.
 function filterEntries(entries: Entry[], flowFilter: FlowFilter, timeMode: TimeMode, cursorDate: Date): Entry[] {
   const [start, end] = periodBounds(cursorDate, timeMode);
   return entries.filter((entry) => {
@@ -452,7 +433,6 @@ function filterEntries(entries: Entry[], flowFilter: FlowFilter, timeMode: TimeM
   });
 }
 
-// buildRankedItems receives the translator, entries, a dimension, and currency and returns sorted base-currency report rows.
 function buildRankedItems(
   t: TFunction,
   entries: Entry[],
@@ -482,7 +462,6 @@ function buildRankedItems(
     .sort((first, second) => second.amountCents - first.amountCents);
 }
 
-// buildDonutSegments receives ranked items and returns SVG dash settings for a donut chart.
 function buildDonutSegments(items: RankedItem[]): DonutSegment[] {
   const total = items.reduce((sum, item) => sum + Math.abs(item.amountCents), 0);
   const circumference = 2 * Math.PI * 70;
@@ -500,12 +479,83 @@ function buildDonutSegments(items: RankedItem[]): DonutSegment[] {
   });
 }
 
-// buildMemberItems receives ledger entries and returns member rows plus a generated shared total row.
+function buildDimensionFlowSections(
+  t: TFunction,
+  entries: Entry[],
+  tab: SectionReportTab,
+  categories: Category[],
+  accounts: Account[],
+  timeMode: TimeMode,
+  cursorDate: Date,
+  currencyCode: string,
+  rates: Map<string, number>,
+): ReportFlowSection[] {
+  return (['expense', 'income', 'balance'] as ReportFlow[]).map((flow) => {
+    const items = buildDimensionFlowItems(t, entries, tab, flow, categories, accounts, timeMode, cursorDate, currencyCode, rates);
+    return { flow, items, segments: buildDonutSegments(items) };
+  });
+}
+
+function buildDimensionFlowItems(
+  t: TFunction,
+  entries: Entry[],
+  tab: SectionReportTab,
+  flow: ReportFlow,
+  categories: Category[],
+  accounts: Account[],
+  timeMode: TimeMode,
+  cursorDate: Date,
+  currencyCode: string,
+  rates: Map<string, number>,
+): RankedItem[] {
+  const rows = new Map<string, RankedItem>();
+  const filtered = flow === 'balance'
+    ? filterEntries(entries, 'all', timeMode, cursorDate)
+    : filterEntries(entries, flow, timeMode, cursorDate);
+
+  for (const entry of filtered) {
+    const converted = convertEntryAmountCents(entry, currencyCode, rates);
+    if (converted === null) {
+      continue;
+    }
+    for (const key of dimensionKeys(t, entry, tab, categories, accounts)) {
+      const current = rows.get(key.id) ?? { ...key, amountCents: 0, count: 0, percent: 0 };
+      current.amountCents += flow === 'balance' && entry.type === 'expense' ? -converted : converted;
+      current.count += 1;
+      rows.set(key.id, current);
+    }
+  }
+
+  const ranked = Array.from(rows.values()).sort((first, second) => Math.abs(second.amountCents) - Math.abs(first.amountCents));
+  const denominator = flow === 'balance'
+    ? ranked.reduce((sum, item) => sum + Math.abs(item.amountCents), 0)
+    : Math.abs(ranked.reduce((sum, item) => sum + item.amountCents, 0));
+  return ranked.map((item) => ({
+    ...item,
+    percent: denominator > 0 ? (Math.abs(item.amountCents) / denominator) * 100 : 0,
+  }));
+}
+
+function buildMemberFlowSections(
+  t: TFunction,
+  entries: Entry[],
+  members: BookMember[],
+  timeMode: TimeMode,
+  cursorDate: Date,
+  currencyCode: string,
+  rates: Map<string, number>,
+): ReportFlowSection[] {
+  return (['expense', 'income', 'balance'] as ReportFlow[]).map((flow) => {
+    const items = buildMemberItems(t, entries, members, flow, timeMode, cursorDate, currencyCode, rates);
+    return { flow, items, segments: buildDonutSegments(items.slice(1)) };
+  });
+}
+
 function buildMemberItems(
   t: TFunction,
   entries: Entry[],
   members: BookMember[],
-  flow: MemberReportFlow,
+  flow: ReportFlow,
   timeMode: TimeMode,
   cursorDate: Date,
   currencyCode: string,
@@ -557,7 +607,6 @@ function buildMemberItems(
   ];
 }
 
-// buildTrendData receives entries and controls and returns cashflow trend buckets in base currency.
 function buildTrendData(
   entries: Entry[],
   timeMode: TimeMode,
@@ -605,7 +654,6 @@ function buildTrendData(
   };
 }
 
-// memberLabel receives an entry and known book members and returns a display label for member reports.
 function memberLabel(t: TFunction, entry: Entry, members: BookMember[]): string {
   const importedMember = (entry as Entry & { member?: string }).member;
   if (importedMember) {
@@ -615,7 +663,6 @@ function memberLabel(t: TFunction, entry: Entry, members: BookMember[]): string 
   return member?.displayName || entry.creatorUserId || t('reports.labels.noMember');
 }
 
-// dimensionKeys receives the translator, an entry, and the active tab and returns grouping keys.
 function dimensionKeys(t: TFunction, entry: Entry, tab: ReportTab, categories: Category[], accounts: Account[]): Array<Pick<RankedItem, 'id' | 'label'>> {
   const category = categories.find((item) => item.id === entry.categoryId);
   const account = accounts.find((item) => item.id === entry.accountId);
@@ -640,7 +687,6 @@ function dimensionKeys(t: TFunction, entry: Entry, tab: ReportTab, categories: C
   }
 }
 
-// periodBounds receives a cursor date and mode and returns UTC inclusive-exclusive bounds.
 function periodBounds(cursorDate: Date, timeMode: TimeMode): [Date, Date] {
   if (timeMode === 'year') {
     const start = startOfYear(cursorDate);
@@ -655,7 +701,6 @@ function periodBounds(cursorDate: Date, timeMode: TimeMode): [Date, Date] {
   return [start, end];
 }
 
-// yearBuckets receives a cursor date and returns monthly report buckets for that year.
 function yearBuckets(cursorDate: Date): RankedItem[] {
   const year = cursorDate.getUTCFullYear();
   return Array.from({ length: 12 }, (_, month) => ({
@@ -667,7 +712,6 @@ function yearBuckets(cursorDate: Date): RankedItem[] {
   }));
 }
 
-// monthBuckets receives a cursor date and returns daily report buckets for that month.
 function monthBuckets(cursorDate: Date): RankedItem[] {
   const start = startOfMonth(cursorDate);
   const end = new Date(start);
@@ -686,17 +730,14 @@ function monthBuckets(cursorDate: Date): RankedItem[] {
   });
 }
 
-// startOfYear receives a date and returns the first UTC instant of that year.
 function startOfYear(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
 }
 
-// startOfMonth receives a date and returns the first UTC instant of that month.
 function startOfMonth(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
 }
 
-// formatPeriod receives a cursor date and mode and returns a compact period label.
 function formatPeriod(date: Date, mode: TimeMode): string {
   if (mode === 'year') {
     return String(date.getUTCFullYear());
@@ -705,18 +746,48 @@ function formatPeriod(date: Date, mode: TimeMode): string {
   return `${date.getUTCFullYear()}/${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-// reportTitle receives the translator and active controls and returns the compact report eyebrow.
 function reportTitle(t: TFunction, tab: ReportTab, flowFilter: FlowFilter): string {
   return t('reports.panel.eyebrow', { dimension: t(`reports.tabs.${tab}`), flow: t(`common.flow.${flowFilter}`) });
 }
 
-// reportHeading receives the translator and active controls and returns a readable report heading.
 function reportHeading(t: TFunction, tab: ReportTab, flowFilter: FlowFilter): string {
   const target = flowFilter === 'all' ? t('reports.cashflow') : t(`common.flow.${flowFilter}`);
   return t('reports.panel.heading', { dimension: t(`reports.tabs.${tab}`), target });
 }
 
-// memberReportHeading receives a flow and returns the member report section heading.
-function memberReportHeading(t: TFunction, flow: MemberReportFlow): string {
+function flowSectionTitle(t: TFunction, tab: SectionReportTab, flow: ReportFlow): string {
+  if (tab === 'member') {
+    return memberReportHeading(t, flow);
+  }
+
+  return t('reports.panel.eyebrow', { dimension: t(`reports.tabs.${tab}`), flow: reportFlowLabel(t, flow) });
+}
+
+function flowSectionHeading(t: TFunction, tab: SectionReportTab, flow: ReportFlow): string {
+  if (tab === 'member') {
+    return memberReportHeading(t, flow);
+  }
+
+  return t('reports.panel.heading', { dimension: t(`reports.tabs.${tab}`), target: reportFlowLabel(t, flow) });
+}
+
+function reportFlowLabel(t: TFunction, flow: ReportFlow): string {
+  return flow === 'balance' ? t('reports.flow.balance') : t(`common.flow.${flow}`);
+}
+
+function memberReportHeading(t: TFunction, flow: ReportFlow): string {
   return t(`reports.member.${flow}`);
+}
+
+function isSectionReportTab(tab: ReportTab): tab is SectionReportTab {
+  return tab === 'category' || tab === 'subcategory' || tab === 'member';
+}
+
+function reportTabPath(tab: ReportTab): string {
+  return `/reports/${tab}`;
+}
+
+function reportTabFromPath(pathname: string): ReportTab | null {
+  const id = pathname.slice('/reports/'.length);
+  return reportTabs.some((tab) => tab.id === id) ? id as ReportTab : null;
 }

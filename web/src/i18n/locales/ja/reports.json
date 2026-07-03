@@ -26,6 +26,9 @@
       "period": "期間",
       "total": "合計"
     },
+    "flow": {
+      "balance": "残高"
+    },
     "heading": "インタラクティブなドリルダウンで支出を分析します。",
     "labels": {
       "noMember": "メンバーなし",

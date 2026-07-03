@@ -79,7 +79,7 @@ async function removePasskeyAuthenticator(authenticator: VirtualAuthenticator): 
 }
 
 test('user can start external SSO from the authentication screen', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/login');
 
   await expect(page.getByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeVisible();
   await expect(page.getByText('External SSO')).toBeVisible();
@@ -88,11 +88,22 @@ test('user can start external SSO from the authentication screen', async ({ page
   await expect(page).toHaveURL(/\/api\/health\?redirect_to=/);
 });
 
+test('signed-out visitors see the public landing page first', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'A ledger for every shared money story.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Sign in' }).click();
+  await expect(page.getByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
 test('user can register and request recovery from the authentication screen', async ({ page }) => {
   const email = `ui-register-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
   const password = 'correct horse battery staple';
 
-  await page.goto('/');
+  await page.goto('/login');
   await page.getByRole('button', { name: 'Register' }).click();
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
@@ -138,6 +149,8 @@ test.describe('passkeys', () => {
       await expect(page.getByLabel('Label for Renamed acceptance passkey')).toBeVisible();
 
       await page.getByRole('button', { name: 'Sign out' }).click();
+      await expect(page.getByRole('heading', { name: 'A ledger for every shared money story.' })).toBeVisible();
+      await page.getByRole('link', { name: 'Sign in' }).click();
       await expect(page.getByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeVisible();
       await page.getByRole('button', { name: 'Use passkey' }).click();
       await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
@@ -168,7 +181,7 @@ test('user signs in through the authentication screen', async ({ page }) => {
   });
   expect(registerResponse.status()).toBe(201);
 
-  await page.goto('/');
+  await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeVisible();
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
@@ -203,16 +216,24 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   expect(JSON.stringify(auditBody)).not.toContain(password);
   expect(JSON.stringify(auditBody)).not.toContain('token');
 
+  await page.goto('/reports/trend');
+  await expect(page.getByRole('region', { name: 'Reports' })).toBeVisible();
+  await expect(page).toHaveURL(/\/reports\/trend$/);
+  await page.goto('/accounts');
+  await expect(page.getByRole('region', { name: 'Accounts', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/accounts$/);
   await page.goto('/');
   await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
+  await expect(page).toHaveURL(/\/home$/);
 
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(nav).toBeInViewport();
   await nav.getByRole('button', { name: 'Accounts' }).click();
-  await expect(page.getByRole('region', { name: 'Accounts' })).toBeVisible();
-  await page.getByRole('button', { name: 'Prepare account' }).click();
+  await expect(page.getByRole('region', { name: 'Accounts', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/accounts$/);
+  await page.locator('button.mobilePrimaryButton', { hasText: 'Prepare account' }).click();
   await expect(page.getByText('Account ready.')).toBeVisible();
-  await expect(page.getByRole('article', { name: 'Book members' }).getByText('owner')).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Book members' })).toBeVisible();
   await page.getByLabel('Account name').fill('Travel wallet');
   await page.getByLabel('Opening balance').fill('123.45');
   await page.getByRole('button', { name: 'Create account' }).click();
@@ -235,7 +256,9 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
 
   await nav.getByRole('button', { name: 'Home' }).click();
   await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
+  await expect(page).toHaveURL(/\/home$/);
   await nav.getByRole('button', { name: 'Record' }).click();
+  await expect(page).toHaveURL(/\/record$/);
   const expenseTab = page.getByRole('tab', { name: 'Expense' });
   await expect(expenseTab).toHaveAttribute('aria-selected', 'true');
   await expect(expenseTab).toBeInViewport();
@@ -261,48 +284,45 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('Category created.')).toBeVisible();
   await page.getByRole('button', { name: '2' }).click();
   await page.getByRole('button', { name: '4' }).click();
+  await page.getByRole('button', { name: 'Open calculator' }).click();
+  await page.getByRole('button', { name: '+' }).click();
+  await page.getByRole('button', { name: '6' }).click();
+  await page.getByRole('button', { name: 'Apply calculation' }).click();
   await page.getByPlaceholder('Add a note...').fill('Team lunch');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText('Entry posted.')).toBeVisible();
-  await expect(page.getByLabel('Transaction Team lunch')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transactions' })).toHaveCount(0);
 
   await nav.getByRole('button', { name: 'Reports' }).click();
   await expect(page.getByRole('region', { name: 'Reports' })).toBeVisible();
+  await expect(page).toHaveURL(/\/reports\/category$/);
   await page.getByRole('button', { name: 'Report filters' }).click();
   await expect(page.getByLabel('Active report filters').getByText('Total')).toBeVisible();
-  await expect(page.getByText('$24.00', { exact: true })).toBeVisible();
-  await expect(page.getByText('1 entries', { exact: true })).toBeVisible();
+  await expect(page.getByText('$30.00', { exact: true })).toBeVisible();
+  const categoryExpenseReport = page.locator('.categoryFlowPanel').filter({
+    has: page.getByRole('heading', { name: 'Category expense' }),
+  });
+  await expect(categoryExpenseReport.getByText('1 entries', { exact: true })).toBeVisible();
 
   await nav.getByRole('button', { name: 'Home' }).click();
   await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transactions' }).getByText('Team lunch')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transactions' }).getByText('-$30.00', { exact: true })).toBeVisible();
   await nav.getByRole('button', { name: 'Record' }).click();
-  await page.getByRole('button', { name: 'Edit details' }).click();
-  await page.getByLabel('Amount for Team lunch').fill('45.67');
-  await page.getByLabel('Time for Team lunch').fill('2026-07-02T09:15');
-  await page.getByLabel('Account for Team lunch').selectOption({ label: 'Travel wallet' });
-  await page.getByLabel('Note for Team lunch').fill('Team lunch edited');
-  await page.getByLabel('Merchant for Team lunch').fill('Corner Cafe');
-  await page.getByLabel('Tags for Team lunch').fill('food, work');
-  await page.getByRole('button', { name: 'Save details' }).click();
-  await expect(page.getByText('Entry updated.')).toBeVisible();
-  await expect(page.getByText('Team lunch edited')).toBeVisible();
-  await expect(page.getByText('$45.67')).toBeVisible();
   await page.getByRole('button', { name: 'Search transactions' }).click();
   await expect(page.getByRole('region', { name: 'Search transactions' })).toBeVisible();
-  await page.getByRole('textbox', { name: 'Search transactions' }).fill('edited');
-  await expect(page.getByRole('list', { name: 'Search results' }).getByText('Team lunch edited')).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Search results' }).getByText('$45.67')).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Search results' }).getByText(/Travel wallet/)).toBeVisible();
+  await page.getByRole('textbox', { name: 'Search transactions' }).fill('Team lunch');
+  await expect(page.getByRole('list', { name: 'Search results' }).getByText('Team lunch')).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Search results' }).getByText('$30.00')).toBeVisible();
   await page.getByRole('button', { name: 'Close search' }).click();
   await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
-  await page.getByRole('button', { name: 'Delete entry' }).click();
-  await expect(page.getByText('Entry deleted.')).toBeVisible();
-  await expect(page.getByText('Team lunch edited')).toHaveCount(0);
 
   await nav.getByRole('button', { name: 'Me', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
+  await expect(page).toHaveURL(/\/me$/);
   await page.getByRole('button', { name: 'Import' }).click();
   await expect(page.getByRole('region', { name: 'Import data' })).toBeVisible();
+  await expect(page).toHaveURL(/\/imports$/);
   await page.getByLabel('Upload Wacai export file').setInputFiles({
     name: 'wacai.csv',
     mimeType: 'text/csv',
@@ -324,12 +344,8 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
 
   await nav.getByRole('button', { name: 'Home' }).click();
   await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
-  await nav.getByRole('button', { name: 'Record' }).click();
-  await page.getByRole('button', { name: 'Search transactions' }).click();
-  await page.getByRole('textbox', { name: 'Search transactions' }).fill('Import lunch');
-  await expect(page.getByRole('list', { name: 'Search results' }).getByText('Import lunch')).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Search results' }).getByText('CN¥12.30')).toBeVisible();
-  await page.getByRole('button', { name: 'Close search' }).click();
+  await expect(page.getByRole('region', { name: 'Transactions' }).getByText('Import lunch')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transactions' }).getByText('-CN¥12.30', { exact: true })).toBeVisible();
 
   await nav.getByRole('button', { name: 'Me', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
@@ -343,6 +359,8 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('TOTP enabled.')).toBeVisible();
   await expect(page.getByRole('article', { name: 'Authenticator app' }).getByText('Authenticator app is on.')).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByRole('heading', { name: 'A ledger for every shared money story.' })).toBeVisible();
+  await page.getByRole('link', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeVisible();
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
@@ -365,7 +383,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('entry / created').first()).toBeVisible();
   await expect(page.getByText(password)).toHaveCount(0);
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A ledger for every shared money story.' })).toBeVisible();
   const sessionResponse = await page.request.get('/api/auth/session');
   expect(sessionResponse.status()).toBe(401);
 });

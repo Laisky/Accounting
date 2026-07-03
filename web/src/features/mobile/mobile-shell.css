@@ -307,12 +307,33 @@
 }
 
 .dayGroup li {
+  min-height: 82px;
+  border-bottom: 1px solid oklch(93% 0.006 185);
+}
+
+.transactionRowButton {
   display: grid;
   grid-template-columns: 50px minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
+  width: 100%;
   min-height: 82px;
-  border-bottom: 1px solid oklch(93% 0.006 185);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.transactionRowButton:focus-visible {
+  outline: 2px solid oklch(69% 0.14 255);
+  outline-offset: -3px;
+}
+
+.transactionRowButton:hover {
+  background: oklch(97% 0.006 185);
 }
 
 .transactionIcon {
@@ -346,7 +367,7 @@
   font-weight: 760;
 }
 
-.dayGroup li > b {
+.transactionRowButton > b {
   color: oklch(20% 0.035 235);
   font-size: 1.02rem;
   font-weight: 880;
@@ -553,17 +574,38 @@
   background: oklch(100% 0 0);
 }
 
-.accountSection > header {
+.accountSectionHeader,
+.accountSectionToggle {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 18px;
   gap: 8px;
   align-items: center;
   min-height: 58px;
-  padding: 0 16px;
   color: oklch(22% 0.034 235);
 }
 
-.accountSection > header span {
+.accountSectionHeader {
+  padding: 0 16px;
+}
+
+.accountSectionToggle {
+  grid-column: 1 / -1;
+  width: calc(100% + 32px);
+  margin: 0 -16px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.accountSectionToggle:focus-visible {
+  outline: 2px solid oklch(69% 0.14 255);
+  outline-offset: -3px;
+}
+
+.accountSectionHeader span {
   font-size: 1rem;
   font-weight: 840;
 }
@@ -578,14 +620,14 @@
   overflow-wrap: anywhere;
 }
 
-.accountSection > header strong {
+.accountSectionHeader strong {
   color: oklch(28% 0.028 235);
   font-size: 1rem;
   font-weight: 850;
   white-space: nowrap;
 }
 
-.accountSectionOpen > header svg {
+.accountSectionOpen .accountSectionHeader svg {
   transform: rotate(180deg);
 }
 
@@ -603,6 +645,24 @@
   align-items: center;
   min-height: 76px;
   border-top: 1px solid oklch(93% 0.006 185);
+}
+
+.accountRowButton {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: inherit;
+  align-items: center;
+  min-height: inherit;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.accountRowButton:focus-visible {
+  outline: 2px solid oklch(69% 0.14 255);
+  outline-offset: -3px;
 }
 
 .accountRowIcon {
@@ -750,9 +810,14 @@
 }
 
 .bottomNav {
+  --bottom-nav-active-fill: oklch(94% 0.05 42);
+  --bottom-nav-active-ink: oklch(56% 0.18 34);
+  --bottom-nav-active-border: oklch(84% 0.09 42);
+  --bottom-nav-active-shadow: oklch(60% 0.16 34 / 18%);
+
   grid-area: nav;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 84px;
   padding: 9px 10px calc(18px + env(safe-area-inset-bottom));
   border-top: 1px solid oklch(91% 0.006 185);
@@ -777,8 +842,17 @@
 
 .bottomNav span {
   display: inline-flex;
+  width: 36px;
+  height: 32px;
   align-items: center;
   justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
 }
 
 .bottomNav b {
@@ -787,26 +861,13 @@
 }
 
 .bottomNavActive {
-  color: oklch(26% 0.05 235);
+  color: var(--bottom-nav-active-ink);
 }
 
-.recordNavButton span {
-  width: 58px;
-  height: 58px;
-  margin-top: -24px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, oklch(70% 0.18 43), oklch(66% 0.22 31));
-  color: oklch(99% 0.002 180);
-  box-shadow: 0 11px 25px oklch(61% 0.18 31 / 32%);
-}
-
-.recordNavButton b {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+.bottomNavActive span {
+  border-color: var(--bottom-nav-active-border);
+  background: var(--bottom-nav-active-fill);
+  box-shadow: 0 7px 18px var(--bottom-nav-active-shadow);
 }
 
 @media (max-width: 520px) {
@@ -868,24 +929,14 @@
       color 160ms ease;
   }
 
-  /* Normalize the raised record FAB into a plain rail item. */
-  .recordNavButton span {
-    width: auto;
-    height: auto;
-    margin-top: 0;
-    border-radius: 0;
-    background: none;
-    color: inherit;
-    box-shadow: none;
+  .bottomNavActive {
+    background: var(--bottom-nav-active-fill);
   }
 
-  .recordNavButton b {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip: auto;
-    white-space: normal;
+  .bottomNavActive span {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
   }
 }
 
@@ -933,7 +984,7 @@
   }
 
   .bottomNavActive {
-    background: oklch(95% 0.02 235);
+    background: var(--bottom-nav-active-fill);
   }
 
   .mobileHeader {
@@ -958,8 +1009,33 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (prefers-color-scheme: dark) {
+  .bottomNav {
+    --bottom-nav-active-fill: oklch(26% 0.06 38);
+    --bottom-nav-active-ink: oklch(78% 0.12 48);
+    --bottom-nav-active-border: oklch(45% 0.09 42);
+    --bottom-nav-active-shadow: oklch(18% 0.02 235 / 45%);
+
+    border-color: oklch(30% 0.018 235);
+    background: oklch(18% 0.014 235 / 96%);
+  }
+
   .bottomNav button {
+    color: oklch(72% 0.018 235);
+  }
+
+  .bottomNav button:hover {
+    background: oklch(24% 0.018 235);
+  }
+
+  .navBrand {
+    color: oklch(90% 0.015 235);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottomNav button,
+  .bottomNav span {
     transition: none;
   }
 }

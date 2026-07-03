@@ -38,6 +38,14 @@ const fixtureAccount = {
   updatedAt: '2026-07-01T00:00:00Z',
 };
 
+const fixtureCreditAccounts = Array.from({ length: 4 }, (_, index) => ({
+  ...fixtureAccount,
+  id: `credit-account-${index + 1}`,
+  name: ['Visa Blue', 'Travel Rewards', 'Family Credit', 'Backup Card'][index],
+  type: 'credit_card',
+  openingBalanceCents: -1000 * (index + 1),
+}));
+
 let currentGroup = fixtureGroup;
 let createdAccounts: typeof fixtureAccount[] = [];
 
@@ -195,7 +203,8 @@ function ledgerResponse(url: string, init?: RequestInit): Response | null {
       return response(account);
     }
 
-    return response({ items: [fixtureAccount, ...createdAccounts], page: 1, pageSize: 50, total: 1 + createdAccounts.length });
+    const accounts = [fixtureAccount, ...fixtureCreditAccounts, ...createdAccounts];
+    return response({ items: accounts, page: 1, pageSize: 50, total: accounts.length });
   }
   if (url === '/api/books/book-1/categories' || url === '/api/books/book-1/categories?page=1&page_size=50') {
     if (init?.method === 'POST') {
@@ -386,7 +395,7 @@ describe('App', () => {
     );
   });
 
-  it('renders the mobile home with a contextual bottom action', async () => {
+  it('renders the mobile home with stable active bottom navigation', async () => {
     renderApp();
 
     expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
@@ -394,27 +403,85 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByRole('region', { name: 'Transactions' })).toHaveTextContent('Lunch'));
 
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
-    expect(within(nav).getAllByRole('button')).toHaveLength(4);
+    expect(within(nav).getAllByRole('button')).toHaveLength(5);
     expect(within(nav).getByRole('button', { name: 'Accounts' })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Record' })).toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: 'Home' })).not.toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('button', { name: 'Reports' })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Me' })).toBeInTheDocument();
     expect(within(nav).queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
 
     fireEvent.click(within(nav).getByRole('button', { name: 'Record' }));
     expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Record' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('tab', { name: 'Income' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Expense' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Transfer' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Borrow/Lend' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('region', { name: 'Selected category' })).toHaveTextContent('Dining'));
     expect(screen.getByRole('group', { name: 'Entry fields' })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: 'Home' })).toBeInTheDocument();
 
     fireEvent.click(within(nav).getByRole('button', { name: 'Home' }));
     expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
     expect(fetch).toHaveBeenCalledWith('/api/ledger/summary', { signal: expect.any(AbortSignal) });
+  });
+
+  it.each([
+    ['/home', 'Home', 'Home'],
+    ['/accounts', 'Accounts', 'Accounts'],
+    ['/record', 'Record entry', 'Record'],
+    ['/reports/category', 'Reports', 'Reports'],
+    ['/imports', 'Import data', 'Me'],
+    ['/me', 'Me', 'Me'],
+  ])('opens %s directly', async (path, regionName, navName) => {
+    renderApp(path);
+
+    expect(await screen.findByRole('region', { name: regionName })).toBeInTheDocument();
+    const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
+    expect(within(nav).getByRole('button', { name: navName })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('opens Home transaction rows into a bill detail page', async () => {
+    renderApp('/home');
+
+    const transactions = await screen.findByRole('region', { name: 'Transactions' });
+    await waitFor(() => expect(transactions).toHaveTextContent('Lunch'));
+    fireEvent.click(within(transactions).getByRole('button', { name: 'Open Lunch detail' }));
+
+    expect(await screen.findByRole('region', { name: 'Bill detail for Lunch' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Expense' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Bill facts' })).toHaveTextContent('Payment account');
+    expect(screen.getByRole('region', { name: 'Bill facts' })).toHaveTextContent('Cash');
+    expect(screen.getByRole('region', { name: 'Bill facts' })).toHaveTextContent('Person');
+    expect(screen.getByRole('region', { name: 'Source' })).toHaveTextContent('Manual entry');
+    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to home' }));
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
+  });
+
+  it('opens a bill detail URL directly even when the entry is outside the Home page', async () => {
+    renderApp('/entries/entry-cny');
+
+    expect(await screen.findByRole('region', { name: 'Bill detail for Converted lunch' })).toBeInTheDocument();
+    expect(screen.getByText('-CN¥100.00')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Source' })).toHaveTextContent('Manual entry');
+    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries?page=1&page_size=100');
+  });
+
+  it.each([
+    ['/reports/trend', 'Trend'],
+    ['/reports/category', 'Category'],
+    ['/reports/subcategory', 'Subcategory'],
+    ['/reports/member', 'Member'],
+    ['/reports/account', 'Account'],
+    ['/reports/merchant', 'Merchant'],
+    ['/reports/tag', 'Tag'],
+  ])('opens %s directly', async (path, tabName) => {
+    renderApp(path);
+
+    expect(await screen.findByRole('tabpanel', { name: tabName })).toBeInTheDocument();
   });
 
   it('shows accounts and can prepare starter account data', async () => {
@@ -424,12 +491,19 @@ describe('App', () => {
     fireEvent.click(within(nav).getByRole('button', { name: 'Accounts' }));
 
     expect(await screen.findByRole('region', { name: 'Accounts' })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: 'Home' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Accounts' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('heading', { name: 'Accounts' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Net assets' })).toBeInTheDocument();
     expect(screen.getByText('Credit cards')).toBeInTheDocument();
     expect(screen.getByText('Savings and IOUs')).toBeInTheDocument();
     expect(screen.getByText('cash / USD')).toBeInTheDocument();
+    const creditCardsButton = screen.getByRole('button', { name: /Credit cards/ });
+    expect(creditCardsButton).toHaveTextContent('(4)');
+    expect(screen.getByRole('button', { name: /Stored-value cards/ })).toHaveTextContent('(0)');
+    expect(screen.queryByText('Visa Blue')).not.toBeInTheDocument();
+    fireEvent.click(creditCardsButton);
+    expect(await screen.findByText('Visa Blue')).toBeInTheDocument();
+    expect(screen.getByText('Backup Card')).toBeInTheDocument();
     const membersPanel = await screen.findByRole('article', { name: 'Book members' });
     await waitFor(() => expect(membersPanel).toHaveTextContent('Person'));
     expect(membersPanel).toHaveTextContent('owner');
@@ -457,10 +531,12 @@ describe('App', () => {
       body: expect.stringContaining('"name":"Daily Wallets"'),
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare account' }));
+    const accountsRegion = screen.getByRole('region', { name: 'Accounts' });
+    fireEvent.click(within(accountsRegion).getByRole('button', { name: 'Prepare account' }));
     expect(await screen.findByText('Account ready.')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Account name'), { target: { value: 'Travel wallet' } });
+    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'credit_card' } });
     fireEvent.change(screen.getByLabelText('Opening balance'), { target: { value: '123.45' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
@@ -474,17 +550,26 @@ describe('App', () => {
     expect(fetch).toHaveBeenCalledWith('/api/accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: expect.stringContaining('"type":"credit_card"'),
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"openingBalanceCents":12345'),
     });
   });
 
-  it('posts a quick ledger entry from the record tab', async () => {
+  it('posts a quick ledger entry with a calculator result from the record tab', async () => {
     renderApp();
 
     expect(await openRecordTab()).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('group', { name: 'Category shortcuts' })).toHaveTextContent('Dining'));
     fireEvent.click(screen.getByRole('button', { name: '2' }));
     fireEvent.click(screen.getByRole('button', { name: '4' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open calculator' }));
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    fireEvent.click(screen.getByRole('button', { name: '6' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply calculation' }));
     fireEvent.change(screen.getByPlaceholderText('Add a note...'), { target: { value: 'Team lunch' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -502,7 +587,7 @@ describe('App', () => {
     expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"amountCents":24'),
+      body: expect.stringContaining('"amountCents":3000'),
     });
     expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
       method: 'POST',
@@ -557,63 +642,14 @@ describe('App', () => {
     });
   });
 
-  it('updates and deletes a recent transaction from the record tab', async () => {
+  it('keeps transactions out of the record tab', async () => {
     renderApp();
 
     expect(await openRecordTab()).toBeInTheDocument();
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit details' }));
-    fireEvent.change(await screen.findByLabelText('Amount for Lunch'), { target: { value: '45.67' } });
-    fireEvent.change(screen.getByLabelText('Time for Lunch'), { target: { value: '2026-07-01T08:30' } });
-    const noteInput = await screen.findByLabelText('Note for Lunch');
-    fireEvent.change(noteInput, { target: { value: 'Updated lunch' } });
-    fireEvent.change(screen.getByLabelText('Merchant for Lunch'), { target: { value: 'Corner Cafe' } });
-    fireEvent.change(screen.getByLabelText('Tags for Lunch'), { target: { value: 'food, work' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save details' }));
-
-    expect(await screen.findByText('Entry updated.')).toBeInTheDocument();
-    expect(await screen.findByText('Updated lunch')).toBeInTheDocument();
-    expect(screen.getByText('$45.67')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"note":"Updated lunch"'),
-    });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"amountCents":4567'),
-    });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"occurredAt":"2026-07-01T08:30:00.000Z"'),
-    });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"accountId":"account-1"'),
-    });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"categoryId":"category-1"'),
-    });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"merchant":"Corner Cafe"'),
-    });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"tags":["food","work"]'),
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Delete entry' }));
-    expect(await screen.findByText('Entry deleted.')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
-      method: 'DELETE',
-    });
+    await waitFor(() => expect(screen.getByRole('group', { name: 'Category shortcuts' })).toHaveTextContent('Dining'));
+    expect(screen.queryByRole('region', { name: 'Transactions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit details' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Categories' })).toBeInTheDocument();
   });
 
   it('searches saved transactions from the header search control', async () => {
@@ -803,6 +839,57 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByRole('region', { name: 'Transactions' })).toHaveTextContent('Lunch'));
   });
 
+  it('shows the public landing page before authentication', async () => {
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/auth/session') {
+        return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) } as Response);
+      }
+      if (url === '/api/runtime-config') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(emptyRuntimeConfig) } as Response);
+      }
+
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+    });
+
+    renderApp();
+
+    expect(await screen.findByRole('heading', { name: 'A ledger for every shared money story.' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeInTheDocument();
+  });
+
+  it('routes the landing sign-in action to SSO when password login is disabled', async () => {
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/auth/session') {
+        return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) } as Response);
+      }
+      if (url === '/api/runtime-config') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              ...emptyRuntimeConfig,
+              auth: { ...emptyRuntimeConfig.auth, emailLoginEnabled: false },
+              features: { ...emptyRuntimeConfig.features, externalSsoEnabled: true },
+              sso: { enabled: true, startPath: '/api/auth/sso/start' },
+            }),
+        } as Response);
+      }
+
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
+    });
+
+    renderApp();
+
+    expect(await screen.findByRole('heading', { name: 'A ledger for every shared money story.' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/api/auth/sso/start'));
+  });
+
   it('signs in from the authentication screen', async () => {
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -851,7 +938,7 @@ describe('App', () => {
       } as Response);
     });
 
-    renderApp();
+    renderApp('/login');
 
     expect(await screen.findByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'person@example.test' } });

@@ -26,6 +26,9 @@
       "period": "Period",
       "total": "Total"
     },
+    "flow": {
+      "balance": "balance"
+    },
     "heading": "Analyze spending with interactive drilldowns.",
     "labels": {
       "noMember": "No member",

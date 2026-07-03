@@ -1,0 +1,90 @@
+{
+  "landing": {
+    "header": {
+      "brand": "Accounting",
+      "brandAria": "Accounting 首页",
+      "model": "模型",
+      "navLabel": "产品分区",
+      "signIn": "登录",
+      "trust": "信任",
+      "workflows": "工作流"
+    },
+    "hero": {
+      "eyebrow": "浏览器优先的记账",
+      "lead": "为个人、家庭、合租、旅行、项目和小团队账本提供清晰所有权、可复核记录，以及可以带走的数据。",
+      "primaryRegister": "创建账本",
+      "primarySignIn": "查看登录选项",
+      "secondary": "查看数据模型",
+      "title": "每段共享金钱故事，都有一本账。"
+    },
+    "model": {
+      "body": "Accounting 将用户、账本、账户、分类、记录、导入和审计事件保留为明确对象。这个模型让个人账户默认保持私有，同时支持协作账本和保留来源的导入。",
+      "eyebrow": "产品模型",
+      "title": "围绕所有权构建，而不只是交易。"
+    },
+    "productShot": {
+      "audit": "审计轨迹记录谁改了什么。",
+      "balanceLabel": "家庭余额",
+      "balanceValue": "$12,500",
+      "entryOneMeta": "支出 · 餐饮 · USD",
+      "entryOneNote": "按创建者限制编辑",
+      "entryOneTitle": "团队午餐",
+      "entryTwoMeta": "收入 · 报销 · CNY/USD",
+      "entryTwoNote": "保留汇率证据",
+      "entryTwoTitle": "室友还款",
+      "label": "示例账本预览",
+      "status": "已复核",
+      "windowTitle": "合租账本"
+    },
+    "proof": {
+      "audit": {
+        "body": "敏感的认证和数据变更会产生已脱敏的审计事件，便于之后复核。",
+        "kicker": "可追踪",
+        "title": "每个重要动作都会留下证据。"
+      },
+      "currency": {
+        "body": "记录携带交易、账户和报表币种，并保留汇率元数据。",
+        "kicker": "多币种",
+        "title": "旅行和跨境记录仍然可解释。"
+      },
+      "label": "Accounting 优势",
+      "ownership": {
+        "body": "账本可以是个人或协作账本，账户除非主动共享，否则始终归用户所有。",
+        "kicker": "用户拥有",
+        "title": "你的账户仍然属于你。"
+      }
+    },
+    "trust": {
+      "auth": {
+        "body": "邮箱密码、TOTP、Passkey、Turnstile 和可选外部 SSO 都由运行时配置展示。",
+        "title": "适配部署方式的认证"
+      },
+      "eyebrow": "数据完整性",
+      "imports": {
+        "body": "Wacai 导入会先生成预览，保留原始来源上下文，并要求明确提交。",
+        "title": "导入先复核再写入"
+      },
+      "portable": {
+        "body": "应用围绕已文档化的 JSON API 和持久化边界设计，而不是假设一个隐藏的单一数据库。",
+        "title": "数据所有权保持可见"
+      },
+      "title": "信任体现在工作流中。"
+    },
+    "workflow": {
+      "eyebrow": "使用场景",
+      "personal": {
+        "body": "追踪账户、分类、收入、支出和报表，不强迫每条记录进入共享空间。",
+        "title": "个人财务"
+      },
+      "shared": {
+        "body": "为家庭、室友、项目和小团队使用成员角色，以及按创建者限制的编辑规则。",
+        "title": "共享账本"
+      },
+      "title": "一个系统，适配不同金钱场景。",
+      "travel": {
+        "body": "当旅行或项目变复杂时，把多币种记录、报销和来源细节放在一起。",
+        "title": "旅行和报销"
+      }
+    }
+  }
+}

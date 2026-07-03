@@ -3,6 +3,7 @@ import {
   Banknote,
   Camera,
   Car,
+  Calculator,
   Flame,
   Fuel,
   Gift,
@@ -14,12 +15,12 @@ import {
   Trash2,
   Utensils,
 } from 'lucide-react';
+import { type TFunction } from 'i18next';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type BookListItem, type Category, type CategoryCreateInput, type CategoryUpdateInput, type Entry, type EntryUpdateInput } from '../../lib/api/ledger';
+import { type Account, type BookListItem, type Category, type CategoryCreateInput, type CategoryUpdateInput, type Entry } from '../../lib/api/ledger';
 import { formatMoney, supportedCurrencies } from '../../lib/money';
 import { CategoryManager } from './CategoryManager';
-import { EntryDetailEditor } from './EntryDetailEditor';
 import './record-entry.css';
 
 type RecordType = 'income' | 'expense' | 'transfer' | 'borrow';
@@ -45,9 +46,7 @@ type RecordEntryViewProps = {
   isBusy: boolean;
   onCreateCategory: (input: CategoryCreateInput) => Promise<void>;
   onCreateEntry: (input: RecordEntryInput) => Promise<void>;
-  onDeleteEntry: (entryId: string) => Promise<void>;
   onUpdateCategory: (categoryId: string, input: CategoryUpdateInput) => Promise<void>;
-  onUpdateEntry: (entryId: string, input: EntryUpdateInput) => Promise<void>;
   rates: Map<string, number>;
   recentEntries: Entry[];
   selectedBookCurrency: string;
@@ -78,9 +77,7 @@ export function RecordEntryView({
   isBusy,
   onCreateCategory,
   onCreateEntry,
-  onDeleteEntry,
   onUpdateCategory,
-  onUpdateEntry,
   rates,
   recentEntries,
   selectedBookCurrency,
@@ -194,166 +191,105 @@ export function RecordEntryView({
   return (
     <section className="tabPanel recordEntryPanel" aria-label={t('mobile.record.title')}>
       <div className="recordComposer">
-      <div className="recordHero" aria-hidden="true" />
-      <div className="recordTypeTabs" role="tablist" aria-label={t('mobile.record.typeLabel')}>
-        {recordTypes.map((type) => (
-          <button
-            key={type.id}
-            type="button"
-            role="tab"
-            aria-selected={recordType === type.id}
-            className={recordType === type.id ? 'recordTypeActive' : ''}
-            onClick={() => setRecordType(type.id)}
-          >
-            {t(`mobile.record.types.${type.id}`)}
-          </button>
-        ))}
-      </div>
+        <div className="recordHero" aria-hidden="true" />
+        <div className="recordTypeTabs" role="tablist" aria-label={t('mobile.record.typeLabel')}>
+          {recordTypes.map((type) => (
+            <button
+              key={type.id}
+              type="button"
+              role="tab"
+              aria-selected={recordType === type.id}
+              className={recordType === type.id ? 'recordTypeActive' : ''}
+              onClick={() => setRecordType(type.id)}
+            >
+              {t(`mobile.record.types.${type.id}`)}
+            </button>
+          ))}
+        </div>
 
-      <section className="selectedCategoryCard" aria-label={t('mobile.record.selectedCategory')}>
-        <span>{categoryIcon(selectedCategory?.name ?? recordType)}</span>
-        <strong>{selectedCategory?.name ?? t('mobile.record.categoryFallback')}</strong>
-        <b>{formatMoney(amountCents, currency)}</b>
-      </section>
+        <section className="selectedCategoryCard" aria-label={t('mobile.record.selectedCategory')}>
+          <span>{categoryIcon(selectedCategory?.name ?? recordType)}</span>
+          <strong>{selectedCategory?.name ?? t('mobile.record.categoryFallback')}</strong>
+          <b>{formatMoney(amountCents, currency)}</b>
+        </section>
 
-      <div className="categoryShortcutGrid" role="group" aria-label={t('mobile.record.categoryShortcuts')}>
-        {shortcuts.map((shortcut) => (
-          <button
-            key={shortcut.category.id}
-            type="button"
-            className={selectedCategory?.id === shortcut.category.id ? 'categoryShortcutActive' : ''}
-            onClick={() => applyCategoryPreference(shortcut.category)}
-          >
-            <span>{categoryIcon(shortcut.category.name)}</span>
-            <b>{shortcut.category.name}</b>
-          </button>
-        ))}
-      </div>
+        <div className="categoryShortcutGrid" role="group" aria-label={t('mobile.record.categoryShortcuts')}>
+          {shortcuts.map((shortcut) => (
+            <button
+              key={shortcut.category.id}
+              type="button"
+              className={selectedCategory?.id === shortcut.category.id ? 'categoryShortcutActive' : ''}
+              onClick={() => applyCategoryPreference(shortcut.category)}
+            >
+              <span>{categoryIcon(shortcut.category.name)}</span>
+              <b>{shortcut.category.name}</b>
+            </button>
+          ))}
+        </div>
 
-      <label className="noteLine">
-        <input aria-label={t('common.note')} value={note} placeholder={t('mobile.record.notePlaceholder')} onChange={(event) => setNote(event.target.value)} />
-        <Camera size={24} />
-      </label>
+        <label className="noteLine">
+          <input aria-label={t('common.note')} value={note} placeholder={t('mobile.record.notePlaceholder')} onChange={(event) => setNote(event.target.value)} />
+          <Camera size={24} />
+        </label>
 
-      <div className="recordFieldChips" role="group" aria-label={t('mobile.record.fields')}>
-        <label>
-          <span>{t('mobile.record.time')}</span>
-          <input aria-label={t('mobile.record.time')} type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} />
-        </label>
-        <label>
-          <span>{t('mobile.record.account')}</span>
-          <select aria-label={t('mobile.record.account')} value={selectedAccount?.id ?? ''} onChange={(event) => setAccountId(event.target.value)}>
-            {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>{t('mobile.record.book')}</span>
-          <select aria-label={t('mobile.record.book')} value={selectedBookId} onChange={(event) => setSelectedBookId(event.target.value)} disabled={!books.length}>
-            {books.length ? books.map((book) => <option key={book.id} value={book.id}>{book.name}</option>) : <option>{t('common.noBookYet')}</option>}
-          </select>
-        </label>
-        <label>
-          <span>{t('mobile.record.member')}</span>
-          <select aria-label={t('mobile.record.member')} value={member} onChange={(event) => setMember(event.target.value)}>
-            {members.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        {isMultiCurrency ? (
+        <div className="recordFieldChips" role="group" aria-label={t('mobile.record.fields')}>
           <label>
-            <span>{t('mobile.record.currency')}</span>
-            <select aria-label={t('mobile.record.currency')} value={currency} onChange={(event) => setCurrency(event.target.value)}>
-              {supportedCurrencies.map((item) => <option key={item} value={item}>{item}</option>)}
+            <span>{t('mobile.record.time')}</span>
+            <input aria-label={t('mobile.record.time')} type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} />
+          </label>
+          <label>
+            <span>{t('mobile.record.account')}</span>
+            <select aria-label={t('mobile.record.account')} value={selectedAccount?.id ?? ''} onChange={(event) => setAccountId(event.target.value)}>
+              {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
             </select>
           </label>
-        ) : null}
-        {recordType === 'transfer' ? (
           <label>
-            <span>{t('mobile.record.destination')}</span>
-            <select aria-label={t('mobile.record.destination')} value={destinationAccount?.id ?? ''} onChange={(event) => setDestinationAccountId(event.target.value)}>
-              {accounts.filter((account) => account.id !== selectedAccount?.id).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+            <span>{t('mobile.record.book')}</span>
+            <select aria-label={t('mobile.record.book')} value={selectedBookId} onChange={(event) => setSelectedBookId(event.target.value)} disabled={!books.length}>
+              {books.length ? books.map((book) => <option key={book.id} value={book.id}>{book.name}</option>) : <option>{t('common.noBookYet')}</option>}
             </select>
           </label>
-        ) : null}
-      </div>
+          <label>
+            <span>{t('mobile.record.member')}</span>
+            <select aria-label={t('mobile.record.member')} value={member} onChange={(event) => setMember(event.target.value)}>
+              {members.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          {isMultiCurrency ? (
+            <label>
+              <span>{t('mobile.record.currency')}</span>
+              <select aria-label={t('mobile.record.currency')} value={currency} onChange={(event) => setCurrency(event.target.value)}>
+                {supportedCurrencies.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+          ) : null}
+          {recordType === 'transfer' ? (
+            <label>
+              <span>{t('mobile.record.destination')}</span>
+              <select aria-label={t('mobile.record.destination')} value={destinationAccount?.id ?? ''} onChange={(event) => setDestinationAccountId(event.target.value)}>
+                {accounts.filter((account) => account.id !== selectedAccount?.id).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+              </select>
+            </label>
+          ) : null}
+        </div>
 
-      <CalculatorPad
-        amountExpression={amountExpression}
-        canSave={canSave && !isBusy}
-        onKeyPress={handleKeyPress}
-        onSave={handleSave}
-      />
+        <CalculatorPad
+          amountExpression={amountExpression}
+          canSave={canSave && !isBusy}
+          onKeyPress={handleKeyPress}
+          onSave={handleSave}
+        />
       </div>
 
       <div className="recordAside">
-      <RecentEntryList
-        accounts={accounts}
-        categories={categories}
-        entries={recentEntries}
-        isBusy={isBusy}
-        onDeleteEntry={onDeleteEntry}
-        onUpdateEntry={onUpdateEntry}
-      />
-
-      <CategoryManager
-        canManageCategories={canManageCategories}
-        categories={categories}
-        isBusy={isBusy}
-        onCreateCategory={onCreateCategory}
-        onUpdateCategory={onUpdateCategory}
-      />
+        <CategoryManager
+          canManageCategories={canManageCategories}
+          categories={categories}
+          isBusy={isBusy}
+          onCreateCategory={onCreateCategory}
+          onUpdateCategory={onUpdateCategory}
+        />
       </div>
-    </section>
-  );
-}
-
-// RecentEntryList receives recent entries and returns editable transaction review controls.
-function RecentEntryList({
-  accounts,
-  categories,
-  entries,
-  isBusy,
-  onDeleteEntry,
-  onUpdateEntry,
-}: {
-  accounts: Account[];
-  categories: Category[];
-  entries: Entry[];
-  isBusy: boolean;
-  onDeleteEntry: (entryId: string) => Promise<void>;
-  onUpdateEntry: (entryId: string, input: EntryUpdateInput) => Promise<void>;
-}) {
-  const { t } = useTranslation();
-
-  if (!entries.length) {
-    return (
-      <section className="recordRecentList" aria-label={t('mobile.transactions.title')}>
-        <div className="sectionTitle">
-          <h2>{t('mobile.transactions.title')}</h2>
-        </div>
-        <p className="emptyState">{t('mobile.transactions.empty')}</p>
-      </section>
-    );
-  }
-
-  return (
-    <section className="recordRecentList" aria-label={t('mobile.transactions.title')}>
-      <div className="sectionTitle">
-        <h2>{t('mobile.transactions.title')}</h2>
-      </div>
-      <ul>
-        {entries.slice(0, 8).map((entry) => (
-          <EntryDetailEditor
-            key={`${entry.id}:${entry.updatedAt}`}
-            account={accounts.find((item) => item.id === entry.accountId)}
-            accounts={accounts}
-            categories={categories}
-            entry={entry}
-            isBusy={isBusy}
-            onDeleteEntry={onDeleteEntry}
-            onUpdateEntry={onUpdateEntry}
-          />
-        ))}
-      </ul>
     </section>
   );
 }
@@ -371,14 +307,39 @@ function CalculatorPad({
   onSave: () => void;
 }) {
   const { t } = useTranslation();
-  const keys = ['1', '2', '3', '+', 'backspace', '4', '5', '6', '-', 'again', '7', '8', '9', '*', '/', '0', '.', '=', 'clear'];
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const keys = isCalculatorOpen
+    ? ['1', '2', '3', 'backspace', '4', '5', '6', '+', '7', '8', '9', '-', '0', '.', '*', '/', 'clear', '=']
+    : ['1', '2', '3', 'backspace', '4', '5', '6', 'calculator', '7', '8', '9', 'clear', '0', '.'];
+
+  function handlePadPress(key: string) {
+    if (key === 'calculator') {
+      setIsCalculatorOpen(true);
+      return;
+    }
+    onKeyPress(key);
+  }
 
   return (
     <section className="calculatorPad" aria-label={t('mobile.record.calculator')}>
-      <output aria-label={t('common.amount')}>{amountExpression}</output>
-      <div className="calculatorGrid">
+      <div className="calculatorDisplay">
+        <output aria-label={t('common.amount')}>{amountExpression}</output>
+        {isCalculatorOpen ? (
+          <button
+            type="button"
+            aria-label={t('mobile.record.useCalculatorResult')}
+            onClick={() => {
+              onKeyPress('=');
+              setIsCalculatorOpen(false);
+            }}
+          >
+            {t('mobile.record.useResult')}
+          </button>
+        ) : null}
+      </div>
+      <div className={`calculatorGrid ${isCalculatorOpen ? 'calculatorGridOpen' : ''}`}>
         {keys.map((key) => (
-          <button key={key} type="button" className={key === 'again' ? 'keyAgain' : ''} onClick={() => onKeyPress(key === 'again' ? 'clear' : key)}>
+          <button key={key} type="button" aria-label={keyAriaLabel(key, t)} className={key === 'calculator' ? 'calculatorToggleKey' : ''} onClick={() => handlePadPress(key)}>
             {keyLabel(key)}
           </button>
         ))}
@@ -562,14 +523,30 @@ function keyLabel(key: string): ReactNode {
   if (key === 'backspace') {
     return <Trash2 size={18} />;
   }
-  if (key === 'again') {
-    return 'Again';
+  if (key === 'calculator') {
+    return <Calculator size={19} />;
   }
   if (key === 'clear') {
     return 'C';
   }
 
   return key;
+}
+
+// keyAriaLabel receives an internal calculator key and returns an accessible button label.
+function keyAriaLabel(key: string, t: TFunction): string | undefined {
+  switch (key) {
+    case 'backspace':
+      return t('mobile.record.backspace');
+    case 'calculator':
+      return t('mobile.record.openCalculator');
+    case 'clear':
+      return t('mobile.record.clearAmount');
+    case '=':
+      return t('mobile.record.applyCalculation');
+    default:
+      return undefined;
+  }
 }
 
 // precedence receives an operator and returns its arithmetic precedence.

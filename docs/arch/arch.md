@@ -189,19 +189,21 @@ Initial auth API shape:
 
 ## Frontend Architecture
 
-The frontend is a Vite React app under `web/`. The first screen is an operational bookkeeping workspace, not a marketing landing page.
+The frontend is a Vite React app under `web/`. The public first screen is a product landing page that explains Accounting's bookkeeping model and routes returning users through an explicit header sign-in action; authenticated users still land in the operational bookkeeping workspace.
 
 Expected direction:
 
 - `src/main.tsx` owns bootstrapping.
+- `/` is public for signed-out visitors and presents the landing page. `/login`, `/register`, and recovery routes remain real application screens rather than embedded landing-page modals. Authenticated visits to `/` redirect to `/home`.
 - Authentication screens should be real application screens: login, registration, account recovery, and invite acceptance.
 - The primary authenticated layout should make book switching, account context, quick entry, transaction review, and import review immediately available.
 - Shared UI should move into `src/components` once it is reused.
 - Feature slices should live under `src/features/<feature>`.
 - API clients should live under `src/lib/api`.
 - Build output stays in `web/dist` and is never hand-edited.
+- Every authenticated page has a canonical browser route that can be opened directly: `/home`, `/accounts`, `/accounts/<accountID>/transactions`, `/record`, `/reports/<dimension>`, `/imports`, and `/me`. The SPA fallback must serve these routes in production.
 - The Reports Trend tab summarizes income, expense, and net balance for the selected month or year, and plots their period buckets in the book reporting currency using the same entry conversion rules as other report dimensions.
-- When the Reports Category tab uses the all-flow filter, the frontend presents category expense and category income as separate sections instead of mixing opposite cashflow directions in one ranked chart.
+- When the Reports Category or Subcategory tab uses the all-flow filter, the frontend presents expense, income, and net balance as separate sections instead of mixing opposite cashflow directions in one ranked chart.
 - The Reports Member tab presents member expense, member income, and member balance separately when the all-flow filter is active. Each member section includes a generated family shared row that aggregates all visible members before the individual member rows.
 
 Vite proxies `/api` to the Go server during local development. The Go server serves `web/dist` in production or whenever the built directory exists locally.

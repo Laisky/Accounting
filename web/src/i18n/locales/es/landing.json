@@ -1,0 +1,90 @@
+{
+  "landing": {
+    "header": {
+      "brand": "Accounting",
+      "brandAria": "Inicio de Accounting",
+      "model": "Modelo",
+      "navLabel": "Secciones del producto",
+      "signIn": "Iniciar sesión",
+      "trust": "Confianza",
+      "workflows": "Flujos"
+    },
+    "hero": {
+      "eyebrow": "Contabilidad en el navegador",
+      "lead": "Gestiona libros personales, familiares, de convivencia, viaje, proyecto y equipos pequeños con propiedad clara, registros revisables y datos que puedes llevar contigo.",
+      "primaryRegister": "Crear un libro",
+      "primarySignIn": "Ver opciones de acceso",
+      "secondary": "Ver el modelo de datos",
+      "title": "Un libro para cada historia de dinero compartido."
+    },
+    "model": {
+      "body": "Accounting mantiene usuarios, libros, cuentas, categorías, asientos, importaciones y eventos de auditoría como objetos explícitos. Ese modelo mantiene las cuentas personales privadas por defecto y admite libros colaborativos e importaciones que preservan la fuente.",
+      "eyebrow": "Modelo del producto",
+      "title": "Construido alrededor de la propiedad, no solo de transacciones."
+    },
+    "productShot": {
+      "audit": "La auditoría registra quién cambió qué.",
+      "balanceLabel": "Saldo del hogar",
+      "balanceValue": "$12,500",
+      "entryOneMeta": "Gasto · Comida · USD",
+      "entryOneNote": "Política de edición por creador",
+      "entryOneTitle": "Almuerzo de equipo",
+      "entryTwoMeta": "Ingreso · Reembolso · CNY/USD",
+      "entryTwoNote": "Evidencia del tipo de cambio preservada",
+      "entryTwoTitle": "Compañero devolvió dinero",
+      "label": "Vista previa de libro de ejemplo",
+      "status": "Revisado",
+      "windowTitle": "Libro de convivencia"
+    },
+    "proof": {
+      "audit": {
+        "body": "Los cambios sensibles de autenticación y datos producen eventos de auditoría saneados para revisión posterior.",
+        "kicker": "Trazable",
+        "title": "Cada acción importante deja evidencia."
+      },
+      "currency": {
+        "body": "Los asientos llevan monedas de transacción, cuenta e informe con metadatos de tipo de cambio.",
+        "kicker": "Multimoneda",
+        "title": "Los registros de viaje y frontera siguen siendo explicables."
+      },
+      "label": "Fortalezas de Accounting",
+      "ownership": {
+        "body": "Los libros pueden ser personales o colaborativos, mientras las cuentas siguen siendo del usuario salvo que se compartan intencionalmente.",
+        "kicker": "Propiedad del usuario",
+        "title": "Tus cuentas siguen siendo tuyas."
+      }
+    },
+    "trust": {
+      "auth": {
+        "body": "Email/contraseña, TOTP, passkeys, Turnstile y SSO externo opcional se muestran desde la configuración de runtime.",
+        "title": "Autenticación que encaja con el despliegue"
+      },
+      "eyebrow": "Integridad de datos",
+      "imports": {
+        "body": "Las importaciones Wacai preparan primero una vista previa, preservan contexto de origen y requieren confirmación explícita.",
+        "title": "Las importaciones se revisan antes de escribir"
+      },
+      "portable": {
+        "body": "La app se diseña alrededor de APIs JSON documentadas y límites de persistencia, no una única base de datos oculta.",
+        "title": "La propiedad de datos permanece visible"
+      },
+      "title": "La confianza se expresa en el flujo."
+    },
+    "workflow": {
+      "eyebrow": "Casos de uso",
+      "personal": {
+        "body": "Sigue cuentas, categorías, ingresos, gastos e informes sin forzar cada registro a un espacio compartido.",
+        "title": "Finanzas personales"
+      },
+      "shared": {
+        "body": "Usa roles de miembros y reglas de edición por creador para hogares, compañeros, proyectos y equipos pequeños.",
+        "title": "Libros compartidos"
+      },
+      "title": "Un sistema para distintos contextos de dinero.",
+      "travel": {
+        "body": "Mantén monedas múltiples, reembolsos y detalles de origen juntos cuando un viaje o proyecto se complique.",
+        "title": "Viajes y reembolsos"
+      }
+    }
+  }
+}

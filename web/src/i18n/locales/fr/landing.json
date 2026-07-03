@@ -1,0 +1,90 @@
+{
+  "landing": {
+    "header": {
+      "brand": "Accounting",
+      "brandAria": "Accueil Accounting",
+      "model": "Modèle",
+      "navLabel": "Sections du produit",
+      "signIn": "Se connecter",
+      "trust": "Confiance",
+      "workflows": "Flux"
+    },
+    "hero": {
+      "eyebrow": "Comptabilité dans le navigateur",
+      "lead": "Gérez des livres personnels, familiaux, de colocation, de voyage, de projet et de petite équipe avec une propriété claire, des enregistrements vérifiables et des données exportables.",
+      "primaryRegister": "Créer un livre",
+      "primarySignIn": "Voir les options d'accès",
+      "secondary": "Voir le modèle de données",
+      "title": "Un livre pour chaque histoire d'argent partagé."
+    },
+    "model": {
+      "body": "Accounting garde les utilisateurs, livres, comptes, catégories, écritures, imports et événements d'audit comme objets explicites. Ce modèle garde les comptes personnels privés par défaut tout en prenant en charge les livres collaboratifs et les imports qui préservent la source.",
+      "eyebrow": "Modèle produit",
+      "title": "Construit autour de la propriété, pas seulement des transactions."
+    },
+    "productShot": {
+      "audit": "L'audit enregistre qui a modifié quoi.",
+      "balanceLabel": "Solde du foyer",
+      "balanceValue": "$12,500",
+      "entryOneMeta": "Dépense · Repas · USD",
+      "entryOneNote": "Politique d'édition par créateur",
+      "entryOneTitle": "Déjeuner d'équipe",
+      "entryTwoMeta": "Revenu · Remboursement · CNY/USD",
+      "entryTwoNote": "Preuve de taux de change conservée",
+      "entryTwoTitle": "Colocataire remboursé",
+      "label": "Aperçu d'un livre exemple",
+      "status": "Révisé",
+      "windowTitle": "Livre de colocation"
+    },
+    "proof": {
+      "audit": {
+        "body": "Les changements sensibles d'authentification et de données produisent des événements d'audit nettoyés pour révision ultérieure.",
+        "kicker": "Traçable",
+        "title": "Chaque action importante laisse une preuve."
+      },
+      "currency": {
+        "body": "Les écritures portent les devises de transaction, de compte et de reporting avec les métadonnées de taux de change.",
+        "kicker": "Multi-devise",
+        "title": "Les voyages et dossiers transfrontaliers restent explicables."
+      },
+      "label": "Forces d'Accounting",
+      "ownership": {
+        "body": "Les livres peuvent être personnels ou collaboratifs, tandis que les comptes restent détenus par l'utilisateur sauf partage volontaire.",
+        "kicker": "Détenu par l'utilisateur",
+        "title": "Vos comptes restent à vous."
+      }
+    },
+    "trust": {
+      "auth": {
+        "body": "Email/mot de passe, TOTP, passkeys, Turnstile et SSO externe optionnel sont affichés depuis la configuration runtime.",
+        "title": "Une auth adaptée au déploiement"
+      },
+      "eyebrow": "Intégrité des données",
+      "imports": {
+        "body": "Les imports Wacai créent d'abord un aperçu, préservent le contexte source et exigent une validation explicite.",
+        "title": "Les imports sont revus avant écriture"
+      },
+      "portable": {
+        "body": "L'application s'appuie sur des API JSON documentées et des frontières de persistance plutôt qu'une base cachée unique.",
+        "title": "La propriété des données reste visible"
+      },
+      "title": "La confiance s'exprime dans le flux."
+    },
+    "workflow": {
+      "eyebrow": "Cas d'usage",
+      "personal": {
+        "body": "Suivez comptes, catégories, revenus, dépenses et rapports sans forcer chaque écriture dans un espace partagé.",
+        "title": "Finances personnelles"
+      },
+      "shared": {
+        "body": "Utilisez rôles de membres et règles d'édition par créateur pour foyers, colocations, projets et petites équipes.",
+        "title": "Livres partagés"
+      },
+      "title": "Un système pour différents contextes d'argent.",
+      "travel": {
+        "body": "Gardez devises multiples, remboursements et détails source ensemble quand un voyage ou projet devient complexe.",
+        "title": "Voyages et remboursements"
+      }
+    }
+  }
+}

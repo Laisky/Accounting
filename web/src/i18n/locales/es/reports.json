@@ -26,6 +26,9 @@
       "period": "Periodo",
       "total": "Total"
     },
+    "flow": {
+      "balance": "saldo"
+    },
     "heading": "Analiza los gastos con desgloses interactivos.",
     "labels": {
       "noMember": "Sin miembro",

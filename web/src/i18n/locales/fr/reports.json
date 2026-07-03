@@ -26,6 +26,9 @@
       "period": "Période",
       "total": "Total"
     },
+    "flow": {
+      "balance": "solde"
+    },
     "heading": "Analysez les dépenses avec des explorations interactives.",
     "labels": {
       "noMember": "Aucun membre",
