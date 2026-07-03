@@ -83,7 +83,8 @@ func TestRegisterRoutesRuntimeConfigExposesOnlyPublicValues(t *testing.T) {
 			External: config.ExternalSSOConfig{
 				Enabled:      true,
 				LoginURL:     "https://sso.example.test/login",
-				SharedSecret: "external-sso-shared-secret-0123456789ab",
+				MetadataURL:  "https://sso.example.test/runtime-config.json",
+				PublicKeyPEM: "-----BEGIN PUBLIC KEY-----\\ntest\\n-----END PUBLIC KEY-----",
 			},
 			Passkey: config.PasskeyConfig{
 				Enabled:       true,
@@ -116,6 +117,7 @@ func TestRegisterRoutesRuntimeConfigExposesOnlyPublicValues(t *testing.T) {
 	require.NotContains(t, rec.Body.String(), "turnstile-secret")
 	require.NotContains(t, rec.Body.String(), "alert-secret")
 	require.NotContains(t, rec.Body.String(), "sso.example.test")
+	require.NotContains(t, rec.Body.String(), "BEGIN PUBLIC KEY")
 
 	var response RuntimeConfigResponse
 	err := json.Unmarshal(rec.Body.Bytes(), &response)

@@ -2,15 +2,19 @@ package auth
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
-	gjwt "github.com/Laisky/go-utils/v6/jwt"
 	jwtLib "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 )
-
-const testExternalSSOSecret = "external-sso-shared-secret-0123456789ab"
 
 const testExternalSSOUID = "0194d5f8-19f7-7f7b-a8d3-421a60f8d8ab"
 
@@ -115,6 +119,128 @@ func TestServiceExternalSSOLoginDisabled(t *testing.T) {
 	require.Contains(t, err.Error(), "external sso login is disabled")
 }
 
+// TestJWTExternalSSOValidatorAcceptsValidToken verifies a genuine laisky-sso token maps to identity data.
+func TestJWTExternalSSOValidatorAcceptsValidToken(t *testing.T) {
+	publicKey, privateKey := newTestExternalSSOKeyPair(t)
+	token := signTestExternalSSOToken(t, privateKey, validExternalSSOClaims(time.Now().UTC()))
+
+	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{
+		PublicKeyPEM: externalSSOPublicKeyPEM(t, publicKey),
+	})
+	require.NoError(t, err)
+
+	identity, err := validator.ValidateExternalSSOToken(context.Background(), token)
+	require.NoError(t, err)
+	require.Equal(t, testExternalSSOUID, identity.Subject)
+	require.Equal(t, "alice@example.com", identity.Username)
+	require.Equal(t, "Alice", identity.DisplayName)
+}
+
+// TestJWTExternalSSOValidatorAcceptsMetadataURLFallback verifies dynamic public metadata remains supported.
+func TestJWTExternalSSOValidatorAcceptsMetadataURLFallback(t *testing.T) {
+	publicKey, privateKey := newTestExternalSSOKeyPair(t)
+	server := newTestExternalSSOMetadataServer(t, testExternalSSOMetadata(t, publicKey))
+	defer server.Close()
+	token := signTestExternalSSOToken(t, privateKey, validExternalSSOClaims(time.Now().UTC()))
+
+	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{MetadataURL: server.URL})
+	require.NoError(t, err)
+
+	identity, err := validator.ValidateExternalSSOToken(context.Background(), token)
+	require.NoError(t, err)
+	require.Equal(t, testExternalSSOUID, identity.Subject)
+}
+
+// TestJWTExternalSSOValidatorRejectsWrongPublicKey verifies tokens signed by another key fail closed.
+func TestJWTExternalSSOValidatorRejectsWrongPublicKey(t *testing.T) {
+	_, privateKey := newTestExternalSSOKeyPair(t)
+	publicKey, _ := newTestExternalSSOKeyPair(t)
+	token := signTestExternalSSOToken(t, privateKey, validExternalSSOClaims(time.Now().UTC()))
+
+	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{
+		PublicKeyPEM: externalSSOPublicKeyPEM(t, publicKey),
+	})
+	require.NoError(t, err)
+
+	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
+	require.Error(t, err)
+}
+
+// TestJWTExternalSSOValidatorRejectsUntrustedIssuer verifies a foreign issuer is refused.
+func TestJWTExternalSSOValidatorRejectsUntrustedIssuer(t *testing.T) {
+	publicKey, privateKey := newTestExternalSSOKeyPair(t)
+	claims := validExternalSSOClaims(time.Now().UTC())
+	claims.Issuer = "someone-else"
+	token := signTestExternalSSOToken(t, privateKey, claims)
+
+	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{
+		PublicKeyPEM: externalSSOPublicKeyPEM(t, publicKey),
+	})
+	require.NoError(t, err)
+
+	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "issuer")
+}
+
+// TestJWTExternalSSOValidatorRejectsExpiredToken verifies expired tokens fail closed.
+func TestJWTExternalSSOValidatorRejectsExpiredToken(t *testing.T) {
+	publicKey, privateKey := newTestExternalSSOKeyPair(t)
+	past := time.Now().UTC().Add(-2 * time.Hour)
+	claims := validExternalSSOClaims(past)
+	claims.ExpiresAt = jwtLib.NewNumericDate(past.Add(time.Hour))
+	token := signTestExternalSSOToken(t, privateKey, claims)
+
+	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{
+		PublicKeyPEM: externalSSOPublicKeyPEM(t, publicKey),
+	})
+	require.NoError(t, err)
+
+	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
+	require.Error(t, err)
+}
+
+// TestJWTExternalSSOValidatorRejectsSubUIDMismatch verifies sub and uid must agree.
+func TestJWTExternalSSOValidatorRejectsSubUIDMismatch(t *testing.T) {
+	publicKey, privateKey := newTestExternalSSOKeyPair(t)
+	claims := validExternalSSOClaims(time.Now().UTC())
+	claims.UID = "0194d5f8-19f7-7f7b-a8d3-000000000000"
+	token := signTestExternalSSOToken(t, privateKey, claims)
+
+	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{
+		PublicKeyPEM: externalSSOPublicKeyPEM(t, publicKey),
+	})
+	require.NoError(t, err)
+
+	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "sub and uid")
+}
+
+// TestJWTExternalSSOValidatorRejectsUnsupportedMetadata verifies non-EdDSA metadata fails closed.
+func TestJWTExternalSSOValidatorRejectsUnsupportedMetadata(t *testing.T) {
+	publicKey, privateKey := newTestExternalSSOKeyPair(t)
+	metadata := testExternalSSOMetadata(t, publicKey)
+	metadata.Algorithm = jwtLib.SigningMethodHS256.Alg()
+	server := newTestExternalSSOMetadataServer(t, metadata)
+	defer server.Close()
+	token := signTestExternalSSOToken(t, privateKey, validExternalSSOClaims(time.Now().UTC()))
+
+	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{MetadataURL: server.URL})
+	require.NoError(t, err)
+
+	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "algorithm")
+}
+
+// TestNewJWTExternalSSOValidatorRequiresTrustMaterial verifies a public key or metadata URL is mandatory.
+func TestNewJWTExternalSSOValidatorRequiresTrustMaterial(t *testing.T) {
+	_, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{MetadataURL: "   "})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "public key pem or metadata url is required")
+}
+
 // validExternalSSOClaims returns claims matching a genuine laisky-sso token.
 func validExternalSSOClaims(now time.Time) externalSSOClaims {
 	return externalSSOClaims{
@@ -131,92 +257,57 @@ func validExternalSSOClaims(now time.Time) externalSSOClaims {
 	}
 }
 
-// signTestExternalSSOToken signs claims with the given HS256 secret for tests.
-func signTestExternalSSOToken(t *testing.T, secret string, claims externalSSOClaims) string {
+// newTestExternalSSOKeyPair returns a fresh Ed25519 keypair for validator tests.
+func newTestExternalSSOKeyPair(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
 	t.Helper()
-	signer, err := gjwt.New(gjwt.WithSignMethod(gjwt.SignMethodHS256), gjwt.WithSecretByte([]byte(secret)))
-	require.NoError(t, err)
-	token, err := signer.SignByHS256(&claims)
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
 
-	return token
+	return publicKey, privateKey
 }
 
-// TestJWTExternalSSOValidatorAcceptsValidToken verifies a genuine laisky-sso token maps to identity data.
-func TestJWTExternalSSOValidatorAcceptsValidToken(t *testing.T) {
-	token := signTestExternalSSOToken(t, testExternalSSOSecret, validExternalSSOClaims(time.Now().UTC()))
-
-	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{SharedSecret: testExternalSSOSecret})
+// signTestExternalSSOToken signs claims with an Ed25519 private key for tests.
+func signTestExternalSSOToken(t *testing.T, privateKey ed25519.PrivateKey, claims externalSSOClaims) string {
+	t.Helper()
+	token := jwtLib.NewWithClaims(jwtLib.SigningMethodEdDSA, claims)
+	token.Header["typ"] = "JWT"
+	signedToken, err := token.SignedString(privateKey)
 	require.NoError(t, err)
 
-	identity, err := validator.ValidateExternalSSOToken(context.Background(), token)
-	require.NoError(t, err)
-	require.Equal(t, testExternalSSOUID, identity.Subject)
-	require.Equal(t, "alice@example.com", identity.Username)
-	require.Equal(t, "Alice", identity.DisplayName)
+	return signedToken
 }
 
-// TestJWTExternalSSOValidatorRejectsWrongSecret verifies tokens signed by a different key fail closed.
-func TestJWTExternalSSOValidatorRejectsWrongSecret(t *testing.T) {
-	token := signTestExternalSSOToken(t, "a-different-shared-secret-0123456789ab", validExternalSSOClaims(time.Now().UTC()))
+// testExternalSSOMetadata returns public verification metadata for tests.
+func testExternalSSOMetadata(t *testing.T, publicKey ed25519.PublicKey) externalSSOMetadata {
+	t.Helper()
 
-	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{SharedSecret: testExternalSSOSecret})
-	require.NoError(t, err)
-
-	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
-	require.Error(t, err)
+	return externalSSOMetadata{
+		Algorithm:    jwtLib.SigningMethodEdDSA.Alg(),
+		Type:         "JWT",
+		Issuer:       externalSSOIssuer,
+		TTLSeconds:   int64((90 * 24 * time.Hour).Seconds()),
+		PublicKeyPEM: externalSSOPublicKeyPEM(t, publicKey),
+	}
 }
 
-// TestJWTExternalSSOValidatorRejectsUntrustedIssuer verifies a foreign issuer is refused.
-func TestJWTExternalSSOValidatorRejectsUntrustedIssuer(t *testing.T) {
-	claims := validExternalSSOClaims(time.Now().UTC())
-	claims.Issuer = "someone-else"
-	token := signTestExternalSSOToken(t, testExternalSSOSecret, claims)
-
-	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{SharedSecret: testExternalSSOSecret})
+// externalSSOPublicKeyPEM serializes an Ed25519 public key to PKIX PEM.
+func externalSSOPublicKeyPEM(t *testing.T, publicKey ed25519.PublicKey) string {
+	t.Helper()
+	der, err := x509.MarshalPKIXPublicKey(publicKey)
 	require.NoError(t, err)
+	block := &pem.Block{Type: "PUBLIC KEY", Bytes: der}
 
-	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "issuer")
+	return string(pem.EncodeToMemory(block))
 }
 
-// TestJWTExternalSSOValidatorRejectsExpiredToken verifies expired tokens fail closed.
-func TestJWTExternalSSOValidatorRejectsExpiredToken(t *testing.T) {
-	past := time.Now().UTC().Add(-2 * time.Hour)
-	claims := validExternalSSOClaims(past)
-	claims.ExpiresAt = jwtLib.NewNumericDate(past.Add(time.Hour))
-	token := signTestExternalSSOToken(t, testExternalSSOSecret, claims)
-
-	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{SharedSecret: testExternalSSOSecret})
-	require.NoError(t, err)
-
-	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
-	require.Error(t, err)
-}
-
-// TestJWTExternalSSOValidatorRejectsSubUIDMismatch verifies sub and uid must agree.
-func TestJWTExternalSSOValidatorRejectsSubUIDMismatch(t *testing.T) {
-	claims := validExternalSSOClaims(time.Now().UTC())
-	claims.UID = "0194d5f8-19f7-7f7b-a8d3-000000000000"
-	token := signTestExternalSSOToken(t, testExternalSSOSecret, claims)
-
-	validator, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{SharedSecret: testExternalSSOSecret})
-	require.NoError(t, err)
-
-	_, err = validator.ValidateExternalSSOToken(context.Background(), token)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "sub and uid")
-}
-
-// TestNewJWTExternalSSOValidatorRejectsWeakSecret verifies the RFC 7518 minimum key length is enforced.
-func TestNewJWTExternalSSOValidatorRejectsWeakSecret(t *testing.T) {
-	_, err := NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{SharedSecret: "too-short"})
-	require.Error(t, err)
-
-	_, err = NewJWTExternalSSOValidator(JWTExternalSSOValidatorConfig{SharedSecret: "   "})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "shared secret is required")
+// newTestExternalSSOMetadataServer serves SSO runtime config metadata for validator tests.
+func newTestExternalSSOMetadataServer(t *testing.T, metadata externalSSOMetadata) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(externalSSORuntimeConfig{SSOJWT: metadata})
+		require.NoError(t, err)
+	}))
 }
 
 type fakeExternalSSOValidator struct {

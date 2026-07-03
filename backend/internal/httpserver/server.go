@@ -254,7 +254,9 @@ func newAuthService(cfg config.Config, store auth.Store) (*auth.Service, error) 
 	}, store, verifier)
 	if cfg.Auth.External.Enabled {
 		validator, err := auth.NewJWTExternalSSOValidator(auth.JWTExternalSSOValidatorConfig{
-			SharedSecret: cfg.Auth.External.SharedSecret,
+			Client:       &http.Client{Timeout: 10 * time.Second},
+			MetadataURL:  cfg.Auth.External.MetadataURL,
+			PublicKeyPEM: cfg.Auth.External.PublicKeyPEM,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "create external sso validator")

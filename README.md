@@ -87,6 +87,7 @@ pnpm --dir web run test
 ├── backend/     # Go API server, domain services, auth, import, audit, telemetry.
 ├── cli/         # Go CLI module for operator and automation workflows.
 ├── docs/arch/   # Architecture notes and product/API decisions.
+├── docs/manual/ # Operator and user workflow manuals.
 ├── web/         # React/Vite frontend.
 └── Makefile     # Root development, lint, test, and build targets.
 ```
@@ -134,8 +135,11 @@ The backend is environment-configured. Important local and deployment settings i
 | `ACCOUNTING_AUTH_SESSION_COOKIE_SECURE` | Must be `true` behind HTTPS in production. |
 | `ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED` | Require verified email before active use. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED` | Enable configured external SSO login. |
-| `ACCOUNTING_AUTH_EXTERNAL_SSO_SHARED_SECRET` | HS256 secret shared with the SSO provider to verify `sso_token` JWTs locally. Required when SSO is enabled; must match the provider secret and be at least 32 bytes. |
+| `ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM` | Ed25519 public key PEM used to verify EdDSA `sso_token` JWTs locally. Required when SSO is enabled unless `ACCOUNTING_AUTH_EXTERNAL_SSO_METADATA_URL` is explicitly configured. |
+| `ACCOUNTING_AUTH_EXTERNAL_SSO_METADATA_URL` | Optional SSO runtime metadata URL used to discover the public key. Prefer static public-key configuration for production. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL` | Backend SSO callback URL. Required for non-loopback hosts. |
+
+For the full login-method matrix and SSO setup guide, see [docs/manual/authentication.md](docs/manual/authentication.md).
 
 ## Quality Bar
 
