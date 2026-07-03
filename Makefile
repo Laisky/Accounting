@@ -24,12 +24,7 @@ dev: ensure-web-deps
 		:*) api_base_url="http://localhost$$backend_addr" ;; \
 		*) api_base_url="http://$$backend_addr" ;; \
 	esac; \
-	(cd backend && ACCOUNTING_ADDR="$$backend_addr" go run ./cmd/accounting-server) & \
-	backend_pid=$$!; \
-	VITE_API_BASE_URL="$$api_base_url" pnpm --dir web run dev --host 0.0.0.0 --port "$(FRONTEND_PORT)" & \
-	frontend_pid=$$!; \
-	trap 'kill $$backend_pid $$frontend_pid 2>/dev/null || true' INT TERM EXIT; \
-	wait
+	VITE_API_BASE_URL="$$api_base_url" pnpm --dir web run dev --host 0.0.0.0 --port "$(FRONTEND_PORT)"
 
 ensure-web-deps:
 	@if [ ! -d web/node_modules ]; then pnpm --dir web install; fi

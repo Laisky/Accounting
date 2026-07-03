@@ -119,14 +119,20 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
   }
 
   return (
-    <article className="passkeySettings" aria-label={t('mobile.me.passkeySettings')}>
+    <article className="passkeySettings settingsPanel" aria-label={t('mobile.me.passkeySettings')}>
       <header>
-        <KeyRound size={18} />
+        <span className="settingsPanelIcon" aria-hidden="true">
+          <KeyRound size={18} />
+        </span>
         <div>
-          <strong>{t('mobile.me.passkeySettings')}</strong>
+          <div className="settingsPanelTitle">
+            <strong>{t('mobile.me.passkeySettings')}</strong>
+            <span className="mePill mePillAccent">{t('mobile.me.passkeyRecommended')}</span>
+          </div>
           <span>{t('mobile.me.passkeyCount', { count: passkeys.length })}</span>
         </div>
       </header>
+      <p className="settingsPanelHint">{t('mobile.me.passkeyHint')}</p>
 
       <form className="passkeyForm" onSubmit={handleRegister}>
         <label className="mobileField">

@@ -124,3 +124,43 @@
   font-weight: 880;
   white-space: nowrap;
 }
+
+/*
+ * Desktop (>=1024px): cap the search column at a readable ~820px, centered,
+ * and tile results into two columns so entries stop stretching into one
+ * ultra-wide row each. Header, search box and messages share the same cap so
+ * everything stays aligned. Money amounts gain tabular figures for column
+ * alignment. All gated at 1024px; the phone layout below it is untouched.
+ */
+@media (min-width: 1024px) {
+  .transactionSearchHeader,
+  .transactionSearchBox,
+  .mobileSearchMessage,
+  .transactionSearchResults,
+  .transactionSearchPanel .emptyState {
+    width: 100%;
+    max-width: 820px;
+    margin-inline: auto;
+  }
+
+  .transactionSearchResults {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .transactionSearchResults li {
+    border: 1px solid oklch(93% 0.006 185);
+    border-radius: 12px;
+    background: oklch(100% 0 0);
+  }
+
+  .transactionSearchResults li:last-child {
+    border-bottom: 1px solid oklch(93% 0.006 185);
+  }
+
+  .transactionSearchResults b {
+    font-variant-numeric: tabular-nums;
+  }
+}

@@ -1,33 +1,78 @@
-.passkeySettings {
+/* Shared "settings panel" surface used by the passkey + authenticator cards
+ * inside the Me › Security group. Design tokens (--me-*) cascade from .meScreen. */
+.settingsPanel {
   display: grid;
-  gap: 12px;
+  gap: 13px;
   padding: 16px;
-  border: 1px solid oklch(90% 0.012 185);
-  border-radius: 8px;
+  border: 1px solid var(--me-line, oklch(92.5% 0.006 185));
+  border-radius: 14px;
   background: oklch(100% 0 0);
 }
 
-.passkeySettings header {
+.settingsPanel > header {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  color: oklch(24% 0.034 235);
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  color: oklch(22% 0.034 235);
 }
 
-.passkeySettings header div {
+.settingsPanelIcon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: var(--me-accent-soft, oklch(95% 0.03 258));
+  color: var(--me-accent, oklch(56% 0.11 258));
+}
+
+.settingsPanel > header > div {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
-.passkeySettings header span,
-.passkeyMeta {
+.settingsPanelTitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.settingsPanelTitle strong {
+  color: oklch(22% 0.034 235);
+  font-size: 1rem;
+  font-weight: 840;
+}
+
+.settingsPanel > header > div > span {
   color: oklch(58% 0.028 230);
   font-size: 0.84rem;
+  font-weight: 720;
+}
+
+.settingsPanelHint {
+  margin: -2px 0 0;
+  color: oklch(54% 0.026 235);
+  font-size: 0.84rem;
+  font-weight: 620;
+  line-height: 1.45;
+}
+
+/* State-coloured status line (authenticator on/off). */
+.settingsPanel .totpStatusLine.isOn {
+  color: var(--me-positive-ink, oklch(46% 0.11 152));
+  font-weight: 780;
+}
+
+.settingsPanel .totpStatusLine.isOff {
+  color: oklch(52% 0.018 250);
   font-weight: 760;
 }
 
+/* ── Passkey management ── */
 .passkeyForm,
 .passkeyList,
 .passkeyList li {
@@ -42,22 +87,22 @@
 }
 
 .passkeyList li {
-  padding: 12px;
-  border: 1px solid oklch(91% 0.008 185);
-  border-radius: 8px;
-  background: oklch(98% 0.004 185);
+  padding: 13px;
+  border: 1px solid oklch(93% 0.008 185);
+  border-radius: 11px;
+  background: oklch(98.6% 0.004 185);
 }
 
 .passkeyForm .mobileField input,
 .passkeyList .mobileField input {
   width: 100%;
-  min-height: 38px;
-  padding: 0 10px;
-  border: 1px solid oklch(86% 0.015 185);
-  border-radius: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid oklch(87% 0.014 235);
+  border-radius: 9px;
   background: oklch(100% 0 0);
   color: oklch(20% 0.035 235);
-  font-weight: 760;
+  font-weight: 720;
 }
 
 .passkeyMeta {
@@ -65,6 +110,14 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
+  color: oklch(58% 0.026 230);
+  font-size: 0.82rem;
+  font-weight: 680;
+}
+
+.passkeyMeta time {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
 }
 
 .passkeyActions {
@@ -73,8 +126,41 @@
   gap: 8px;
 }
 
+.passkeyActions .mobileSecondaryButton,
+.passkeyActions .mobileDangerButton {
+  min-height: 40px;
+}
+
 .passkeyEmpty {
-  color: oklch(60% 0.025 230);
-  font-size: 0.9rem;
-  font-weight: 760;
+  padding: 10px 12px;
+  border: 1px dashed oklch(88% 0.012 235);
+  border-radius: 10px;
+  color: oklch(56% 0.025 230);
+  font-size: 0.88rem;
+  font-weight: 640;
+  text-align: center;
+}
+
+.passkeyForm .mobileField input:focus-visible,
+.passkeyList .mobileField input:focus-visible {
+  outline: 2px solid var(--me-accent, oklch(56% 0.11 258));
+  outline-offset: 1px;
+}
+
+/*
+ * Desktop (>=1024px): tile registered passkeys as a responsive card grid so
+ * multiple credentials read side by side instead of stacking into a tall
+ * single column. Each card keeps its internal label/meta/actions layout.
+ * Gated at 1024px so the phone layout stays pixel-identical below it (a wide
+ * phone in landscape must never see two columns).
+ */
+@media (min-width: 1024px) {
+  .passkeyList {
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+    align-items: start;
+  }
+
+  .passkeyEmpty {
+    grid-column: 1 / -1;
+  }
 }

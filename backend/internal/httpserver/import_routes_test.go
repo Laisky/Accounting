@@ -12,6 +12,7 @@ import (
 
 	importsvc "github.com/Laisky/Accounting/backend/internal/imports"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -133,6 +134,10 @@ func TestRegisterRoutesImportApplyCreatesEntries(t *testing.T) {
 	require.Equal(t, 1, response.ImportedCount)
 	require.Equal(t, 0, response.SkippedCount)
 	require.Len(t, response.Entries, 1)
+	importedID, err := uuid.Parse(response.Entries[0].ID)
+	require.NoError(t, err)
+	require.NotEqual(t, uuid.Nil, importedID)
+	require.Equal(t, uuid.Version(7), importedID.Version())
 	require.Equal(t, int64(1230), response.Entries[0].AmountCents)
 	require.Equal(t, "USD", response.Entries[0].TransactionCurrency)
 	require.Equal(t, "Market", response.Entries[0].Merchant)
@@ -221,6 +226,15 @@ func TestRegisterRoutesImportApplyCreatesMissingReferences(t *testing.T) {
 	require.Equal(t, 2, response.ImportedCount)
 	require.Equal(t, 0, response.SkippedCount)
 	require.Len(t, response.Entries, 2)
+	seenEntryIDs := map[string]struct{}{}
+	for _, entry := range response.Entries {
+		parsedID, parseErr := uuid.Parse(entry.ID)
+		require.NoError(t, parseErr)
+		require.Equal(t, uuid.Version(7), parsedID.Version())
+		_, ok := seenEntryIDs[entry.ID]
+		require.False(t, ok)
+		seenEntryIDs[entry.ID] = struct{}{}
+	}
 	require.Equal(t, ledger.EntryTypeTransfer, response.Entries[1].Type)
 	require.NotEmpty(t, response.Entries[1].DestinationAccountID)
 

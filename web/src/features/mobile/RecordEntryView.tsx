@@ -193,6 +193,7 @@ export function RecordEntryView({
 
   return (
     <section className="tabPanel recordEntryPanel" aria-label={t('mobile.record.title')}>
+      <div className="recordComposer">
       <div className="recordHero" aria-hidden="true" />
       <div className="recordTypeTabs" role="tablist" aria-label={t('mobile.record.typeLabel')}>
         {recordTypes.map((type) => (
@@ -281,7 +282,9 @@ export function RecordEntryView({
         onKeyPress={handleKeyPress}
         onSave={handleSave}
       />
+      </div>
 
+      <div className="recordAside">
       <RecentEntryList
         accounts={accounts}
         categories={categories}
@@ -298,6 +301,7 @@ export function RecordEntryView({
         onCreateCategory={onCreateCategory}
         onUpdateCategory={onUpdateCategory}
       />
+      </div>
     </section>
   );
 }

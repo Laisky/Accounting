@@ -1,29 +1,42 @@
 import type { TFunction } from 'i18next';
-import { ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, Filter, PieChart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   fetchAccounts,
   fetchAllEntries,
+  fetchBookMembers,
   fetchBooks,
   fetchCategories,
   fetchExchangeRates,
   type Account,
   type BookListItem,
+  type BookMember,
   type Category,
   type Entry,
   type ExchangeRate,
 } from '../../lib/api/ledger';
-import { buildRateIndex, compactMoney, convertEntryAmountCents, formatMoney } from '../../lib/money';
+import { buildRateIndex, convertEntryAmountCents, formatMoney } from '../../lib/money';
+import {
+  ReportBreakdownPanel,
+  TrendPanel,
+  type DonutSegment,
+  type RankedItem,
+  type TrendBucket,
+  type TrendData,
+} from './ReportVisuals';
+import { reportColors } from './reportColors';
 import './reports.css';
 
 type FlowFilter = 'all' | 'expense' | 'income';
 type TimeMode = 'year' | 'month';
 type ReportTab = 'trend' | 'category' | 'subcategory' | 'member' | 'account' | 'merchant' | 'tag';
+type MemberReportFlow = 'expense' | 'income' | 'balance';
 
 type ReportData = {
   books: BookListItem[];
+  members: BookMember[];
   accounts: Account[];
   categories: Category[];
   entries: Entry[];
@@ -32,20 +45,6 @@ type ReportData = {
 
 type ReportWorkspaceProps = {
   refreshKey?: number;
-};
-
-type RankedItem = {
-  id: string;
-  label: string;
-  amountCents: number;
-  count: number;
-  percent: number;
-};
-
-type DonutSegment = RankedItem & {
-  color: string;
-  dashArray: string;
-  dashOffset: number;
 };
 
 const reportTabs: Array<{ id: ReportTab }> = [
@@ -58,17 +57,10 @@ const reportTabs: Array<{ id: ReportTab }> = [
   { id: 'tag' },
 ];
 
-const reportColors = ['#2ec4b6', '#2eb6e6', '#5a7cff', '#ffb14a', '#8dd85f', '#ff7f66', '#a56dff', '#4db39f'];
-
-const percent = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 2,
-  minimumFractionDigits: 2,
-});
-
 // ReportWorkspace renders interactive reporting over real ledger entries.
 export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
   const { t } = useTranslation();
-  const [data, setData] = useState<ReportData>({ books: [], accounts: [], categories: [], entries: [], rates: [] });
+  const [data, setData] = useState<ReportData>({ books: [], members: [], accounts: [], categories: [], entries: [], rates: [] });
   const [selectedBookId, setSelectedBookId] = useState('');
   const [flowFilter, setFlowFilter] = useState<FlowFilter>('expense');
   const [timeMode, setTimeMode] = useState<TimeMode>('month');
@@ -95,10 +87,39 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
   const entryCount = filteredEntries.length;
   const conversionIssueCount = filteredEntries.filter((entry) => convertEntryAmountCents(entry, reportCurrency, rateIndex) === null).length;
   const segments = useMemo(() => buildDonutSegments(rankedItems), [rankedItems]);
-  const trendRows = useMemo(
-    () => buildTrendRows(data.entries, flowFilter, timeMode, cursorDate, reportCurrency, rateIndex),
-    [cursorDate, data.entries, flowFilter, rateIndex, reportCurrency, timeMode],
+  const categoryExpenseItems = useMemo(
+    () => buildRankedItems(t, filterEntries(data.entries, 'expense', timeMode, cursorDate), 'category', data.categories, data.accounts, reportCurrency, rateIndex),
+    [cursorDate, data.accounts, data.categories, data.entries, rateIndex, reportCurrency, t, timeMode],
   );
+  const categoryIncomeItems = useMemo(
+    () => buildRankedItems(t, filterEntries(data.entries, 'income', timeMode, cursorDate), 'category', data.categories, data.accounts, reportCurrency, rateIndex),
+    [cursorDate, data.accounts, data.categories, data.entries, rateIndex, reportCurrency, t, timeMode],
+  );
+  const categoryExpenseSegments = useMemo(() => buildDonutSegments(categoryExpenseItems), [categoryExpenseItems]);
+  const categoryIncomeSegments = useMemo(() => buildDonutSegments(categoryIncomeItems), [categoryIncomeItems]);
+  const memberExpenseItems = useMemo(
+    () => buildMemberItems(t, data.entries, data.members, 'expense', timeMode, cursorDate, reportCurrency, rateIndex),
+    [cursorDate, data.entries, data.members, rateIndex, reportCurrency, t, timeMode],
+  );
+  const memberIncomeItems = useMemo(
+    () => buildMemberItems(t, data.entries, data.members, 'income', timeMode, cursorDate, reportCurrency, rateIndex),
+    [cursorDate, data.entries, data.members, rateIndex, reportCurrency, t, timeMode],
+  );
+  const memberBalanceItems = useMemo(
+    () => buildMemberItems(t, data.entries, data.members, 'balance', timeMode, cursorDate, reportCurrency, rateIndex),
+    [cursorDate, data.entries, data.members, rateIndex, reportCurrency, t, timeMode],
+  );
+  const memberExpenseSegments = useMemo(() => buildDonutSegments(memberExpenseItems.slice(1)), [memberExpenseItems]);
+  const memberIncomeSegments = useMemo(() => buildDonutSegments(memberIncomeItems.slice(1)), [memberIncomeItems]);
+  const memberBalanceSegments = useMemo(() => buildDonutSegments(memberBalanceItems.slice(1)), [memberBalanceItems]);
+  const trendRows = useMemo(
+    () => buildTrendData(data.entries, timeMode, cursorDate, reportCurrency, rateIndex),
+    [cursorDate, data.entries, rateIndex, reportCurrency, timeMode],
+  );
+  const memberSingleFlow: Extract<FlowFilter, 'expense' | 'income'> = flowFilter === 'income' ? 'income' : 'expense';
+  const memberSingleItems = memberSingleFlow === 'income' ? memberIncomeItems : memberExpenseItems;
+  const memberSingleSegments = memberSingleFlow === 'income' ? memberIncomeSegments : memberExpenseSegments;
+  const visibleTotalCents = activeTab === 'trend' ? trendRows.balanceCents : totalCents;
   const activeTabPanelId = `report-panel-${activeTab}`;
   const activeTabButtonId = `report-tab-${activeTab}`;
 
@@ -132,17 +153,17 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
 
   useEffect(() => {
     if (!selectedBookId) {
-      setData((current) => ({ ...current, categories: [], entries: [] }));
+      setData((current) => ({ ...current, members: [], categories: [], entries: [] }));
       return;
     }
 
     let isActive = true;
     setIsLoading(true);
     setError('');
-    Promise.all([fetchCategories(selectedBookId), fetchAllEntries(selectedBookId)])
-      .then(([categories, entries]) => {
+    Promise.all([fetchCategories(selectedBookId), fetchAllEntries(selectedBookId), fetchBookMembers(selectedBookId)])
+      .then(([categories, entries, members]) => {
         if (isActive) {
-          setData((current) => ({ ...current, categories, entries }));
+          setData((current) => ({ ...current, members, categories, entries }));
         }
       })
       .catch(() => {
@@ -251,7 +272,7 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
           </span>
           <span>
             <strong>{t('reports.filter.total')}</strong>
-            {formatMoney(totalCents, reportCurrency)}
+            {formatMoney(visibleTotalCents, reportCurrency)}
           </span>
         </div>
       ) : null}
@@ -326,185 +347,91 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
       {activeTab === 'trend' ? (
         <TrendPanel
           currencyCode={reportCurrency}
-          entryCount={entryCount}
           labelledBy={activeTabButtonId}
           panelId={activeTabPanelId}
-          rows={trendRows}
-          totalCents={totalCents}
+          trend={trendRows}
+        />
+      ) : activeTab === 'category' && flowFilter === 'all' ? (
+        <section className="categorySplitPanel" id={activeTabPanelId} role="tabpanel" aria-labelledby={activeTabButtonId}>
+          {([
+            { flow: 'expense' as const, items: categoryExpenseItems, segments: categoryExpenseSegments },
+            { flow: 'income' as const, items: categoryIncomeItems, segments: categoryIncomeSegments },
+          ]).map((section) => {
+            const sectionTotalCents = section.items.reduce((sum, item) => sum + item.amountCents, 0);
+            return (
+              <ReportBreakdownPanel
+                className="reportPanel categoryFlowPanel"
+                currencyCode={reportCurrency}
+                entryCount={section.items.reduce((sum, item) => sum + item.count, 0)}
+                heading={reportHeading(t, 'category', section.flow)}
+                isExpanded={isExpanded}
+                items={section.items}
+                key={section.flow}
+                onToggleExpanded={() => setIsExpanded((current) => !current)}
+                segments={section.segments}
+                title={reportTitle(t, 'category', section.flow)}
+                totalCents={sectionTotalCents}
+                visibleItems={isExpanded ? section.items : section.items.slice(0, 5)}
+              />
+            );
+          })}
+        </section>
+      ) : activeTab === 'member' && flowFilter === 'all' ? (
+        <section className="categorySplitPanel" id={activeTabPanelId} role="tabpanel" aria-labelledby={activeTabButtonId}>
+          {([
+            { flow: 'expense' as const, items: memberExpenseItems, segments: memberExpenseSegments },
+            { flow: 'income' as const, items: memberIncomeItems, segments: memberIncomeSegments },
+            { flow: 'balance' as const, items: memberBalanceItems, segments: memberBalanceSegments },
+          ]).map((section) => (
+            <ReportBreakdownPanel
+              className="reportPanel categoryFlowPanel"
+              currencyCode={reportCurrency}
+              entryCount={section.items[0]?.count ?? 0}
+              heading={memberReportHeading(t, section.flow)}
+              isExpanded={isExpanded}
+              items={section.items}
+              key={section.flow}
+              onToggleExpanded={() => setIsExpanded((current) => !current)}
+              segments={section.segments}
+              title={memberReportHeading(t, section.flow)}
+              totalCents={section.items[0]?.amountCents ?? 0}
+              visibleItems={isExpanded ? section.items : section.items.slice(0, 5)}
+            />
+          ))}
+        </section>
+      ) : activeTab === 'member' ? (
+        <ReportBreakdownPanel
+          currencyCode={reportCurrency}
+          entryCount={memberSingleItems[0]?.count ?? 0}
+          heading={memberReportHeading(t, memberSingleFlow)}
+          isExpanded={isExpanded}
+          items={memberSingleItems}
+          labelledBy={activeTabButtonId}
+          onToggleExpanded={() => setIsExpanded((current) => !current)}
+          panelId={activeTabPanelId}
+          role="tabpanel"
+          segments={memberSingleSegments}
+          title={memberReportHeading(t, memberSingleFlow)}
+          totalCents={memberSingleItems[0]?.amountCents ?? 0}
+          visibleItems={isExpanded ? memberSingleItems : memberSingleItems.slice(0, 5)}
         />
       ) : (
-        <section className="reportPanel" id={activeTabPanelId} role="tabpanel" aria-labelledby={activeTabButtonId}>
-          <div className="reportPanelHeader">
-            <div>
-              <p className="eyebrow">{reportTitle(t, activeTab, flowFilter)}</p>
-              <h3>{reportHeading(t, activeTab, flowFilter)}</h3>
-            </div>
-            <span>{t('common.entriesCount', { value: entryCount })}</span>
-          </div>
-
-          <div className="reportBody">
-            <DonutChart currencyCode={reportCurrency} segments={segments} totalCents={totalCents} label={reportHeading(t, activeTab, flowFilter)} />
-            <RankedList currencyCode={reportCurrency} items={visibleItems} totalCents={totalCents} />
-          </div>
-
-          {rankedItems.length > 5 ? (
-            <button className="expandReport" type="button" onClick={() => setIsExpanded((current) => !current)}>
-              <span>{isExpanded ? t('reports.showLess') : t('reports.showAll')}</span>
-              <ChevronDown size={16} className={isExpanded ? 'expandIconRotated' : ''} />
-            </button>
-          ) : null}
-        </section>
+        <ReportBreakdownPanel
+          currencyCode={reportCurrency}
+          entryCount={entryCount}
+          heading={reportHeading(t, activeTab, flowFilter)}
+          isExpanded={isExpanded}
+          items={rankedItems}
+          labelledBy={activeTabButtonId}
+          onToggleExpanded={() => setIsExpanded((current) => !current)}
+          panelId={activeTabPanelId}
+          role="tabpanel"
+          segments={segments}
+          title={reportTitle(t, activeTab, flowFilter)}
+          totalCents={totalCents}
+          visibleItems={visibleItems}
+        />
       )}
-    </section>
-  );
-}
-
-// DonutChart receives report segments and renders an accessible proportional donut chart.
-function DonutChart({
-  segments,
-  totalCents,
-  label,
-  currencyCode,
-}: {
-  segments: DonutSegment[];
-  totalCents: number;
-  label: string;
-  currencyCode: string;
-}) {
-  const { t } = useTranslation();
-  const radius = 70;
-  const stroke = 32;
-  const center = 94;
-  const hasData = totalCents > 0;
-
-  return (
-    <figure className="donutFigure">
-      <svg viewBox="0 0 188 188" role="img" aria-labelledby="reportDonutTitle reportDonutDescription">
-        <title id="reportDonutTitle">{label}</title>
-        <desc id="reportDonutDescription">
-          {hasData
-            ? t('reports.donut.desc', { value: segments.length, amount: formatMoney(totalCents, currencyCode) })
-            : t('reports.donut.empty')}
-        </desc>
-        <circle cx={center} cy={center} r={radius} fill="none" stroke="oklch(91% 0.018 112)" strokeWidth={stroke} />
-        {segments.map((segment) => (
-          <circle
-            key={segment.id}
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="none"
-            stroke={segment.color}
-            strokeDasharray={segment.dashArray}
-            strokeDashoffset={segment.dashOffset}
-            strokeLinecap="butt"
-            strokeWidth={stroke}
-          />
-        ))}
-        <text x="94" y="84" textAnchor="middle">
-          {t('common.total')}
-        </text>
-        <text className="donutAmount" x="94" y="112" textAnchor="middle">
-          {compactMoney(totalCents)}
-        </text>
-      </svg>
-      {hasData ? (
-        <figcaption>
-          {segments.slice(0, 4).map((segment) => (
-            <span key={segment.id}>
-              <i style={{ background: segment.color }} />
-              {segment.label} {percent.format(segment.percent)}%
-            </span>
-          ))}
-        </figcaption>
-      ) : (
-        <figcaption>{t('reports.donut.emptyCaption')}</figcaption>
-      )}
-    </figure>
-  );
-}
-
-// RankedList receives ranked report rows and returns a ranked amount list.
-function RankedList({ items, totalCents, currencyCode }: { items: RankedItem[]; totalCents: number; currencyCode: string }) {
-  const { t } = useTranslation();
-  if (!items.length) {
-    return (
-      <div className="reportEmpty">
-        <CircleDollarSign size={26} />
-        <p>{t('reports.rankedEmpty')}</p>
-      </div>
-    );
-  }
-
-  return (
-    <ol className="rankedList">
-      {items.map((item, index) => (
-        <li key={item.id}>
-          <span className="rankIcon" style={{ background: reportColors[index % reportColors.length] }}>
-            {index + 1}
-          </span>
-          <div className="rankMain">
-            <div>
-              <strong>{item.label}</strong>
-              <b>{formatMoney(item.amountCents, currencyCode)}</b>
-            </div>
-            <div className="rankBar" aria-hidden="true">
-              <span style={{ width: `${totalCents > 0 ? Math.max(3, item.percent) : 0}%`, background: reportColors[index % reportColors.length] }} />
-            </div>
-            <small>
-              {t('common.entriesCount', { value: item.count })} <em>{percent.format(item.percent)}%</em>
-            </small>
-          </div>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-// TrendPanel receives period buckets and renders income, expense, and net movement.
-function TrendPanel({
-  rows,
-  totalCents,
-  entryCount,
-  panelId,
-  labelledBy,
-  currencyCode,
-}: {
-  rows: RankedItem[];
-  totalCents: number;
-  entryCount: number;
-  panelId: string;
-  labelledBy: string;
-  currencyCode: string;
-}) {
-  const { t } = useTranslation();
-  const max = Math.max(...rows.map((row) => row.amountCents), 1);
-
-  return (
-    <section className="reportPanel trendPanel" id={panelId} role="tabpanel" aria-labelledby={labelledBy}>
-      <div className="reportPanelHeader">
-        <div>
-          <p className="eyebrow">{t('reports.tabs.trend')}</p>
-          <h3>{t('reports.trend.heading')}</h3>
-        </div>
-        <span>{t('common.entriesCount', { value: entryCount })}</span>
-      </div>
-      <div className="trendSummary">
-        <PieChart size={24} />
-        <strong>{formatMoney(totalCents, currencyCode)}</strong>
-        <span>{t('reports.trend.filteredTotal')}</span>
-      </div>
-      <ol className="trendBars">
-        {rows.map((row) => (
-          <li key={row.id}>
-            <span>{row.label}</span>
-            <div className="trendTrack">
-              <i style={{ width: `${Math.max(3, (row.amountCents / max) * 100)}%` }} />
-            </div>
-            <strong>{formatMoney(row.amountCents, currencyCode)}</strong>
-          </li>
-        ))}
-      </ol>
     </section>
   );
 }
@@ -557,11 +484,11 @@ function buildRankedItems(
 
 // buildDonutSegments receives ranked items and returns SVG dash settings for a donut chart.
 function buildDonutSegments(items: RankedItem[]): DonutSegment[] {
-  const total = items.reduce((sum, item) => sum + item.amountCents, 0);
+  const total = items.reduce((sum, item) => sum + Math.abs(item.amountCents), 0);
   const circumference = 2 * Math.PI * 70;
   let offset = 0;
   return items.slice(0, 8).map((item, index) => {
-    const length = total > 0 ? (item.amountCents / total) * circumference : 0;
+    const length = total > 0 ? (Math.abs(item.amountCents) / total) * circumference : 0;
     const segment = {
       ...item,
       color: reportColors[index % reportColors.length],
@@ -573,18 +500,82 @@ function buildDonutSegments(items: RankedItem[]): DonutSegment[] {
   });
 }
 
-// buildTrendRows receives entries and controls and returns month or day trend buckets in base currency.
-function buildTrendRows(
+// buildMemberItems receives ledger entries and returns member rows plus a generated shared total row.
+function buildMemberItems(
+  t: TFunction,
   entries: Entry[],
-  flowFilter: FlowFilter,
+  members: BookMember[],
+  flow: MemberReportFlow,
   timeMode: TimeMode,
   cursorDate: Date,
   currencyCode: string,
   rates: Map<string, number>,
 ): RankedItem[] {
-  const rows = timeMode === 'year' ? yearBuckets(cursorDate) : monthBuckets(cursorDate);
+  const rows = new Map<string, RankedItem>();
+  const filtered = flow === 'balance'
+    ? filterEntries(entries, 'all', timeMode, cursorDate)
+    : filterEntries(entries, flow, timeMode, cursorDate);
+
+  for (const entry of filtered) {
+    const converted = convertEntryAmountCents(entry, currencyCode, rates);
+    if (converted === null) {
+      continue;
+    }
+    const key = entry.creatorUserId || 'no-member';
+    const current = rows.get(key) ?? {
+      id: key,
+      label: memberLabel(t, entry, members),
+      amountCents: 0,
+      count: 0,
+      percent: 0,
+    };
+    current.amountCents += flow === 'balance' && entry.type === 'expense' ? -converted : converted;
+    current.count += 1;
+    rows.set(key, current);
+  }
+
+  const ranked = Array.from(rows.values()).sort((first, second) => Math.abs(second.amountCents) - Math.abs(first.amountCents));
+  const totalCents = ranked.reduce((sum, row) => sum + row.amountCents, 0);
+  const totalCount = ranked.reduce((sum, row) => sum + row.count, 0);
+  if (!ranked.length) {
+    return [];
+  }
+
+  const denominator = flow === 'balance' ? ranked.reduce((sum, row) => sum + Math.abs(row.amountCents), 0) : Math.abs(totalCents);
+  return [
+    {
+      id: 'shared-total',
+      label: t('reports.member.sharedTotal'),
+      amountCents: totalCents,
+      count: totalCount,
+      percent: denominator > 0 ? 100 : 0,
+    },
+    ...ranked.map((row) => ({
+      ...row,
+      percent: denominator > 0 ? (Math.abs(row.amountCents) / denominator) * 100 : 0,
+    })),
+  ];
+}
+
+// buildTrendData receives entries and controls and returns cashflow trend buckets in base currency.
+function buildTrendData(
+  entries: Entry[],
+  timeMode: TimeMode,
+  cursorDate: Date,
+  currencyCode: string,
+  rates: Map<string, number>,
+): TrendData {
+  const sourceRows = timeMode === 'year' ? yearBuckets(cursorDate) : monthBuckets(cursorDate);
+  const rows: TrendBucket[] = sourceRows.map((row) => ({
+    id: row.id,
+    label: row.label,
+    incomeCents: 0,
+    expenseCents: 0,
+    balanceCents: 0,
+    count: 0,
+  }));
   const index = new Map(rows.map((row) => [row.id, row]));
-  for (const entry of filterEntries(entries, flowFilter, timeMode, cursorDate)) {
+  for (const entry of filterEntries(entries, 'all', timeMode, cursorDate)) {
     const amountCents = convertEntryAmountCents(entry, currencyCode, rates);
     if (amountCents === null) {
       continue;
@@ -595,12 +586,33 @@ function buildTrendRows(
     if (!current) {
       continue;
     }
-    current.amountCents += amountCents;
+    if (entry.type === 'income') {
+      current.incomeCents += amountCents;
+      current.balanceCents += amountCents;
+    } else {
+      current.expenseCents += amountCents;
+      current.balanceCents -= amountCents;
+    }
     current.count += 1;
   }
 
-  const total = rows.reduce((sum, row) => sum + row.amountCents, 0);
-  return rows.map((row) => ({ ...row, percent: total > 0 ? (row.amountCents / total) * 100 : 0 }));
+  return {
+    rows,
+    incomeCents: rows.reduce((sum, row) => sum + row.incomeCents, 0),
+    expenseCents: rows.reduce((sum, row) => sum + row.expenseCents, 0),
+    balanceCents: rows.reduce((sum, row) => sum + row.balanceCents, 0),
+    entryCount: rows.reduce((sum, row) => sum + row.count, 0),
+  };
+}
+
+// memberLabel receives an entry and known book members and returns a display label for member reports.
+function memberLabel(t: TFunction, entry: Entry, members: BookMember[]): string {
+  const importedMember = (entry as Entry & { member?: string }).member;
+  if (importedMember) {
+    return importedMember;
+  }
+  const member = members.find((item) => item.userId === entry.creatorUserId);
+  return member?.displayName || entry.creatorUserId || t('reports.labels.noMember');
 }
 
 // dimensionKeys receives the translator, an entry, and the active tab and returns grouping keys.
@@ -702,4 +714,9 @@ function reportTitle(t: TFunction, tab: ReportTab, flowFilter: FlowFilter): stri
 function reportHeading(t: TFunction, tab: ReportTab, flowFilter: FlowFilter): string {
   const target = flowFilter === 'all' ? t('reports.cashflow') : t(`common.flow.${flowFilter}`);
   return t('reports.panel.heading', { dimension: t(`reports.tabs.${tab}`), target });
+}
+
+// memberReportHeading receives a flow and returns the member report section heading.
+function memberReportHeading(t: TFunction, flow: MemberReportFlow): string {
+  return t(`reports.member.${flow}`);
 }

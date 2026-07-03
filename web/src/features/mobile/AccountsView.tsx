@@ -2,6 +2,7 @@ import { ChevronDown, CreditCard, Eye, Globe2, Landmark, PiggyBank, TrendingUp }
 import { type FormEvent, useMemo, useState } from 'react';
 import { type Account, type AccountGroup, type BookListItem, type BookMember } from '../../lib/api/ledger';
 import { formatMoney, supportedCurrencies } from '../../lib/money';
+import './accounts.css';
 
 export type AccountCreateInput = {
   name: string;
@@ -83,6 +84,8 @@ export function AccountsView({
 
   return (
     <section className="tabPanel accountPanel" aria-label="Accounts">
+      {/* Left column at >=1024px; transparent (display:contents) below, so mobile is unchanged. */}
+      <div className="accountPrimaryColumn">
       <section className="accountHero" aria-label="Net assets">
         <div>
           <span>Net assets</span>
@@ -155,6 +158,7 @@ export function AccountsView({
         </label>
         <button type="submit" disabled={!canCreateAccount}>Create account</button>
       </form>
+      </div>
 
       <div className="accountSectionList">
         <BookMembersView members={members} />

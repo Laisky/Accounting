@@ -24,6 +24,7 @@
     "off": "désactivé",
     "on": "activé",
     "postEntry": "Enregistrer l'écriture",
+    "processing": "Traitement en cours",
     "signOut": "Se déconnecter",
     "status": {
       "accountReady": "Compte prêt.",

@@ -17,6 +17,7 @@ web/vite.config.js
 # Local environment
 .env
 .env.*
+backend/var/accounting/
 
 # Sensitive local tooling / debugging instructions (never commit or push)
 .github/instructions/laisky.instructions.md

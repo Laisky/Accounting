@@ -36,6 +36,12 @@
       "uncategorized": "未分类"
     },
     "loading": "正在加载报表。",
+    "member": {
+      "balance": "成员结余",
+      "expense": "成员支出",
+      "income": "成员收入",
+      "sharedTotal": "家庭公共"
+    },
     "noBook": "无账本",
     "panel": {
       "eyebrow": "{{dimension}} {{flow}}",
@@ -59,8 +65,15 @@
     },
     "title": "报表",
     "trend": {
+      "balance": "结余",
+      "chartDesc": "所选周期内收入、支出和结余的变化。",
+      "chartTitle": "现金流趋势图",
+      "expense": "支出",
       "filteredTotal": "筛选后合计",
-      "heading": "周期变动"
+      "heading": "收入、支出和结余趋势",
+      "income": "收入",
+      "range": "范围 {{low}} 至 {{high}}",
+      "summary": "趋势汇总"
     }
   }
 }

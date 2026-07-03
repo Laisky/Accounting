@@ -1,0 +1,23 @@
+/*
+ * tokens.css — shared responsive layout design tokens for the accounting shell.
+ * Imported once (before styles.css) in main.tsx so the custom properties exist app-wide.
+ * Custom properties may only be referenced inside property VALUES via var(); the literal
+ * breakpoint numbers (768/1024/1280) still have to be written directly in @media/@container.
+ */
+:root {
+  /* Centered desktop canvas max-width. */
+  --content-max: 1280px;
+  /* Labeled sidebar width at >=1024px. */
+  --sidebar-width: 248px;
+  /* Vertical icon rail width at 768-1023px. */
+  --rail-width: 76px;
+  /* Outer gutter for the desktop shell chrome. */
+  --shell-gutter: clamp(16px, 2.4vw, 32px);
+  /* Gap between stacked/side-by-side desktop panels. */
+  --panel-gap: clamp(16px, 2vw, 24px);
+}
+
+/* tabularNums aligns money/number columns by giving digits equal advance width. */
+.tabularNums {
+  font-variant-numeric: tabular-nums;
+}

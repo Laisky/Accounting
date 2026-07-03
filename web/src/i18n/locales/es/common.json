@@ -24,6 +24,7 @@
     "off": "desactivado",
     "on": "activado",
     "postEntry": "Registrar movimiento",
+    "processing": "Procesando",
     "signOut": "Cerrar sesión",
     "status": {
       "accountReady": "Cuenta lista.",

@@ -253,9 +253,8 @@ func newAuthService(cfg config.Config, store auth.Store) (*auth.Service, error) 
 		TurnstileLoginMode:         cfg.Auth.Turnstile.LoginMode,
 	}, store, verifier)
 	if cfg.Auth.External.Enabled {
-		validator, err := auth.NewHTTPExternalSSOValidator(auth.HTTPExternalSSOValidatorConfig{
-			Client:   &http.Client{Timeout: 10 * time.Second},
-			Endpoint: cfg.Auth.External.GraphQLEndpoint,
+		validator, err := auth.NewJWTExternalSSOValidator(auth.JWTExternalSSOValidatorConfig{
+			SharedSecret: cfg.Auth.External.SharedSecret,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "create external sso validator")

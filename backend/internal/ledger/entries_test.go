@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Laisky/errors/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -67,6 +68,45 @@ func TestCreateEntryEnforcesRolesAndServerControlledFields(t *testing.T) {
 	require.Equal(t, 7, list.Total)
 }
 
+// TestCreateEntryAssignsUniqueUUIDs verifies user-created bookkeeping entries always receive unique UUIDs.
+func TestCreateEntryAssignsUniqueUUIDs(t *testing.T) {
+	service := NewServiceWithStore(NewMemoryStore(testSeedData()))
+
+	first, err := service.CreateEntry(context.Background(), CreateEntryRequest{
+		Actor:               Actor{UserID: "member"},
+		BookID:              "book",
+		Type:                EntryTypeExpense,
+		AccountID:           "account-member",
+		AmountCents:         1200,
+		TransactionCurrency: "USD",
+		OccurredAt:          time.Date(2026, 7, 1, 20, 0, 0, 0, time.UTC),
+	})
+	require.NoError(t, err)
+	requireEntryUUID(t, first.ID)
+
+	second, err := service.CreateEntry(context.Background(), CreateEntryRequest{
+		Actor:               Actor{UserID: "member"},
+		BookID:              "book",
+		Type:                EntryTypeExpense,
+		AccountID:           "account-member",
+		AmountCents:         3400,
+		TransactionCurrency: "USD",
+		OccurredAt:          time.Date(2026, 7, 1, 21, 0, 0, 0, time.UTC),
+	})
+	require.NoError(t, err)
+	requireEntryUUID(t, second.ID)
+	require.NotEqual(t, first.ID, second.ID)
+}
+
+// TestCreateEntryRejectsNonUUIDStoreID verifies direct store writes cannot bypass entry UUID identity.
+func TestCreateEntryRejectsNonUUIDStoreID(t *testing.T) {
+	store := NewMemoryStore(SeedData{})
+
+	_, err := store.CreateEntry(context.Background(), Entry{ID: "entry-not-a-uuid", BookID: "book"})
+	require.Error(t, err)
+	require.True(t, errors.Is(err, ErrInvalidInput))
+}
+
 // TestCreateEntryAllowsManagerCreatorOverride verifies managers can attribute imports to book members.
 func TestCreateEntryAllowsManagerCreatorOverride(t *testing.T) {
 	service := NewServiceWithStore(NewMemoryStore(testSeedData()))
@@ -109,6 +149,15 @@ func TestCreateEntryAllowsManagerCreatorOverride(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrAccessDenied))
+}
+
+func requireEntryUUID(t *testing.T, value string) {
+	t.Helper()
+
+	parsed, err := uuid.Parse(value)
+	require.NoError(t, err)
+	require.NotEqual(t, uuid.Nil, parsed)
+	require.Equal(t, uuid.Version(7), parsed.Version())
 }
 
 // TestCreateEntryRejectsViewerAndInaccessibleAccount verifies viewers and private accounts cannot create entries.

@@ -134,6 +134,8 @@ The backend is environment-configured. Important local and deployment settings i
 | `ACCOUNTING_AUTH_SESSION_COOKIE_SECURE` | Must be `true` behind HTTPS in production. |
 | `ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED` | Require verified email before active use. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED` | Enable configured external SSO login. |
+| `ACCOUNTING_AUTH_EXTERNAL_SSO_SHARED_SECRET` | HS256 secret shared with the SSO provider to verify `sso_token` JWTs locally. Required when SSO is enabled; must match the provider secret and be at least 32 bytes. |
+| `ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL` | Backend SSO callback URL. Required for non-loopback hosts. |
 
 ## Quality Bar
 

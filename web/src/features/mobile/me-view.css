@@ -1,0 +1,401 @@
+/*
+ * Me tab — an inset-grouped settings index (2026 native-grouped-list pattern):
+ * one calm identity banner, then labeled domain groups of rows on a tinted
+ * surface with inset hairline dividers. No box-per-row; grouping comes from
+ * whitespace + shared card surfaces + section headers.
+ */
+.meScreen {
+  --me-ink: oklch(21% 0.035 235);
+  --me-ink-soft: oklch(44% 0.03 232);
+  --me-ink-muted: oklch(60% 0.024 230);
+  --me-surface: oklch(100% 0 0);
+  --me-surface-sunken: oklch(98.6% 0.004 185);
+  --me-line: oklch(92.5% 0.006 185);
+  --me-accent: oklch(56% 0.11 258);
+  --me-accent-soft: oklch(95% 0.03 258);
+  --me-positive-ink: oklch(46% 0.11 152);
+  --me-positive-bg: oklch(95% 0.042 158);
+  --me-neutral-ink: oklch(52% 0.018 250);
+  --me-neutral-bg: oklch(95.5% 0.006 240);
+  --me-radius: 14px;
+  --me-row-min: 52px;
+
+  display: grid;
+  gap: 22px;
+  padding: 4px 0 10px;
+}
+
+/* ── Identity banner — the one distinct card ── */
+.meIdentity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 14px;
+  padding: 18px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 12% -10%, oklch(96% 0.03 258), transparent 62%),
+    linear-gradient(150deg, oklch(99.5% 0.003 230), oklch(97.5% 0.01 250));
+  border: 1px solid oklch(91% 0.012 250);
+  box-shadow: 0 14px 34px oklch(55% 0.06 255 / 12%);
+}
+
+.meAvatar {
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(140deg, oklch(64% 0.13 262), oklch(60% 0.15 292));
+  color: oklch(99% 0.005 250);
+  box-shadow: inset 0 1px 1px oklch(100% 0 0 / 40%);
+}
+
+.meIdentityMain {
+  display: grid;
+  gap: 7px;
+  align-content: center;
+  min-width: 0;
+}
+
+.meEmail {
+  color: var(--me-ink);
+  font-size: 1.06rem;
+  font-weight: 880;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.meUid {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: 11px;
+  background: oklch(100% 0 0 / 70%);
+  border: 1px solid oklch(93% 0.008 250);
+}
+
+.meUidText {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.meUidText span {
+  color: var(--me-ink-muted);
+  font-size: 0.68rem;
+  font-weight: 840;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.meUidText code {
+  color: var(--me-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.86rem;
+  font-weight: 720;
+  overflow-wrap: anywhere;
+}
+
+.meCopyButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 13px;
+  border: 1px solid oklch(88% 0.02 258);
+  border-radius: 999px;
+  background: oklch(100% 0 0);
+  color: var(--me-accent);
+  font-size: 0.8rem;
+  font-weight: 840;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.meCopyButton:hover {
+  background: var(--me-accent-soft);
+  border-color: oklch(80% 0.05 258);
+}
+
+/* ── Status pills ── */
+.mePill {
+  display: inline-flex;
+  align-self: start;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 860;
+  text-transform: capitalize;
+  line-height: 1.4;
+}
+
+.mePillDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentcolor;
+}
+
+.mePillPositive {
+  background: var(--me-positive-bg);
+  color: var(--me-positive-ink);
+}
+
+.mePillNeutral {
+  background: var(--me-neutral-bg);
+  color: var(--me-neutral-ink);
+}
+
+.mePillAccent {
+  background: var(--me-accent-soft);
+  color: var(--me-accent);
+  text-transform: none;
+}
+
+/* ── Domain groups ── */
+.meGroup {
+  display: grid;
+  gap: 9px;
+}
+
+.meGroupHeader {
+  margin: 0;
+  padding: 0 6px;
+  color: var(--me-ink-muted);
+  font-size: 0.74rem;
+  font-weight: 860;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* Shared card surface for grouped rows / panels */
+.meCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--me-line);
+  border-radius: var(--me-radius);
+  background: var(--me-surface);
+}
+
+/* Navigation / action row: [icon] [label + hint] [trailing] */
+.meNavRow {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  width: 100%;
+  min-height: var(--me-row-min);
+  padding: 12px 15px;
+  border: 1px solid var(--me-line);
+  border-radius: var(--me-radius);
+  background: var(--me-surface);
+  color: var(--me-ink);
+  text-align: start;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.meNavRow:hover {
+  background: var(--me-surface-sunken);
+  border-color: oklch(89% 0.01 240);
+}
+
+.meNavIcon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: var(--me-accent-soft);
+  color: var(--me-accent);
+}
+
+.meNavLabel {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.meNavLabel b {
+  color: var(--me-ink);
+  font-size: 0.98rem;
+  font-weight: 820;
+}
+
+.meNavLabel small {
+  color: var(--me-ink-muted);
+  font-size: 0.8rem;
+  font-weight: 640;
+  line-height: 1.35;
+}
+
+.meNavChevron {
+  color: oklch(72% 0.02 250);
+}
+
+/* ── Recent activity ── */
+.meActivityCard .mobileSecondaryButton {
+  justify-content: center;
+  width: 100%;
+}
+
+.meEmpty {
+  margin: 0;
+  padding: 6px 2px;
+  color: var(--me-ink-muted);
+  font-size: 0.86rem;
+  font-weight: 640;
+  text-align: center;
+}
+
+.meActivityList {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.meActivityList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 0;
+  border-top: 1px solid var(--me-line);
+  color: var(--me-ink);
+  font-size: 0.9rem;
+  font-weight: 720;
+}
+
+.meActivityList li:first-child {
+  border-top: 0;
+}
+
+.meActivityAction {
+  overflow-wrap: anywhere;
+}
+
+.meActivityList time {
+  flex-shrink: 0;
+  color: var(--me-ink-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  font-weight: 640;
+  white-space: nowrap;
+}
+
+/* ── Preferences: language row ── */
+.meLanguageRow {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  width: 100%;
+  min-height: var(--me-row-min);
+  padding: 10px 15px;
+  border: 1px solid var(--me-line);
+  border-radius: var(--me-radius);
+  background: var(--me-surface);
+}
+
+.meLanguageRow .languageSelectorLabel {
+  display: inline-flex;
+  gap: 13px;
+  align-items: center;
+  color: var(--me-ink);
+  font-size: 0.98rem;
+  font-weight: 820;
+}
+
+.meLanguageRow .languageSelectorLabel svg {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 11px;
+  border-radius: 11px;
+  background: var(--me-accent-soft);
+  color: var(--me-accent);
+  box-sizing: border-box;
+}
+
+.meLanguageRow select {
+  grid-column: 3;
+  min-height: 38px;
+  padding: 0 30px 0 12px;
+  border: 1px solid oklch(88% 0.012 250);
+  border-radius: 9px;
+  background: var(--me-surface-sunken);
+  color: var(--me-ink);
+  font-weight: 780;
+  cursor: pointer;
+}
+
+/* ── Session: isolated sign out ── */
+.meSignOut {
+  display: grid;
+  padding-top: 4px;
+}
+
+.meSignOutButton {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid oklch(88% 0.03 28);
+  border-radius: var(--me-radius);
+  background: oklch(99% 0.008 30);
+  color: oklch(50% 0.15 28);
+  font-size: 0.98rem;
+  font-weight: 860;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.meSignOutButton:hover {
+  background: oklch(96.5% 0.02 30);
+}
+
+.meSignOutButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.meSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Shared focus ring for interactive Me controls (WCAG 2.2 focus visible). */
+.meCopyButton:focus-visible,
+.meNavRow:focus-visible,
+.meSignOutButton:focus-visible,
+.meLanguageRow select:focus-visible {
+  outline: 2px solid var(--me-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meCopyButton,
+  .meNavRow,
+  .meSignOutButton {
+    transition: none;
+  }
+}

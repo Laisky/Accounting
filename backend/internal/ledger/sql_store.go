@@ -186,6 +186,12 @@ func (s *SQLStore) Entries(ctx context.Context, bookID string) ([]Entry, error) 
 
 // CreateEntry receives an entry and stores it when its id is unique.
 func (s *SQLStore) CreateEntry(ctx context.Context, entry Entry) (Entry, error) {
+	entryID, err := normalizeEntryID(entry.ID)
+	if err != nil {
+		return Entry{}, err
+	}
+	entry.ID = entryID
+
 	entry = cloneEntry(entry)
 	if err := s.records.Insert(ctx, mustRecord(ledgerEntriesNS, entry.ID, entry.BookID, entry.CreatorUserID, "", entry)); err != nil {
 		return Entry{}, errors.Wrap(err, "insert entry")

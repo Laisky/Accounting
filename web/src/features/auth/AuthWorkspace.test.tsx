@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { type ReactNode } from 'react';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../../lib/api/auth';
 import { AuthWorkspace } from './AuthWorkspace';
@@ -25,6 +27,11 @@ const authenticatedResult = {
   },
 };
 
+// renderWithRouter mounts auth screens with the router context required by AuthWorkspace.
+function renderWithRouter(children: ReactNode, path = '/login') {
+  return render(<MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>);
+}
+
 describe('AuthWorkspace', () => {
   const originalCredentials = navigator.credentials;
 
@@ -38,7 +45,7 @@ describe('AuthWorkspace', () => {
   });
 
   it('renders external SSO when runtime config enables it', () => {
-    render(
+    renderWithRouter(
       <AuthWorkspace
         runtimeConfig={{
           ...emptyRuntimeConfig,
@@ -60,7 +67,7 @@ describe('AuthWorkspace', () => {
   });
 
   it('hides external SSO when runtime config disables it', () => {
-    render(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={vi.fn()} />);
+    renderWithRouter(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={vi.fn()} />);
 
     expect(screen.queryByText('External SSO')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Use SSO' })).not.toBeInTheDocument();
@@ -85,7 +92,7 @@ describe('AuthWorkspace', () => {
     const finishSpy = vi.spyOn(authApi, 'finishPasskeyLogin').mockResolvedValue(authenticatedResult);
     const onAuthenticated = vi.fn();
 
-    render(
+    renderWithRouter(
       <AuthWorkspace
         runtimeConfig={{
           ...emptyRuntimeConfig,
@@ -128,7 +135,7 @@ describe('AuthWorkspace', () => {
       user: authenticatedResult.user,
     });
 
-    render(
+    renderWithRouter(
       <AuthWorkspace
         runtimeConfig={{
           ...emptyRuntimeConfig,
@@ -160,7 +167,7 @@ describe('AuthWorkspace', () => {
       .mockResolvedValueOnce(authenticatedResult);
     const onAuthenticated = vi.fn();
 
-    render(
+    renderWithRouter(
       <AuthWorkspace
         runtimeConfig={{
           ...emptyRuntimeConfig,
@@ -202,7 +209,7 @@ describe('AuthWorkspace', () => {
       user: authenticatedResult.user,
     });
 
-    render(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={vi.fn()} />);
+    renderWithRouter(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Register' }));
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'person@example.test' } });
@@ -219,6 +226,7 @@ describe('AuthWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verify email' }));
 
     expect(await screen.findByText('Email verified. Sign in to continue.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(screen.getByRole('button', { name: 'Sign in with email' })).toBeInTheDocument();
     expect(confirmVerificationSpy).toHaveBeenCalledWith('person@example.test', '123456');
   });
@@ -230,7 +238,7 @@ describe('AuthWorkspace', () => {
       .mockResolvedValueOnce(authenticatedResult);
     const onAuthenticated = vi.fn();
 
-    render(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={onAuthenticated} />);
+    renderWithRouter(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={onAuthenticated} />);
 
     // The TOTP field is hidden before the password is submitted.
     expect(screen.queryByLabelText('TOTP code')).not.toBeInTheDocument();
@@ -256,7 +264,7 @@ describe('AuthWorkspace', () => {
   it('drops back to the password step when credentials change after a TOTP challenge', async () => {
     const loginSpy = vi.spyOn(authApi, 'loginWithPassword').mockResolvedValue({ kind: 'totpRequired' });
 
-    render(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={vi.fn()} />);
+    renderWithRouter(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'person@example.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct horse battery staple' } });
@@ -282,7 +290,7 @@ describe('AuthWorkspace', () => {
       .mockRejectedValueOnce(new Error('login failed: 401'));
     const onAuthenticated = vi.fn();
 
-    render(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={onAuthenticated} />);
+    renderWithRouter(<AuthWorkspace runtimeConfig={emptyRuntimeConfig} onAuthenticated={onAuthenticated} />);
 
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'person@example.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct horse battery staple' } });

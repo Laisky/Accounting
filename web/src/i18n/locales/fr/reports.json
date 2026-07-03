@@ -36,6 +36,12 @@
       "uncategorized": "Non catégorisé"
     },
     "loading": "Chargement des rapports.",
+    "member": {
+      "balance": "Solde par membre",
+      "expense": "Dépense par membre",
+      "income": "Revenu par membre",
+      "sharedTotal": "Famille partagée"
+    },
     "noBook": "Aucun livre",
     "panel": {
       "eyebrow": "{{dimension}} {{flow}}",
@@ -59,8 +65,15 @@
     },
     "title": "Rapports",
     "trend": {
+      "balance": "Solde",
+      "chartDesc": "Évolution des revenus, dépenses et du solde sur la période sélectionnée.",
+      "chartTitle": "Graphique de tendance de trésorerie",
+      "expense": "Dépense",
       "filteredTotal": "total filtré",
-      "heading": "Évolution sur la période"
+      "heading": "Tendance des revenus, dépenses et du solde",
+      "income": "Revenu",
+      "range": "Plage de {{low}} à {{high}}",
+      "summary": "Résumé de tendance"
     }
   }
 }

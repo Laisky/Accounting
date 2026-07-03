@@ -36,6 +36,12 @@
       "uncategorized": "Sin categoría"
     },
     "loading": "Cargando informes.",
+    "member": {
+      "balance": "Saldo por miembro",
+      "expense": "Gasto por miembro",
+      "income": "Ingreso por miembro",
+      "sharedTotal": "Familia compartida"
+    },
     "noBook": "Sin libro",
     "panel": {
       "eyebrow": "{{dimension}} {{flow}}",
@@ -59,8 +65,15 @@
     },
     "title": "Informes",
     "trend": {
+      "balance": "Saldo",
+      "chartDesc": "Evolución de ingresos, gastos y saldo en el periodo seleccionado.",
+      "chartTitle": "Gráfico de tendencia de flujo de caja",
+      "expense": "Gasto",
       "filteredTotal": "total filtrado",
-      "heading": "Movimiento del periodo"
+      "heading": "Tendencia de ingresos, gastos y saldo",
+      "income": "Ingreso",
+      "range": "Rango de {{low}} a {{high}}",
+      "summary": "Resumen de tendencia"
     }
   }
 }

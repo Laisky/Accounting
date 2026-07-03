@@ -1,7 +1,8 @@
-import { ShieldCheck } from 'lucide-react';
+import { Check, Copy, ShieldCheck } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { confirmTotp, disableTotp, fetchTotpStatus, setupTotp } from '../../lib/api/auth';
+import { copyToClipboard } from '../../lib/clipboard';
 import './totp-settings.css';
 
 type TotpSettingsViewProps = {
@@ -18,6 +19,18 @@ export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [keyCopied, setKeyCopied] = useState(false);
+
+  // handleCopySetupKey receives no parameters and copies the authenticator secret to the clipboard
+  // (the camera-less enrollment path) with brief confirmation.
+  async function handleCopySetupKey() {
+    const copied = await copyToClipboard(extractTotpSecret(setupURI));
+    if (!copied) {
+      return;
+    }
+    setKeyCopied(true);
+    window.setTimeout(() => setKeyCopied(false), 2000);
+  }
 
   useEffect(() => {
     if (!featureEnabled) {
@@ -96,14 +109,21 @@ export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
   }
 
   return (
-    <article className="totpSettings" aria-label={t('mobile.me.totpSettings')}>
+    <article className="totpSettings settingsPanel" aria-label={t('mobile.me.totpSettings')}>
       <header>
-        <ShieldCheck size={18} />
+        <span className="settingsPanelIcon" aria-hidden="true">
+          <ShieldCheck size={18} />
+        </span>
         <div>
-          <strong>{t('mobile.me.totpSettings')}</strong>
-          <span>{enabled ? t('mobile.me.totpEnabled') : t('mobile.me.totpDisabled')}</span>
+          <div className="settingsPanelTitle">
+            <strong>{t('mobile.me.totpSettings')}</strong>
+          </div>
+          <span className={`totpStatusLine ${enabled ? 'isOn' : 'isOff'}`}>
+            {enabled ? t('mobile.me.totpEnabled') : t('mobile.me.totpDisabled')}
+          </span>
         </div>
       </header>
+      <p className="settingsPanelHint">{t('mobile.me.totpHint')}</p>
 
       {!enabled ? (
         <>
@@ -112,10 +132,18 @@ export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
           </button>
           {setupURI ? (
             <form className="totpForm" onSubmit={handleConfirm}>
-              <label className="mobileField">
-                <span>{t('mobile.me.totpSetupUri')}</span>
-                <textarea readOnly value={setupURI} aria-label={t('mobile.me.totpSetupUri')} />
-              </label>
+              <div className="totpSetupKey">
+                <label className="mobileField">
+                  <span>{t('mobile.me.totpSetupUri')}</span>
+                  <textarea readOnly value={setupURI} aria-label={t('mobile.me.totpSetupUri')} />
+                </label>
+                <button type="button" className="mobileSecondaryButton totpCopyKey" onClick={handleCopySetupKey}>
+                  {keyCopied ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
+                  <span role="status" aria-live="polite">
+                    {keyCopied ? t('mobile.me.setupKeyCopied') : t('mobile.me.copySetupKey')}
+                  </span>
+                </button>
+              </div>
               <label className="mobileField">
                 <span>{t('mobile.me.totpCode')}</span>
                 <input
@@ -156,4 +184,14 @@ export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
       {status ? <p className="mobileInlineStatus">{status}</p> : null}
     </article>
   );
+}
+
+// extractTotpSecret receives an otpauth URI and returns its base32 secret, falling back
+// to the full URI when the secret cannot be parsed.
+function extractTotpSecret(otpauth: string): string {
+  try {
+    return new URL(otpauth).searchParams.get('secret') ?? otpauth;
+  } catch {
+    return otpauth;
+  }
 }

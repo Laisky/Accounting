@@ -36,6 +36,12 @@
       "uncategorized": "Uncategorized"
     },
     "loading": "Loading reports.",
+    "member": {
+      "balance": "Member balance",
+      "expense": "Member expense",
+      "income": "Member income",
+      "sharedTotal": "Family shared"
+    },
     "noBook": "No book",
     "panel": {
       "eyebrow": "{{dimension}} {{flow}}",
@@ -59,8 +65,15 @@
     },
     "title": "Reports",
     "trend": {
+      "balance": "Balance",
+      "chartDesc": "Income, expense, and balance movement across the selected period.",
+      "chartTitle": "Cashflow trend chart",
+      "expense": "Expense",
       "filteredTotal": "filtered total",
-      "heading": "Period movement"
+      "heading": "Income, expense, and balance trend",
+      "income": "Income",
+      "range": "Range {{low}} to {{high}}",
+      "summary": "Trend summary"
     }
   }
 }

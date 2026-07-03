@@ -1,0 +1,18 @@
+/*
+ * language-selector.css — desktop width cap for the language switcher.
+ * styles.css sets `.languageSelector select { width: 100% }`, which stretches
+ * the native <select> across the full width of the wide desktop settings /
+ * sidebar surface. A max-width caps that inherited 100% regardless of
+ * stylesheet import order (max-width always wins over an inherited width:100%),
+ * so the control reads as a compact picker on desktop. Gated at 1024px so the
+ * phone layout below it stays pixel-identical.
+ */
+@media (min-width: 1024px) {
+  .languageSelector {
+    max-width: 280px;
+  }
+
+  .languageSelector select {
+    max-width: 280px;
+  }
+}

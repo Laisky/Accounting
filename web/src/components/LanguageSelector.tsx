@@ -1,6 +1,7 @@
 import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { changeAppLanguage, supportedLanguages, type SupportedLanguage } from '../i18n';
+import './language-selector.css';
 
 type LanguageOption = { code: SupportedLanguage; label: string };
 

@@ -82,6 +82,7 @@ The core product model is user-centered bookkeeping:
 - Book members can create entries and can edit or delete only entries they created.
 - Book viewers can read book data but cannot create or mutate entries.
 - Each entry belongs to exactly one book and has a creator.
+- Each entry has a server-generated globally unique UUIDv7 identifier. Clients, imports, and persistence drivers must not accept caller-supplied non-UUID entry ids.
 - Entries must support income and expense as first-class directions. The model must also leave room for transfer, refund, reimbursement, borrow, lend, and repayment flows because imported bookkeeping data commonly contains those concepts.
 - Income and expense categories are separate trees. Top-level categories group subcategories such as dining, groceries, household goods, salary, bonus, interest, and reimbursements.
 - Categories must be book-configurable and importable. Imports must preserve raw source category names when a normalized category mapping is uncertain.
@@ -153,14 +154,14 @@ Accounting should follow the proven `one-api` authentication shape while keeping
 - Cloudflare Turnstile must be supported on registration and login. The default product posture should bind Turnstile to both routes when enabled, while allowing an `after_failure` login mode that requires Turnstile after a recent failed login for the same email.
 - Sessions should be HTTP-only, SameSite=Lax cookies. Production deployments must use Secure cookies.
 - Session values should contain only stable user identity and role/status data, not secrets.
-- User `id` values are public stable UIDs generated as UUIDv7. APIs must never expose database-internal incrementing identifiers as user identity, and external SSO auto-provisioning must preserve the UUIDv7 UID returned by SSO `WhoAmI.id` / token subject.
+- User `id` values are public stable UIDs generated as UUIDv7. APIs must never expose database-internal incrementing identifiers as user identity, and external SSO auto-provisioning must preserve the UUIDv7 UID carried in the SSO token subject (`sub`/`uid`).
 - Password hashes must use OWASP-compliant parameters and must never be returned by any API.
 - Auth routes must not reveal whether an email exists when credentials, reset requests, or verification requests fail.
 - TOTP is an optional per-user MFA method. Setup stores the generated secret only in the session until the user confirms a valid code.
 - TOTP verification must be rate-limited and must reject recently reused codes through a short replay cache, using PostgreSQL or Redis-compatible storage once available. The fallback in-memory cache is acceptable only for local development.
 - Passkey login is an optional WebAuthn flow. Users can register multiple passkeys after login, and passkey login should support discoverable credentials.
 - Passkey credentials must store raw credential id, public key, sign count, backup flags, transports, AAGUID, human label, and timestamps. Private key material is never stored by the server.
-- External SSO login is optional and configuration-driven. When enabled, the backend redirects users to the configured SSO login URL, validates the returned `sso_token` server-side through the configured SSO GraphQL `WhoAmI` endpoint, maps the SSO username to a local active user, and can provision that local user automatically when configured.
+- External SSO login is optional and configuration-driven. When enabled, the backend redirects users to the configured SSO login URL, then verifies the returned `sso_token` locally as an HS256 JWT signed with the shared SSO secret (checking signature, `exp`/`iat`, `iss == laisky-sso`, and that `sub == uid`), maps the SSO username to a local active user, and can provision that local user automatically when configured.
 - Admins may disable another user's TOTP or passkeys for account recovery, but these actions must be audited.
 - The webapp must show available login methods based on public runtime config, but public config must expose only non-secret values such as Turnstile site key, passkey relying-party metadata, and the local SSO start path.
 
@@ -199,6 +200,9 @@ Expected direction:
 - Feature slices should live under `src/features/<feature>`.
 - API clients should live under `src/lib/api`.
 - Build output stays in `web/dist` and is never hand-edited.
+- The Reports Trend tab summarizes income, expense, and net balance for the selected month or year, and plots their period buckets in the book reporting currency using the same entry conversion rules as other report dimensions.
+- When the Reports Category tab uses the all-flow filter, the frontend presents category expense and category income as separate sections instead of mixing opposite cashflow directions in one ranked chart.
+- The Reports Member tab presents member expense, member income, and member balance separately when the all-flow filter is active. Each member section includes a generated family shared row that aggregates all visible members before the individual member rows.
 
 Vite proxies `/api` to the Go server during local development. The Go server serves `web/dist` in production or whenever the built directory exists locally.
 
@@ -248,7 +252,7 @@ Initial endpoints:
 | `POST` | `/api/books/{bookID}/categories` | Authenticated category creation for book owners and administrators. |
 | `PATCH` | `/api/books/{bookID}/categories/{categoryID}` | Authenticated category update and soft archive for book owners and administrators. |
 | `GET` | `/api/books/{bookID}/entries` | Authenticated paginated entry list for explicit book members. |
-| `POST` | `/api/books/{bookID}/entries` | Authenticated entry creation for owners, administrators, and members, with server-controlled creator and book fields. |
+| `POST` | `/api/books/{bookID}/entries` | Authenticated entry creation for owners, administrators, and members, with server-controlled UUIDv7 id, creator, and book fields. |
 | `PATCH` | `/api/books/{bookID}/entries/{entryID}` | Authenticated partial entry update with owner/administrator override and member creator-only policy. |
 | `DELETE` | `/api/books/{bookID}/entries/{entryID}` | Authenticated entry deletion with owner/administrator override and member creator-only policy. |
 | `POST` | `/api/imports/wacai/preview` | Authenticated Wacai CSV or `.xlsx` import preview from multipart field `file`, returning `201` with a staged preview batch. |

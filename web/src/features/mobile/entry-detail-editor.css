@@ -37,3 +37,18 @@
 .entryDetailForm button {
   grid-column: 1 / -1;
 }
+
+/*
+ * Desktop (>=1024px, via the Foundation `appMain` container): let every field flow into
+ * fluid auto-fit columns and drop the phone-only full-span override on the last two labels.
+ * The submit button keeps its 1 / -1 span from the base rule above.
+ */
+@container appMain (min-width: 680px) {
+  .entryDetailForm {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .entryDetailForm label:nth-last-of-type(-n + 2) {
+    grid-column: auto;
+  }
+}

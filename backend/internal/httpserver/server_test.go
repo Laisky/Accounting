@@ -81,9 +81,9 @@ func TestRegisterRoutesRuntimeConfigExposesOnlyPublicValues(t *testing.T) {
 				VerificationRequired:       true,
 			},
 			External: config.ExternalSSOConfig{
-				Enabled:         true,
-				GraphQLEndpoint: "https://sso.example.test/query",
-				LoginURL:        "https://sso.example.test/login",
+				Enabled:      true,
+				LoginURL:     "https://sso.example.test/login",
+				SharedSecret: "external-sso-shared-secret-0123456789ab",
 			},
 			Passkey: config.PasskeyConfig{
 				Enabled:       true,
@@ -195,7 +195,10 @@ func TestRegisterRoutesAuthSessionFlow(t *testing.T) {
 	cfg := testConfig()
 	cfg.Auth.Session.CookieSecure = true
 	cfg.Auth.Session.TTL = time.Hour
-	authService := testAuthService(cfg)
+	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	authService := testAuthService(cfg).WithClock(func() time.Time {
+		return now
+	})
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
 	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
@@ -204,6 +207,13 @@ func TestRegisterRoutesAuthSessionFlow(t *testing.T) {
 	router.ServeHTTP(registerRec, registerReq)
 	require.Equal(t, http.StatusCreated, registerRec.Code)
 	require.NotContains(t, registerRec.Body.String(), "password")
+	var registerResponse struct {
+		User auth.User `json:"user"`
+	}
+	err := json.Unmarshal(registerRec.Body.Bytes(), &registerResponse)
+	require.NoError(t, err)
+	require.Equal(t, now, registerResponse.User.CreatedAt)
+	require.Equal(t, now, registerResponse.User.UpdatedAt)
 
 	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
@@ -221,7 +231,7 @@ func TestRegisterRoutesAuthSessionFlow(t *testing.T) {
 	require.Equal(t, http.SameSiteLaxMode, sessionCookie.SameSite)
 	require.NotEmpty(t, sessionCookie.Value)
 
-	_, err := authService.SessionFromToken(t.Context(), sessionCookie.Value)
+	_, err = authService.SessionFromToken(t.Context(), sessionCookie.Value)
 	require.NoError(t, err)
 
 	logoutReq := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)

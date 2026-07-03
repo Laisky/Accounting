@@ -124,7 +124,7 @@ test.describe('passkeys', () => {
       expect(loginResponse.status()).toBe(200);
 
       await page.goto('/');
-      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Me' }).click();
+      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Me', exact: true }).click();
       const passkeys = page.getByRole('article', { name: 'Passkeys' });
       await expect(passkeys.getByText('Registered passkeys: 0')).toBeVisible();
       await page.getByLabel('Passkey label').fill('Acceptance passkey');
@@ -140,9 +140,9 @@ test.describe('passkeys', () => {
       await page.getByRole('button', { name: 'Sign out' }).click();
       await expect(page.getByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeVisible();
       await page.getByRole('button', { name: 'Use passkey' }).click();
-      await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
 
-      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Me' }).click();
+      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Me', exact: true }).click();
       await expect(page.getByLabel('Label for Renamed acceptance passkey')).toBeVisible();
       await passkeys.getByRole('button', { name: 'Delete' }).click();
       await expect(page.getByText('Passkey deleted.')).toBeVisible();
@@ -174,7 +174,7 @@ test('user signs in through the authentication screen', async ({ page }) => {
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in with email' }).click();
 
-  await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
 });
 
@@ -204,7 +204,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   expect(JSON.stringify(auditBody)).not.toContain('token');
 
   await page.goto('/');
-  await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
 
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(nav).toBeInViewport();
@@ -233,6 +233,8 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('Account group updated.')).toBeVisible();
   await expect(page.getByLabel('Account group name')).toHaveValue('Daily Wallets');
 
+  await nav.getByRole('button', { name: 'Home' }).click();
+  await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
   await nav.getByRole('button', { name: 'Record' }).click();
   const expenseTab = page.getByRole('tab', { name: 'Expense' });
   await expect(expenseTab).toHaveAttribute('aria-selected', 'true');
@@ -271,6 +273,8 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('$24.00', { exact: true })).toBeVisible();
   await expect(page.getByText('1 entries', { exact: true })).toBeVisible();
 
+  await nav.getByRole('button', { name: 'Home' }).click();
+  await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
   await nav.getByRole('button', { name: 'Record' }).click();
   await page.getByRole('button', { name: 'Edit details' }).click();
   await page.getByLabel('Amount for Team lunch').fill('45.67');
@@ -295,7 +299,9 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('Entry deleted.')).toBeVisible();
   await expect(page.getByText('Team lunch edited')).toHaveCount(0);
 
-  await nav.getByRole('button', { name: 'Import' }).click();
+  await nav.getByRole('button', { name: 'Me', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
+  await page.getByRole('button', { name: 'Import' }).click();
   await expect(page.getByRole('region', { name: 'Import data' })).toBeVisible();
   await page.getByLabel('Upload Wacai export file').setInputFiles({
     name: 'wacai.csv',
@@ -316,6 +322,8 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('Imported 1 rows, skipped 0.')).toBeVisible();
   await expect(page.getByText('Import applied.')).toBeVisible();
 
+  await nav.getByRole('button', { name: 'Home' }).click();
+  await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
   await nav.getByRole('button', { name: 'Record' }).click();
   await page.getByRole('button', { name: 'Search transactions' }).click();
   await page.getByRole('textbox', { name: 'Search transactions' }).fill('Import lunch');
@@ -323,7 +331,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByRole('list', { name: 'Search results' }).getByText('CN¥12.30')).toBeVisible();
   await page.getByRole('button', { name: 'Close search' }).click();
 
-  await nav.getByRole('button', { name: 'Me' }).click();
+  await nav.getByRole('button', { name: 'Me', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByRole('article', { name: 'Authenticator app' }).getByText('Authenticator app is off.')).toBeVisible();
@@ -342,9 +350,9 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText('Enter the code from your authenticator app to finish signing in.')).toBeVisible();
   await page.getByLabel('TOTP code').fill(generateTotpCode(otpauth));
   await page.getByRole('button', { name: 'Verify code' }).click();
-  await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
   const postTotpNav = page.getByRole('navigation', { name: 'Main navigation' });
-  await postTotpNav.getByRole('button', { name: 'Me' }).click();
+  await postTotpNav.getByRole('button', { name: 'Me', exact: true }).click();
   await page.getByLabel('TOTP code').fill(generateTotpCode(otpauth, 30000));
   await page.getByRole('button', { name: 'Disable TOTP' }).click();
   await expect(page.getByText('TOTP disabled.')).toBeVisible();

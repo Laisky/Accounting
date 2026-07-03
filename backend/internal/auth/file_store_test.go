@@ -20,13 +20,17 @@ func TestFileStorePersistsUsers(t *testing.T) {
 		EmailVerificationRequired: false,
 		SessionTTL:                time.Hour,
 	}
-	service := NewService(cfg, store, NoopTurnstileVerifier{})
+	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	service := NewService(cfg, store, NoopTurnstileVerifier{}).WithClock(func() time.Time {
+		return now
+	})
 
-	_, err = service.Register(context.Background(), RegisterRequest{
+	user, err := service.Register(context.Background(), RegisterRequest{
 		Email:    "person@example.test",
 		Password: "correct horse battery staple",
 	})
 	require.NoError(t, err)
+	require.Equal(t, now, user.CreatedAt)
 
 	reopened, err := NewFileStore(path)
 	require.NoError(t, err)
@@ -36,4 +40,6 @@ func TestFileStorePersistsUsers(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, result.SessionToken)
+	require.Equal(t, now, result.User.CreatedAt)
+	require.Equal(t, now, result.User.UpdatedAt)
 }

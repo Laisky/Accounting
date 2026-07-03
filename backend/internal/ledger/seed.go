@@ -133,7 +133,7 @@ func DemoSeedData() SeedData {
 		Rates: defaultExchangeRates(now),
 		Entries: []Entry{
 			{
-				ID:                    "entry-opening-balance",
+				ID:                    "019017f6-d300-7cc7-8d6d-5f73391f9bb1",
 				BookID:                book.ID,
 				CreatorUserID:         defaultUserID,
 				Type:                  EntryTypeIncome,

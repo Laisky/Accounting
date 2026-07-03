@@ -1,11 +1,16 @@
 .reportWorkspace {
   display: grid;
   gap: 16px;
+  /* Query container so descendant grids adapt to the panel width, not the viewport. */
+  container: reportView / inline-size;
+  max-width: 1100px;
+  margin-inline: auto;
 }
 
+/* Mobile-first default: single column. Desktop widths expand via @container reportView below. */
 .reportTopbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
   gap: 16px;
   align-items: end;
 }
@@ -14,7 +19,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .reportActions select,
@@ -30,7 +35,7 @@
 
 .reportControls {
   display: grid;
-  grid-template-columns: minmax(230px, 1fr) minmax(170px, 0.65fr) minmax(210px, 0.8fr);
+  grid-template-columns: 1fr;
   gap: 10px;
   align-items: center;
   padding: 8px;
@@ -41,7 +46,7 @@
 
 .reportFilterPanel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
   padding: 10px;
   border: 1px solid oklch(82% 0.035 104);
@@ -166,6 +171,11 @@
   background: oklch(98% 0.014 110);
 }
 
+.categorySplitPanel {
+  display: grid;
+  gap: 18px;
+}
+
 .reportPanelHeader {
   display: flex;
   gap: 16px;
@@ -185,7 +195,7 @@
 
 .reportBody {
   display: grid;
-  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: 1fr;
   gap: clamp(18px, 4vw, 42px);
   align-items: center;
 }
@@ -239,8 +249,7 @@
   border-radius: 999px;
 }
 
-.rankedList,
-.trendBars {
+.rankedList {
   display: grid;
   gap: 12px;
   padding: 0;
@@ -348,69 +357,191 @@
 }
 
 .trendPanel {
-  gap: 18px;
+  gap: clamp(18px, 3vw, 28px);
 }
 
-.trendSummary {
+.trendMetrics {
   display: grid;
-  grid-template-columns: 34px auto minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 10px;
-  align-items: center;
-  color: oklch(31% 0.1 164);
 }
 
-.trendSummary strong {
-  color: oklch(18% 0.04 242);
-  font-size: clamp(1.5rem, 4vw, 2.35rem);
-}
-
-.trendSummary span {
-  color: oklch(43% 0.04 238);
-  font-weight: 820;
-}
-
-.trendBars li {
+.trendMetric {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) minmax(98px, auto);
-  gap: 10px;
-  align-items: center;
-}
-
-.trendBars li > span,
-.trendBars strong {
-  color: oklch(30% 0.04 242);
-  font-size: 0.86rem;
-  font-weight: 850;
-}
-
-.trendBars strong {
-  text-align: right;
-}
-
-.trendTrack {
-  height: 14px;
-  overflow: hidden;
+  gap: 7px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid oklch(83% 0.034 108);
   border-radius: 8px;
-  background: oklch(90% 0.018 112);
+  background: oklch(99% 0.008 110);
 }
 
-.trendTrack i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, oklch(68% 0.145 185), oklch(66% 0.12 164));
+.trendMetric span {
+  color: oklch(43% 0.04 238);
+  font-size: 0.78rem;
+  font-weight: 820;
+  text-transform: uppercase;
 }
 
-@media (max-width: 900px) {
-  .reportTopbar,
-  .reportControls,
-  .reportFilterPanel,
-  .reportBody {
-    grid-template-columns: 1fr;
+.trendMetric strong {
+  color: oklch(18% 0.04 242);
+  font-size: clamp(1.32rem, 4vw, 2rem);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.trendMetric-income {
+  border-color: oklch(78% 0.095 156);
+}
+
+.trendMetric-expense {
+  border-color: oklch(79% 0.09 36);
+}
+
+.trendMetric-balance {
+  border-color: oklch(76% 0.072 250);
+}
+
+.trendChart {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.trendChart svg {
+  width: 100%;
+  min-height: 220px;
+  overflow: visible;
+}
+
+.trendGridLine {
+  stroke: oklch(88% 0.018 112);
+  stroke-dasharray: 4 8;
+  stroke-width: 1;
+}
+
+.trendZeroLine {
+  stroke: oklch(74% 0.028 238);
+  stroke-width: 1.25;
+}
+
+.trendLine {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.trendLine-income {
+  stroke: oklch(63% 0.145 156);
+}
+
+.trendLine-expense {
+  stroke: oklch(67% 0.145 36);
+}
+
+.trendLine-balance {
+  stroke: oklch(57% 0.13 250);
+}
+
+.trendAxisLabel {
+  fill: oklch(48% 0.04 238);
+  font-size: 0.76rem;
+  font-weight: 780;
+}
+
+.trendChart figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  color: oklch(43% 0.04 238);
+  font-size: 0.82rem;
+  font-weight: 780;
+}
+
+.trendLegend {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.trendLegend::before {
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+  content: "";
+}
+
+.trendLegend-income::before {
+  background: oklch(63% 0.145 156);
+}
+
+.trendLegend-expense::before {
+  background: oklch(67% 0.145 36);
+}
+
+.trendLegend-balance::before {
+  background: oklch(57% 0.13 250);
+}
+
+/*
+ * Container queries against the report view's own width (reportView). Below 768px the phone frame
+ * caps this container at ~398px, so none of these min-width rules fire on phones — the mobile-first
+ * defaults above stay in force there. The phone-only @media (max-width: 560px) block is kept
+ * viewport-based on purpose so the <=560 vs 561-767 phone bands render exactly as before.
+ */
+@container reportView (min-width: 520px) {
+  .reportFilterPanel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container reportView (min-width: 620px) {
+  .reportTopbar {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .reportActions {
-    justify-content: flex-start;
+    justify-content: flex-end;
+  }
+
+  .reportControls {
+    grid-template-columns: minmax(230px, 1fr) minmax(170px, 0.65fr) minmax(210px, 0.8fr);
+  }
+
+  .reportTabs {
+    overflow-x: visible;
+    flex-wrap: wrap;
+  }
+
+  /* Tabular figures keep money and percentages column-aligned once amounts share desktop rows. */
+  .rankMain b,
+  .rankMain small em,
+  .trendMetric strong,
+  .periodStepper strong,
+  .donutFigure .donutAmount,
+  .reportFilterPanel span {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@container reportView (min-width: 720px) {
+  .reportFilterPanel {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .reportBody {
+    grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  /* Grow the donut so it balances the wider ranked-list column when they sit side by side. */
+  .donutFigure svg {
+    width: min(100%, 420px);
+  }
+
+  .trendMetrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -437,12 +568,7 @@
     height: 38px;
   }
 
-  .trendBars li {
-    grid-template-columns: 34px minmax(0, 1fr);
-  }
-
-  .trendBars strong {
-    grid-column: 2;
-    text-align: left;
+  .trendMetric {
+    padding: 12px;
   }
 }

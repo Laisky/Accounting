@@ -88,11 +88,13 @@ type ExternalSSOConfig struct {
 	AutoProvisionEnabled bool
 	CallbackURL          string
 	Enabled              bool
-	GraphQLEndpoint      string
 	LoginURL             string
-	StateCookieName      string
-	StateTTL             time.Duration
-	SuccessRedirectURL   string
+	// SharedSecret is the HS256 secret shared with the SSO provider used to
+	// verify `sso_token` JWTs locally (must be at least 32 bytes).
+	SharedSecret       string
+	StateCookieName    string
+	StateTTL           time.Duration
+	SuccessRedirectURL string
 }
 
 // PasskeyConfig contains WebAuthn passkey settings.
@@ -175,8 +177,8 @@ func LoadFromEnv() Config {
 				AutoProvisionEnabled: readBool("ACCOUNTING_AUTH_EXTERNAL_SSO_AUTO_PROVISION_ENABLED", true),
 				CallbackURL:          readString("ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL", ""),
 				Enabled:              readBool("ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED", false),
-				GraphQLEndpoint:      readString("ACCOUNTING_AUTH_EXTERNAL_SSO_GRAPHQL_ENDPOINT", "https://sso.laisky.com/query"),
 				LoginURL:             readString("ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL", "https://sso.laisky.com/"),
+				SharedSecret:         readString("ACCOUNTING_AUTH_EXTERNAL_SSO_SHARED_SECRET", ""),
 				StateCookieName:      readString("ACCOUNTING_AUTH_EXTERNAL_SSO_STATE_COOKIE_NAME", "accounting_sso_state"),
 				StateTTL:             readDuration("ACCOUNTING_AUTH_EXTERNAL_SSO_STATE_TTL", 5*time.Minute),
 				SuccessRedirectURL:   readString("ACCOUNTING_AUTH_EXTERNAL_SSO_SUCCESS_REDIRECT_URL", "/"),

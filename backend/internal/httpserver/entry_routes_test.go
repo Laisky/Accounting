@@ -12,6 +12,7 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/ledger"
 	"github.com/Laisky/Accounting/backend/internal/logger"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -68,6 +69,10 @@ func TestRegisterRoutesBookEntriesCreateControlsServerFields(t *testing.T) {
 	var response ledger.Entry
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	require.NoError(t, err)
+	parsedID, err := uuid.Parse(response.ID)
+	require.NoError(t, err)
+	require.NotEqual(t, uuid.Nil, parsedID)
+	require.Equal(t, uuid.Version(7), parsedID.Version())
 	require.Equal(t, "book-household", response.BookID)
 	require.Equal(t, "user-member", response.CreatorUserID)
 	require.Equal(t, "USD", response.TransactionCurrency)

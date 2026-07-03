@@ -36,6 +36,12 @@
       "uncategorized": "未分類"
     },
     "loading": "レポートを読み込み中。",
+    "member": {
+      "balance": "メンバー別残高",
+      "expense": "メンバー別支出",
+      "income": "メンバー別収入",
+      "sharedTotal": "家族共有"
+    },
     "noBook": "帳簿なし",
     "panel": {
       "eyebrow": "{{dimension}} {{flow}}",
@@ -59,8 +65,15 @@
     },
     "title": "レポート",
     "trend": {
+      "balance": "残高",
+      "chartDesc": "選択した期間の収入、支出、残高の推移。",
+      "chartTitle": "キャッシュフロートレンドチャート",
+      "expense": "支出",
       "filteredTotal": "フィルター後の合計",
-      "heading": "期間の推移"
+      "heading": "収入、支出、残高のトレンド",
+      "income": "収入",
+      "range": "範囲 {{low}} から {{high}}",
+      "summary": "トレンドサマリー"
     }
   }
 }

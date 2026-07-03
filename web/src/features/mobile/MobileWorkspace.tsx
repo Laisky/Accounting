@@ -2,7 +2,7 @@ import {
   BarChart3,
   ChevronDown,
   CircleUserRound,
-  FileSpreadsheet,
+  House,
   MoreHorizontal,
   Plus,
   Search,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LanguageSelector } from '../../components/LanguageSelector';
+import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { fetchAuditEvents, type AuditEvent } from '../../lib/api/audit';
 import { type AuthActor } from '../../lib/api/auth';
 import {
@@ -47,19 +47,19 @@ import {
   type ExchangeRate,
   type LedgerSummary,
 } from '../../lib/api/ledger';
-import { emptyRuntimeConfig, type RuntimeConfig } from '../../lib/api/runtimeConfig';
+import { type RuntimeConfig } from '../../lib/api/runtimeConfig';
 import { buildRateIndex } from '../../lib/money';
 import { ReportWorkspace } from '../reports/ReportWorkspace';
 import { AccountsView } from './AccountsView';
 import type { AccountCreateInput } from './AccountsView';
+import { HomeView } from './HomeView';
 import { ImportPreviewView } from './ImportPreviewView';
-import { PasskeySettingsView } from './PasskeySettingsView';
+import { MeView } from './MeView';
 import { RecordEntryView, type RecordEntryInput } from './RecordEntryView';
-import { TotpSettingsView } from './TotpSettingsView';
 import { TransactionSearchView } from './TransactionSearchView';
 import './mobile-shell.css';
 
-type MobileTab = 'accounts' | 'record' | 'reports' | 'imports' | 'me';
+type MobileTab = 'home' | 'accounts' | 'record' | 'reports' | 'imports' | 'me';
 
 type MobileWorkspaceProps = {
   actor: AuthActor;
@@ -78,18 +78,16 @@ type LedgerSnapshot = {
   totalEntries: number;
 };
 
-const navItems: Array<{ id: MobileTab; icon: ReactNode }> = [
+const sideNavItems: Array<{ id: Exclude<MobileTab, 'home' | 'record' | 'imports'>; icon: ReactNode }> = [
   { id: 'accounts', icon: <WalletCards size={22} /> },
-  { id: 'record', icon: <Plus size={30} /> },
   { id: 'reports', icon: <BarChart3 size={22} /> },
-  { id: 'imports', icon: <FileSpreadsheet size={22} /> },
   { id: 'me', icon: <CircleUserRound size={22} /> },
 ];
 
 // MobileWorkspace renders the authenticated mobile-first accounting shell.
 export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorkspaceProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<MobileTab>('record');
+  const [activeTab, setActiveTab] = useState<MobileTab>('home');
   const [summary, setSummary] = useState<LedgerSummary>(emptyLedgerSummary);
   const [snapshot, setSnapshot] = useState<LedgerSnapshot>({
     groups: [],
@@ -106,6 +104,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [importProcessing, setImportProcessing] = useState('');
   const [activityEvents, setActivityEvents] = useState<AuditEvent[]>([]);
   const [isActivityLoading, setIsActivityLoading] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -124,6 +123,9 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     [selectedBook, snapshot.accounts],
   );
   const primaryAccount = sharedAccounts[0] ?? snapshot.accounts[0];
+  // A single blocking label drives the shell overlay: import work reports its own label, other
+  // server mutations fall back to a generic processing message so duplicate submits are prevented.
+  const processingLabel = importProcessing || (isBusy ? t('common.processing') : '');
 
   const loadFoundation = useCallback(async () => {
     const [loadedSummary, books, groups, accounts, rates] = await Promise.all([
@@ -595,6 +597,16 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
               onClose={handleCloseSearch}
             />
           ) : null}
+          {!isSearchOpen && activeTab === 'home' ? (
+            <HomeView
+              accounts={snapshot.accounts}
+              bookName={selectedBook?.name ?? t('mobile.defaultBookName')}
+              categories={snapshot.categories}
+              currencyCode={bookCurrency}
+              entries={snapshot.entries}
+              summary={summary}
+            />
+          ) : null}
           {!isSearchOpen && activeTab === 'accounts' ? (
             <AccountsView
               accounts={sharedAccounts}
@@ -641,6 +653,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
               selectedBookId={selectedBook?.id ?? ''}
               setSelectedBookId={setSelectedBookId}
               onApplied={handleImportApplied}
+              onProcessingChange={setImportProcessing}
             />
           ) : null}
           {!isSearchOpen && activeTab === 'me' ? (
@@ -651,98 +664,66 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
               isLoggingOut={isLoggingOut}
               onLoadActivity={handleLoadActivity}
               onLogout={handleLogoutClick}
+              onOpenImports={() => setActiveTab('imports')}
               runtimeConfig={runtimeConfig}
             />
           ) : null}
         </div>
 
         <nav className="bottomNav" aria-label={t('mobile.a11y.mainNavigation')}>
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`${activeTab === item.id ? 'bottomNavActive' : ''} ${item.id === 'record' ? 'recordNavButton' : ''}`}
-              aria-current={activeTab === item.id ? 'page' : undefined}
-              onClick={() => {
-                setIsSearchOpen(false);
-                setActiveTab(item.id);
-              }}
-            >
-              <span>{item.icon}</span>
-              <b>{t(`mobile.nav.${item.id}`)}</b>
-            </button>
-          ))}
+          <div className="navBrand">
+            <WalletCards size={22} aria-hidden="true" />
+            <span>{t('mobile.brand')}</span>
+          </div>
+          <button
+            type="button"
+            className={activeTab === 'accounts' ? 'bottomNavActive' : ''}
+            aria-current={activeTab === 'accounts' ? 'page' : undefined}
+            onClick={() => {
+              setIsSearchOpen(false);
+              setActiveTab('accounts');
+            }}
+          >
+            <span>{sideNavItems[0].icon}</span>
+            <b>{t('mobile.nav.accounts')}</b>
+          </button>
+          <button
+            type="button"
+            className={activeTab === 'home' ? 'recordNavButton' : ''}
+            aria-label={activeTab === 'home' ? t('mobile.nav.record') : t('mobile.nav.home')}
+            onClick={() => {
+              setIsSearchOpen(false);
+              setActiveTab(activeTab === 'home' ? 'record' : 'home');
+            }}
+          >
+            <span>{activeTab === 'home' ? <Plus size={30} /> : <House size={22} />}</span>
+            <b>{activeTab === 'home' ? t('mobile.nav.record') : t('mobile.nav.home')}</b>
+          </button>
+          {sideNavItems.slice(1).map((item) => {
+            // The imports view is reached from the Me tab, so keep Me highlighted while it is open.
+            const isActive = activeTab === item.id || (item.id === 'me' && activeTab === 'imports');
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={isActive ? 'bottomNavActive' : ''}
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setActiveTab(item.id);
+                }}
+              >
+                <span>{item.icon}</span>
+                <b>{t(`mobile.nav.${item.id}`)}</b>
+              </button>
+            );
+          })}
         </nav>
+
+        <LoadingOverlay active={Boolean(processingLabel)} label={processingLabel} />
       </section>
     </main>
   );
-}
-
-// MeView receives session details and returns the personal settings tab.
-function MeView({
-  actor,
-  activityEvents,
-  isActivityLoading,
-  isLoggingOut,
-  onLoadActivity,
-  onLogout,
-  runtimeConfig,
-}: {
-  actor: AuthActor;
-  activityEvents: AuditEvent[];
-  isActivityLoading: boolean;
-  isLoggingOut: boolean;
-  onLoadActivity: () => void;
-  onLogout: () => void;
-  runtimeConfig: RuntimeConfig | null;
-}) {
-  const { t } = useTranslation();
-  const config = runtimeConfig ?? emptyRuntimeConfig;
-  return (
-    <section className="tabPanel mePanel" aria-label={t('mobile.nav.me')}>
-      <div className="profileBadge">
-        <CircleUserRound size={42} />
-        <div>
-          <strong>{actor.email}</strong>
-          <span>{actor.status}</span>
-        </div>
-      </div>
-      <div className="settingsList">
-        <span>{t('mobile.me.emailLogin', { state: config.auth.emailLoginEnabled ? t('common.on') : t('common.off') })}</span>
-        <span>{t('mobile.me.passkeys', { state: config.features.passkeyEnabled ? t('common.on') : t('common.off') })}</span>
-        <span>{t('mobile.me.totp', { state: config.features.totpEnabled ? t('common.on') : t('common.off') })}</span>
-      </div>
-      <PasskeySettingsView featureEnabled={config.features.passkeyEnabled} />
-      <TotpSettingsView featureEnabled={config.features.totpEnabled} />
-      <LanguageSelector />
-      <button className="mobileSecondaryButton" type="button" disabled={isActivityLoading} onClick={onLoadActivity}>
-        {t('mobile.me.loadActivity')}
-      </button>
-      {activityEvents.length ? (
-        <ul className="activityMiniList">
-          {activityEvents.slice(0, 8).map((event) => (
-            <li key={event.id}>
-              <span>{event.action.replace('.', ' / ')}</span>
-              <time dateTime={event.createdAt}>{formatAuditTime(event.createdAt)}</time>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <button className="mobilePrimaryButton" type="button" disabled={isLoggingOut} onClick={onLogout}>
-        {t('common.signOut')}
-      </button>
-    </section>
-  );
-}
-
-// formatAuditTime receives an ISO timestamp and returns a compact UTC string.
-function formatAuditTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toISOString().replace('.000Z', 'Z');
 }
 
 // formatShortDate receives a date and returns the UTC header date.

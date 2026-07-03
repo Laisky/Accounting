@@ -1,68 +1,60 @@
-.totpSettings {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid oklch(90% 0.012 185);
-  border-radius: 8px;
-  background: oklch(100% 0 0);
-}
-
-.totpSettings header {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  color: oklch(24% 0.034 235);
-}
-
-.totpSettings header div {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.totpSettings header span {
-  color: oklch(58% 0.028 230);
-  font-size: 0.84rem;
-  font-weight: 760;
-}
-
+/* Authenticator (TOTP) card. Shares the .settingsPanel surface defined in
+ * passkey-settings.css; only TOTP-specific form styling lives here. */
 .totpForm {
   display: grid;
   gap: 12px;
 }
 
+.totpSetupKey {
+  display: grid;
+  gap: 8px;
+}
+
 .totpForm textarea {
   width: 100%;
-  min-height: 92px;
+  min-height: 76px;
   resize: vertical;
-  padding: 10px;
-  border: 1px solid oklch(86% 0.015 185);
-  border-radius: 8px;
-  background: oklch(98% 0.004 185);
-  color: oklch(23% 0.034 235);
-  font: inherit;
-  font-size: 0.78rem;
-  line-height: 1.45;
+  padding: 11px 12px;
+  border: 1px solid oklch(88% 0.012 235);
+  border-radius: 10px;
+  background: oklch(98.6% 0.004 185);
+  color: oklch(28% 0.03 235);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.76rem;
+  line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+.totpCopyKey {
+  justify-self: start;
+  min-height: 38px;
+  padding: 0 14px;
 }
 
 .totpForm .mobileField input {
   width: 100%;
-  min-height: 38px;
-  padding: 0 10px;
-  border: 1px solid oklch(86% 0.015 185);
-  border-radius: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid oklch(87% 0.014 235);
+  border-radius: 9px;
   background: oklch(100% 0 0);
   color: oklch(20% 0.035 235);
+  font-size: 1.02rem;
   font-weight: 760;
+  letter-spacing: 0.12em;
+}
+
+.totpForm .mobileField input:focus-visible,
+.totpForm textarea:focus-visible {
+  outline: 2px solid var(--me-accent, oklch(56% 0.11 258));
+  outline-offset: 1px;
 }
 
 .mobileInlineError,
 .mobileInlineStatus {
   margin: 0;
   font-size: 0.86rem;
-  font-weight: 820;
+  font-weight: 800;
 }
 
 .mobileInlineError {
@@ -70,5 +62,25 @@
 }
 
 .mobileInlineStatus {
-  color: oklch(43% 0.11 150);
+  color: oklch(45% 0.11 150);
+}
+
+/*
+ * Tablet / small-window and up (>=768px): lay the enrollment form in two
+ * columns — the otpauth URI + copy-key control on the left, the confirm-code
+ * input and confirm button on the right — so setup is a compact side-by-side
+ * pair instead of a tall stack. Scoped with :has(textarea) so the disable form
+ * (code + button only, no textarea) keeps its single-column layout. Gated at
+ * 768px so the phone layout below it stays pixel-identical.
+ */
+@media (min-width: 768px) {
+  .totpForm:has(textarea) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 16px;
+    align-items: start;
+  }
+
+  .totpForm:has(textarea) > .totpSetupKey {
+    grid-row: 1 / span 2;
+  }
 }

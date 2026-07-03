@@ -1,0 +1,84 @@
+/*
+ * accounts.css — desktop responsive layer for the Accounts tab, imported by AccountsView.tsx.
+ *
+ * Import order & cascade safety: this file loads AFTER mobile-shell.css (which owns the base
+ * .account* rules), so overrides here already win on source order. Every override that shares a
+ * base selector's specificity is additionally scoped (`.tabPanel.accountPanel`, `.accountPanel
+ * .child`) to raise specificity above the base rule, so the result is correct even if a bundler
+ * were to reorder the two stylesheets.
+ *
+ * Mobile safety: below 1024px nothing here changes layout. The new left-column wrapper
+ * `.accountPrimaryColumn` is `display: contents`, so at <768 (phone) and 768-1023 (rail) the
+ * hero, forms, section list and Prepare button stay direct grid children of `.accountPanel`
+ * exactly as in mobile-shell.css — pixel-identical to today. All desktop behaviour is gated
+ * behind `@media (min-width: 1024px)` or the `appMain` container (which only exists at >=1024px).
+ */
+
+/* Transparent below desktop: the wrapped children remain in the .accountPanel grid unchanged. */
+.accountPrimaryColumn {
+  display: contents;
+}
+
+/* >=1024px: split the tab into a controls column (left) and a section-card column (right). */
+@media (min-width: 1024px) {
+  .tabPanel.accountPanel {
+    display: grid;
+    grid-template-columns: minmax(340px, 0.9fr) 1.6fr;
+    gap: var(--panel-gap);
+    align-items: start;
+  }
+
+  /* Left column: hero + book/group/create forms stacked with panel spacing. */
+  .accountPanel .accountPrimaryColumn {
+    display: grid;
+    gap: var(--panel-gap);
+    align-content: start;
+  }
+
+  /* Hero stays a single card in the narrower left column; keep the decorative chip tucked
+   * into the corner (the hero already clips overflow, so it never floats outside). */
+  .accountPanel .accountHero {
+    max-width: 100%;
+  }
+
+  .accountPanel .accountHero::after {
+    right: -46px;
+    bottom: -50px;
+  }
+
+  /* Right column: tile the member + section cards on the pane's own width. auto-fill reacts
+   * to the list's rendered width intrinsically, so cards go 2-up only when the pane is wide. */
+  .accountPanel .accountSectionList {
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+    gap: var(--panel-gap);
+    align-items: start;
+    align-content: start;
+  }
+
+  /* Keep the Prepare-account action anchored in the controls column, below the forms. */
+  .accountPanel > .mobilePrimaryButton {
+    grid-column: 1;
+    align-self: start;
+  }
+
+  /* Align money figures with tabular digits so balances line up on desktop. */
+  .accountPanel .accountHero strong,
+  .accountPanel .accountHero footer span,
+  .accountPanel .accountSection > header strong,
+  .accountPanel .accountSection li b {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/*
+ * Only when the working canvas is genuinely wide (left column ~430px) do the forms pack into
+ * three columns. Driven by Foundation's existing `appMain` query container, which is only
+ * declared at >=1024px, so phone/rail layouts are never affected. Full-span fields
+ * (Account name / Book name / submit buttons) keep their existing `grid-column: 1 / -1`.
+ */
+@container appMain (min-width: 1200px) {
+  .accountPanel .accountControls,
+  .accountPanel .accountCreateForm {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

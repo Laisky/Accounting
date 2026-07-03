@@ -1,7 +1,8 @@
 import type { TFunction } from 'i18next';
 import { KeyRound, LogIn, Mail, ShieldCheck, UserPlus } from 'lucide-react';
-import { type FormEvent, useCallback, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router';
 import {
   beginPasskeyLogin,
   confirmEmailVerification,
@@ -31,17 +32,18 @@ type AuthWorkspaceProps = {
 // AuthWorkspace renders first-class authentication and account recovery workflows.
 export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceProps) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const config = runtimeConfig ?? emptyRuntimeConfig;
-  const [mode, setMode] = useState<AuthMode>('login');
+  // mode and every sub-step live in the URL so each auth screen has its own address
+  // and the browser back button walks the steps. See parseAuthRoute / authPathFor.
+  const { mode, loginStep, verificationStep, recoveryStep } = parseAuthRoute(location.pathname);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTOTPCode] = useState('');
-  const [loginStep, setLoginStep] = useState<LoginStep>('password');
   const [verificationCode, setVerificationCode] = useState('');
-  const [verificationStep, setVerificationStep] = useState<VerificationStep>('credentials');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>('request');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
@@ -50,6 +52,19 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
   const [loginTurnstileRequired, setLoginTurnstileRequired] = useState(false);
   const turnstileRequired = shouldRequireTurnstile(config, mode, verificationStep, loginTurnstileRequired);
   const canSubmit = !isBusy && !(mode === 'login' && !config.auth.emailLoginEnabled) && (!turnstileRequired || Boolean(turnstileToken));
+
+  useEffect(() => {
+    // Steps past the first hold only in-memory state (a server-verified password, a
+    // pending email challenge). On a cold direct load that state is gone, so send the
+    // visitor back to step one instead of a dead-end form.
+    if (loginStep === 'totp' && !password) {
+      navigate('/login', { replace: true });
+    } else if (verificationStep === 'confirm' && !email) {
+      navigate('/register', { replace: true });
+    } else if (recoveryStep === 'confirm' && !email) {
+      navigate('/recover', { replace: true });
+    }
+  }, [loginStep, verificationStep, recoveryStep, password, email, navigate]);
 
   // handleSubmit receives a form submit event and runs the selected authentication workflow.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -68,9 +83,9 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
       if (mode === 'login') {
         const result = await loginWithPassword(email, password, loginStep === 'totp' ? totpCode : undefined, currentTurnstileToken);
         if (result.kind === 'totpRequired') {
-          // Password verified and the account has TOTP enabled; reveal the code step.
-          setLoginStep('totp');
+          // Password verified and the account has TOTP enabled; advance to the code step.
           setStatus(t('auth.status.totpRequired'));
+          navigate('/login/totp');
           return;
         }
         onAuthenticated({
@@ -84,44 +99,42 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
       if (mode === 'register') {
         if (verificationStep === 'confirm') {
           await confirmEmailVerification(email, verificationCode);
-          setMode('login');
-          setVerificationStep('credentials');
           setVerificationCode('');
           setPassword('');
           setStatus(t('auth.status.emailVerified'));
+          navigate('/login');
           return;
         }
 
         const result = await registerWithPassword(email, password, currentTurnstileToken);
+        setPassword('');
         if (config.auth.emailVerificationRequired) {
           await requestEmailVerification(email);
-          setVerificationStep('confirm');
           setVerificationCode('');
           setStatus(t('auth.status.verificationRequested'));
+          navigate('/register/verify');
         } else {
           setStatus(t('auth.status.registrationComplete'));
-        }
-        setPassword('');
-        if (result.user.status === 'active' && !config.auth.emailVerificationRequired) {
-          setMode('login');
+          if (result.user.status === 'active') {
+            navigate('/login');
+          }
         }
         return;
       }
 
       if (recoveryStep === 'request') {
         await requestPasswordReset(email);
-        setRecoveryStep('confirm');
         setStatus(t('auth.status.resetRequested'));
+        navigate('/recover/confirm');
         return;
       }
 
       await confirmPasswordReset(email, resetCode, newPassword);
-      setMode('login');
-      setRecoveryStep('request');
       setPassword('');
       setResetCode('');
       setNewPassword('');
       setStatus(t('auth.status.passwordUpdated'));
+      navigate('/login');
     } catch {
       if (mode === 'login' && config.features.turnstileEnabled && config.turnstile.loginMode === 'after_failure') {
         setLoginTurnstileRequired(true);
@@ -162,11 +175,8 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
     }
   }
 
-  // changeMode receives a target auth mode and resets any in-progress login challenge and messages.
+  // changeMode receives a target auth mode, resets any in-progress challenge, and routes to it.
   function changeMode(next: AuthMode) {
-    setMode(next);
-    setLoginStep('password');
-    setVerificationStep('credentials');
     setTOTPCode('');
     setVerificationCode('');
     setResetCode('');
@@ -175,15 +185,16 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
     resetTurnstileChallenge();
     setError('');
     setStatus('');
+    navigate(next === 'login' ? '/login' : `/${next}`);
   }
 
-  // resetLoginChallenge receives no parameters and clears a pending TOTP step after credentials change.
+  // resetLoginChallenge receives no parameters and routes back from a pending TOTP step after credentials change.
   function resetLoginChallenge() {
     if (loginStep !== 'password') {
-      setLoginStep('password');
       setTOTPCode('');
       setStatus('');
       setError('');
+      navigate('/login');
     }
   }
 
@@ -371,6 +382,29 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
       </section>
     </main>
   );
+}
+
+// parseAuthRoute maps an unauthenticated URL to the mode and step it represents.
+function parseAuthRoute(pathname: string): {
+  mode: AuthMode;
+  loginStep: LoginStep;
+  verificationStep: VerificationStep;
+  recoveryStep: RecoveryStep;
+} {
+  switch (pathname) {
+    case '/register':
+      return { mode: 'register', loginStep: 'password', verificationStep: 'credentials', recoveryStep: 'request' };
+    case '/register/verify':
+      return { mode: 'register', loginStep: 'password', verificationStep: 'confirm', recoveryStep: 'request' };
+    case '/recover':
+      return { mode: 'recover', loginStep: 'password', verificationStep: 'credentials', recoveryStep: 'request' };
+    case '/recover/confirm':
+      return { mode: 'recover', loginStep: 'password', verificationStep: 'credentials', recoveryStep: 'confirm' };
+    case '/login/totp':
+      return { mode: 'login', loginStep: 'totp', verificationStep: 'credentials', recoveryStep: 'request' };
+    default:
+      return { mode: 'login', loginStep: 'password', verificationStep: 'credentials', recoveryStep: 'request' };
+  }
 }
 
 // submitLabel receives the translator and auth state and returns button copy for the current form step.

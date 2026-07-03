@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, FileSpreadsheet, UploadCloud } from 'lucide-react';
 import { type ChangeEvent, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Spinner } from '../../components/Spinner';
 import { type AuthActor } from '../../lib/api/auth';
 import { applyWacaiImport, previewWacaiImport, type ImportApplyResponse, type ImportPreviewBatch } from '../../lib/api/imports';
 import { type BookListItem, type BookMember } from '../../lib/api/ledger';
@@ -21,6 +22,8 @@ type ImportPreviewViewProps = {
   selectedBookId: string;
   setSelectedBookId: (bookID: string) => void;
   onApplied: () => void;
+  // onProcessingChange reports a blocking-work label to the shell (empty string when idle).
+  onProcessingChange: (label: string) => void;
 };
 
 type MemberMappingRequirement = {
@@ -35,6 +38,7 @@ export function ImportPreviewView({
   members,
   onApplied,
   onCreateBook,
+  onProcessingChange,
   selectedBookId,
   setSelectedBookId,
 }: ImportPreviewViewProps) {
@@ -86,6 +90,7 @@ export function ImportPreviewView({
 
     setStage('staging');
     setError('');
+    onProcessingChange(t('imports.stage.staging'));
     try {
       const batch = await previewWacaiImport(selectedFile);
       setPreviewBatch(batch);
@@ -96,6 +101,8 @@ export function ImportPreviewView({
       setPreviewBatch(null);
       setError(t('imports.error.previewFailed'));
       setStage('failed');
+    } finally {
+      onProcessingChange('');
     }
   }
 
@@ -107,6 +114,7 @@ export function ImportPreviewView({
 
     setStage('applying');
     setError('');
+    onProcessingChange(t('imports.stage.applying'));
     try {
       const result = await applyWacaiImport(selectedBookId, previewBatch, { memberMappings: effectiveMemberMappings });
       setApplyResult(result);
@@ -115,6 +123,8 @@ export function ImportPreviewView({
     } catch {
       setError(t('imports.error.applyFailed'));
       setStage('staged');
+    } finally {
+      onProcessingChange('');
     }
   }
 
@@ -170,7 +180,14 @@ export function ImportPreviewView({
           disabled={!selectedFile || stage === 'staging'}
           onClick={handleStageImport}
         >
-          {stage === 'staging' ? t('imports.stage.staging') : t('imports.stage.stage')}
+          {stage === 'staging' ? (
+            <>
+              <Spinner size={16} />
+              {t('imports.stage.staging')}
+            </>
+          ) : (
+            t('imports.stage.stage')
+          )}
         </button>
         <button className="mobileSecondaryButton" type="button" disabled={!selectedFile} onClick={handleClearSelection}>
           {t('imports.clearFile')}
@@ -225,7 +242,14 @@ export function ImportPreviewView({
               disabled={!selectedBookId || previewBatch.errorCount > 0 || hasMissingMemberMappings || stage === 'applying' || stage === 'applied'}
               onClick={handleApplyImport}
             >
-              {stage === 'applying' ? t('imports.stage.applying') : t('imports.stage.apply')}
+              {stage === 'applying' ? (
+                <>
+                  <Spinner size={16} />
+                  {t('imports.stage.applying')}
+                </>
+              ) : (
+                t('imports.stage.apply')
+              )}
             </button>
             {hasMissingMemberMappings ? (
               <p className="mobileImportMessage mobileImportMessageWarning">
@@ -307,7 +331,14 @@ function BookDestination({
           disabled={!createName || isCreatingBook}
           onClick={onCreateBook}
         >
-          {isCreatingBook ? t('imports.destination.creating') : t('imports.destination.create')}
+          {isCreatingBook ? (
+            <>
+              <Spinner size={15} />
+              {t('imports.destination.creating')}
+            </>
+          ) : (
+            t('imports.destination.create')
+          )}
         </button>
       </div>
     </div>

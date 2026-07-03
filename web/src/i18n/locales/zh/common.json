@@ -24,6 +24,7 @@
     "off": "关闭",
     "on": "开启",
     "postEntry": "提交记录",
+    "processing": "处理中",
     "signOut": "退出登录",
     "status": {
       "accountReady": "账户已就绪。",

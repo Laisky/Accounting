@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { emptyRuntimeConfig } from './lib/api/runtimeConfig';
@@ -270,6 +271,22 @@ function response(data: unknown): Response {
   } as Response;
 }
 
+// renderApp mounts App with the router context it requires.
+function renderApp(path = '/') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <App />
+    </MemoryRouter>,
+  );
+}
+
+// openRecordTab clicks the home plus action and waits for the record composer.
+async function openRecordTab() {
+  const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
+  fireEvent.click(within(nav).getByRole('button', { name: 'Record' }));
+  return screen.findByRole('region', { name: 'Record entry' });
+}
+
 describe('App', () => {
   beforeEach(() => {
     currentBook = fixtureBook;
@@ -369,9 +386,23 @@ describe('App', () => {
     );
   });
 
-  it('renders the mobile workspace with five bottom tabs', async () => {
-    render(<App />);
+  it('renders the mobile home with a contextual bottom action', async () => {
+    renderApp();
 
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Monthly spending budget' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Transactions' })).toHaveTextContent('Lunch'));
+
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(nav).getAllByRole('button')).toHaveLength(4);
+    expect(within(nav).getByRole('button', { name: 'Accounts' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Record' })).toBeInTheDocument();
+    expect(within(nav).queryByRole('button', { name: 'Home' })).not.toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Reports' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Me' })).toBeInTheDocument();
+    expect(within(nav).queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'Record' }));
     expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Income' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Expense' })).toHaveAttribute('aria-selected', 'true');
@@ -379,24 +410,21 @@ describe('App', () => {
     expect(screen.getByRole('tab', { name: 'Borrow/Lend' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('region', { name: 'Selected category' })).toHaveTextContent('Dining'));
     expect(screen.getByRole('group', { name: 'Entry fields' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Home' })).toBeInTheDocument();
 
-    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
-    expect(within(nav).getAllByRole('button')).toHaveLength(5);
-    expect(within(nav).getByRole('button', { name: 'Accounts' })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: 'Record' })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: 'Reports' })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: 'Import' })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: 'Me' })).toBeInTheDocument();
+    fireEvent.click(within(nav).getByRole('button', { name: 'Home' }));
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('/api/ledger/summary', { signal: expect.any(AbortSignal) });
   });
 
   it('shows accounts and can prepare starter account data', async () => {
-    render(<App />);
+    renderApp();
 
     const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Accounts' }));
 
     expect(await screen.findByRole('region', { name: 'Accounts' })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Accounts' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Net assets' })).toBeInTheDocument();
     expect(screen.getByText('Credit cards')).toBeInTheDocument();
@@ -451,9 +479,9 @@ describe('App', () => {
   });
 
   it('posts a quick ledger entry from the record tab', async () => {
-    render(<App />);
+    renderApp();
 
-    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    expect(await openRecordTab()).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('group', { name: 'Category shortcuts' })).toHaveTextContent('Dining'));
     fireEvent.click(screen.getByRole('button', { name: '2' }));
     fireEvent.click(screen.getByRole('button', { name: '4' }));
@@ -484,9 +512,9 @@ describe('App', () => {
   });
 
   it('creates, renames, and archives a category from the record tab', async () => {
-    render(<App />);
+    renderApp();
 
-    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    expect(await openRecordTab()).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('region', { name: 'Categories' })).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText('Category name'), { target: { value: 'Fuel' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create category' }));
@@ -530,9 +558,9 @@ describe('App', () => {
   });
 
   it('updates and deletes a recent transaction from the record tab', async () => {
-    render(<App />);
+    renderApp();
 
-    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    expect(await openRecordTab()).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Edit details' }));
     fireEvent.change(await screen.findByLabelText('Amount for Lunch'), { target: { value: '45.67' } });
     fireEvent.change(screen.getByLabelText('Time for Lunch'), { target: { value: '2026-07-01T08:30' } });
@@ -589,9 +617,9 @@ describe('App', () => {
   });
 
   it('searches saved transactions from the header search control', async () => {
-    render(<App />);
+    renderApp();
 
-    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    expect(await openRecordTab()).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('group', { name: 'Category shortcuts' })).toHaveTextContent('Dining'));
     fireEvent.click(screen.getByRole('button', { name: 'Search transactions' }));
 
@@ -606,10 +634,11 @@ describe('App', () => {
   });
 
   it('stages and applies a Wacai import from the import tab', async () => {
-    render(<App />);
+    renderApp();
 
     const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
-    fireEvent.click(within(nav).getByRole('button', { name: 'Import' }));
+    fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Import' }));
 
     expect(await screen.findByRole('region', { name: 'Import data' })).toBeInTheDocument();
     expect(screen.getByLabelText('Destination book')).toHaveTextContent('Household');
@@ -646,7 +675,7 @@ describe('App', () => {
   });
 
   it('opens the reports tab with existing report drilldowns', async () => {
-    render(<App />);
+    renderApp();
 
     const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Reports' }));
@@ -659,7 +688,7 @@ describe('App', () => {
   });
 
   it('opens the profile tab and loads audit activity', async () => {
-    render(<App />);
+    renderApp();
 
     const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
@@ -697,6 +726,43 @@ describe('App', () => {
     expect(fetch).toHaveBeenCalledWith('/api/audit?page=1&page_size=20');
   });
 
+  it('shows the account UID on the profile tab and copies it to the clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    try {
+      renderApp();
+
+      const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
+      fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
+      expect(await screen.findByRole('region', { name: 'Me' })).toBeInTheDocument();
+      expect(screen.getByText('user-1')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy account UID' }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith('user-1'));
+      expect(await screen.findByText('Copied')).toBeInTheDocument();
+    } finally {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, 'clipboard', originalClipboard);
+      } else {
+        delete (navigator as { clipboard?: unknown }).clipboard;
+      }
+    }
+  });
+
+  it('opens the import view from the Me tab', async () => {
+    renderApp();
+
+    const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Import' }));
+
+    expect(await screen.findByRole('region', { name: 'Import data' })).toBeInTheDocument();
+    // The Me tab stays highlighted while the import sub-view is open.
+    expect(within(nav).getByRole('button', { name: 'Me' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('renders the zero-value budget fallback when summary loading fails', async () => {
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
@@ -731,10 +797,10 @@ describe('App', () => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response);
     });
 
-    render(<App />);
+    renderApp();
 
-    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('region', { name: 'Selected category' })).toHaveTextContent('Dining'));
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Transactions' })).toHaveTextContent('Lunch'));
   });
 
   it('signs in from the authentication screen', async () => {
@@ -785,14 +851,14 @@ describe('App', () => {
       } as Response);
     });
 
-    render(<App />);
+    renderApp();
 
     expect(await screen.findByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'person@example.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct horse battery staple' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with email' }));
 
-    expect(await screen.findByRole('region', { name: 'Record entry' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
     fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
     expect(await screen.findByRole('region', { name: 'Me' })).toBeInTheDocument();

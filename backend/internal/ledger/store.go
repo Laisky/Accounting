@@ -299,6 +299,12 @@ func (s *MemoryStore) CreateEntry(_ context.Context, entry Entry) (Entry, error)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	entryID, err := normalizeEntryID(entry.ID)
+	if err != nil {
+		return Entry{}, err
+	}
+	entry.ID = entryID
+
 	for _, existing := range s.entries {
 		if existing.ID == entry.ID {
 			return Entry{}, errors.WithStack(errors.New("entry id already exists"))

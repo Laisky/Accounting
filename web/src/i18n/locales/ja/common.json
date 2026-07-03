@@ -24,6 +24,7 @@
     "off": "オフ",
     "on": "オン",
     "postEntry": "記帳する",
+    "processing": "処理中",
     "signOut": "サインアウト",
     "status": {
       "accountReady": "口座の準備が整いました。",

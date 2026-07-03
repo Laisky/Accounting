@@ -38,6 +38,8 @@ func TestSQLStorePersistsUserAcrossStoreInstances(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, user.ID, loaded.ID)
 	require.Equal(t, user.PasswordHash, loaded.PasswordHash)
+	require.Equal(t, user.CreatedAt, loaded.CreatedAt)
+	require.Equal(t, user.UpdatedAt, loaded.UpdatedAt)
 }
 
 // TestSQLStoreCountersPersist verifies auth failure counters are stored in SQL rows.

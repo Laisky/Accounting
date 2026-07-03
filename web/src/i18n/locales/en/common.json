@@ -24,6 +24,7 @@
     "off": "off",
     "on": "on",
     "postEntry": "Post entry",
+    "processing": "Processing",
     "signOut": "Sign out",
     "status": {
       "accountReady": "Account ready.",

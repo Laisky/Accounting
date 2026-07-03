@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Navigate, useLocation } from 'react-router';
 import { AuthWorkspace } from './features/auth/AuthWorkspace';
 import { MobileWorkspace } from './features/mobile/MobileWorkspace';
 import { fetchSession, logout, type AuthActor } from './lib/api/auth';
 import { emptyRuntimeConfig, fetchRuntimeConfig, type RuntimeConfig } from './lib/api/runtimeConfig';
 
-// App renders the active bookkeeping workspace and returns the application root.
+// authPaths enumerates every unauthenticated screen. AuthWorkspace derives its mode
+// and step from the current one; anything else lands the visitor back on /login.
+export const authPaths = ['/login', '/login/totp', '/register', '/register/verify', '/recover', '/recover/confirm'];
+
+// App resolves the session then gates between the auth and authenticated route trees.
 export function App() {
   const { t } = useTranslation();
+  const location = useLocation();
   const runtimeConfig = useRuntimeConfig();
   const [actor, setActor] = useState<AuthActor | null>(null);
   const [isSessionLoaded, setIsSessionLoaded] = useState(false);
@@ -28,6 +34,8 @@ export function App() {
     setActor(null);
   }
 
+  // Hold on the splash until the session resolves so an authenticated deep link
+  // lands directly on its page instead of flashing the login form first.
   if (!isSessionLoaded) {
     return (
       <main className="shell authShell">
@@ -41,8 +49,22 @@ export function App() {
     );
   }
 
+  const onAuthPath = authPaths.includes(location.pathname);
+
+  // Unauthenticated: a single AuthWorkspace instance drives every auth step, so the
+  // multi-step form state survives navigation between /login, /login/totp, etc.
   if (!actor) {
-    return <AuthWorkspace runtimeConfig={runtimeConfig} onAuthenticated={setActor} />;
+    return onAuthPath ? (
+      <AuthWorkspace runtimeConfig={runtimeConfig} onAuthenticated={setActor} />
+    ) : (
+      <Navigate to="/login" replace />
+    );
+  }
+
+  // Authenticated: keep logged-in users out of the auth screens; MobileWorkspace owns
+  // all in-app routing for the remaining paths.
+  if (onAuthPath) {
+    return <Navigate to="/record" replace />;
   }
 
   return <MobileWorkspace actor={actor} runtimeConfig={runtimeConfig} onLogout={handleLogout} />;

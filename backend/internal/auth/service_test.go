@@ -33,6 +33,9 @@ func TestServiceRegisterLoginAndLogout(t *testing.T) {
 	require.Equal(t, "person@example.test", user.Email)
 	require.Equal(t, UserStatusActive, user.Status)
 	require.True(t, user.EmailVerified)
+	require.Equal(t, now, user.CreatedAt)
+	require.Equal(t, now, user.UpdatedAt)
+	require.True(t, user.CreatedAt.Equal(user.CreatedAt.UTC()))
 	requireUUIDv7(t, user.ID)
 
 	result, err := service.Login(context.Background(), LoginRequest{
@@ -42,6 +45,7 @@ func TestServiceRegisterLoginAndLogout(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, result.SessionToken)
 	require.Equal(t, user.ID, result.Session.UserID)
+	require.Equal(t, user.CreatedAt, result.User.CreatedAt)
 	require.Equal(t, now.Add(time.Hour), result.Session.ExpiresAt)
 
 	session, err := service.SessionFromToken(context.Background(), result.SessionToken)

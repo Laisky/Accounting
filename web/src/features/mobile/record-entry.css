@@ -345,3 +345,89 @@
     justify-self: end;
   }
 }
+
+/*
+ * Desktop record layout (>=1024px, via the Foundation `appMain` inline-size container
+ * on `.mobileContent`, which only exists at >=1024px so nothing below matches).
+ * The panel splits into a composer column (left) and a stacked recent-list + category
+ * manager aside (right). The wrapper divs default to display:contents so, below the
+ * query, their children flow as direct grid items of `.recordEntryPanel` exactly as
+ * on phones (pixel-identical). At desktop the wrappers become real boxes and split.
+ */
+.recordComposer,
+.recordAside {
+  display: contents;
+}
+
+@container appMain (min-width: 680px) {
+  .recordEntryPanel {
+    grid-template-columns: minmax(0, 1.3fr) minmax(340px, 0.7fr);
+    gap: var(--panel-gap);
+    align-items: start;
+    margin: 0;
+  }
+
+  /* Composer becomes a self-contained card; overflow clips the hero + keypad corners. */
+  .recordComposer {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 16px;
+    background: oklch(98.5% 0.004 180);
+    box-shadow: 0 12px 30px oklch(60% 0.03 220 / 12%);
+  }
+
+  .recordAside {
+    display: grid;
+    gap: var(--panel-gap);
+    align-content: start;
+  }
+
+  /* Frame the gradient hero as the composer header instead of a full-bleed banner. */
+  .recordHero {
+    min-height: 96px;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+  }
+
+  /* Fluid tiles fill the wider composer column instead of a fixed 4-up grid. */
+  .categoryShortcutGrid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+
+  /* Legible, aligned field controls instead of tiny wrapping pills. */
+  .recordFieldChips {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .recordFieldChips label {
+    max-width: none;
+    border-radius: 12px;
+  }
+
+  .recordFieldChips span {
+    font-size: 0.68rem;
+  }
+
+  /* Keep the touch keypad compact so it does not balloon across the wide column. */
+  .calculatorPad output,
+  .calculatorGrid {
+    max-width: 360px;
+    margin-inline: auto;
+  }
+
+  /* Round the aside cards so they read as panels, not full-bleed phone sections. */
+  .recordRecentList,
+  .categoryManager {
+    border-radius: 16px;
+    box-shadow: 0 10px 24px oklch(60% 0.03 220 / 10%);
+  }
+
+  /* Align money figures by digit width. */
+  .selectedCategoryCard b,
+  .recordRecentSummary b {
+    font-variant-numeric: tabular-nums;
+  }
+}

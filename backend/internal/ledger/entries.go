@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/Laisky/errors/v2"
-	"github.com/google/uuid"
 )
 
 const (
@@ -113,9 +112,14 @@ func (s *Service) CreateEntry(ctx context.Context, request CreateEntryRequest) (
 		transactionCurrency = account.Currency
 	}
 
+	entryID, err := NewEntryID()
+	if err != nil {
+		return Entry{}, err
+	}
+
 	now := time.Now().UTC()
 	entry := Entry{
-		ID:                    uuid.NewString(),
+		ID:                    entryID,
 		BookID:                request.BookID,
 		CreatorUserID:         creatorUserID,
 		Type:                  request.Type,
