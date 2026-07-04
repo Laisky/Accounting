@@ -13,6 +13,7 @@ type TransactionSearchViewProps = {
   error: string;
   members?: BookMember[];
   onClose: () => void;
+  onOpenEntry?: (entryId: string) => void;
   title?: string;
 };
 
@@ -25,6 +26,7 @@ export function TransactionSearchView({
   isLoading,
   members = [],
   onClose,
+  onOpenEntry,
   title,
 }: TransactionSearchViewProps) {
   const { t } = useTranslation();
@@ -65,11 +67,18 @@ export function TransactionSearchView({
               const account = accounts.find((item) => item.id === entry.accountId);
               return (
                 <li key={entry.id}>
-                  <div>
-                    <strong>{title}</strong>
-                    <span>{t('mobile.search.resultMeta', { account: account?.name ?? t('mobile.transactions.accountFallback'), time: formatEntryTime(entry.occurredAt), type: entry.type })}</span>
-                  </div>
-                  <b>{formatMoney(entry.amountCents, entry.transactionCurrency)}</b>
+                  <button
+                    type="button"
+                    className="transactionSearchResultButton"
+                    aria-label={t('mobile.transactions.openEntry', { title })}
+                    onClick={() => onOpenEntry?.(entry.id)}
+                  >
+                    <div>
+                      <strong>{title}</strong>
+                      <span>{t('mobile.search.resultMeta', { account: account?.name ?? t('mobile.transactions.accountFallback'), time: formatEntryTime(entry.occurredAt), type: entry.type })}</span>
+                    </div>
+                    <b>{formatMoney(entry.amountCents, entry.transactionCurrency)}</b>
+                  </button>
                 </li>
               );
             })}

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { type Account, type BookMember, type Category, type Entry } from '../../lib/api/ledger';
 import { AccountTransactionsView } from './AccountTransactionsView';
 import { TransactionSearchView } from './TransactionSearchView';
@@ -127,6 +127,7 @@ const entries: Entry[] = [
 
 describe('AccountTransactionsView', () => {
   it('shows running account balance and monthly transaction details', () => {
+    const onOpenEntry = vi.fn();
     render(
       <AccountTransactionsView
         account={account}
@@ -134,6 +135,7 @@ describe('AccountTransactionsView', () => {
         entries={entries}
         isLoading={false}
         members={members}
+        onOpenEntry={onOpenEntry}
       />,
     );
 
@@ -142,6 +144,9 @@ describe('AccountTransactionsView', () => {
     expect(screen.getByText('Salary')).toBeInTheDocument();
     expect(screen.getByText('Landlord')).toBeInTheDocument();
     expect(screen.getAllByText(/Alex Chen/)).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: /Salary/ }));
+    expect(onOpenEntry).toHaveBeenCalledWith('entry-income');
   });
 
   it('filters account entries through source and destination transfer accounts', () => {
@@ -160,6 +165,7 @@ describe('AccountTransactionsView', () => {
 
 describe('TransactionSearchView', () => {
   it('matches account-scoped transactions by parent category, amount, and member', () => {
+    const onOpenEntry = vi.fn();
     render(
       <TransactionSearchView
         accounts={[account, transferTarget]}
@@ -169,6 +175,7 @@ describe('TransactionSearchView', () => {
         isLoading={false}
         members={members}
         onClose={() => undefined}
+        onOpenEntry={onOpenEntry}
         title="Search Checking"
       />,
     );
@@ -181,5 +188,8 @@ describe('TransactionSearchView', () => {
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search transactions' }), { target: { value: 'alex' } });
     expect(screen.getByText('Landlord')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Landlord/ }));
+    expect(onOpenEntry).toHaveBeenCalledWith('entry-rent');
   });
 });

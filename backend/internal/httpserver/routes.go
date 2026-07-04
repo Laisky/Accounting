@@ -147,6 +147,7 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 	registerAccountCategoryRoutes(api, ledgerService, auditService)
 	registerImportRoutes(api, importService, ledgerService, authService, auditService)
 	registerAuditRoutes(api, auditService)
+	registerUserRoutes(api, authService, auditService)
 
 	api.GET("/books/:bookID/ledger/summary", RequireSession(), func(c *gin.Context) {
 		log := gmw.GetLogger(c)

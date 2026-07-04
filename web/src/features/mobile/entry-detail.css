@@ -85,6 +85,14 @@
   font-weight: 760;
 }
 
+.entryDetailEditorList {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
 .entryDetailAudit {
   display: grid;
   gap: 8px;

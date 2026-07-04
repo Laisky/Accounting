@@ -1,10 +1,31 @@
 .recordEntryPanel {
+  --record-bg: oklch(98.5% 0.004 180);
+  --record-surface: oklch(100% 0 0);
+  --record-ink: oklch(20% 0.035 235);
+  --record-muted: oklch(58% 0.025 230);
+  --record-border: oklch(90% 0.01 190);
+  --record-accent: oklch(75% 0.14 178);
+  --record-keypad: oklch(34% 0.03 258);
+  --record-keypad-line: oklch(42% 0.027 260);
+  height: 100%;
+  min-height: 0;
   gap: 0;
-  margin: 0 -16px;
+  margin: 0;
+  overflow: hidden;
+  background: var(--record-bg);
+}
+
+.recordComposer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .recordHero {
-  min-height: 118px;
+  min-height: 58px;
   background:
     linear-gradient(180deg, oklch(20% 0.05 240 / 20%), oklch(20% 0.04 240 / 55%)),
     linear-gradient(135deg, oklch(63% 0.11 37), oklch(43% 0.08 215) 62%, oklch(78% 0.13 80));
@@ -12,11 +33,11 @@
 
 .recordTypeTabs {
   display: flex;
-  min-height: 58px;
+  min-height: 44px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  margin-top: -58px;
+  margin-top: -44px;
   color: oklch(100% 0 0);
 }
 
@@ -28,11 +49,28 @@
   position: relative;
   flex: 1 0 88px;
   min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
   background: transparent;
   color: oklch(100% 0 0 / 76%);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 820;
+  white-space: nowrap;
+}
+
+.recordTypeTabs button:focus-visible,
+.categoryShortcutGrid button:focus-visible,
+.categorySheet button:focus-visible,
+.categorySheet input:focus-visible,
+.categorySheet summary:focus-visible,
+.noteLine input:focus-visible,
+.recordFieldChips select:focus-visible,
+.recordFieldChips input:focus-visible,
+.calculatorDisplay button:focus-visible,
+.calculatorGrid button:focus-visible {
+  outline: 2px solid oklch(86% 0.11 178);
+  outline-offset: -2px;
 }
 
 .recordTypeTabs .recordTypeActive {
@@ -42,7 +80,7 @@
 .recordTypeActive::after {
   position: absolute;
   right: 34%;
-  bottom: 6px;
+  bottom: 4px;
   left: 34%;
   height: 3px;
   border-radius: 999px;
@@ -52,14 +90,14 @@
 
 .selectedCategoryCard {
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr) auto;
-  gap: 16px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  min-height: 88px;
-  margin: 6px 16px 18px;
-  padding: 16px 22px;
-  border-radius: 12px;
-  background: oklch(100% 0 0);
+  min-height: 62px;
+  margin: 6px 12px 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--record-surface);
   box-shadow: 0 16px 34px oklch(48% 0.05 230 / 14%);
 }
 
@@ -72,46 +110,54 @@
 }
 
 .selectedCategoryCard span {
-  width: 44px;
-  height: 44px;
-  background: oklch(75% 0.14 178);
+  width: 36px;
+  height: 36px;
+  background: var(--record-accent);
   color: oklch(100% 0 0);
 }
 
 .selectedCategoryCard strong {
-  color: oklch(22% 0.034 235);
-  font-size: 1.08rem;
+  color: var(--record-ink);
+  font-size: 0.96rem;
   overflow-wrap: anywhere;
 }
 
 .selectedCategoryCard b {
-  color: oklch(18% 0.03 235);
-  font-size: 2rem;
+  color: var(--record-ink);
+  font-size: clamp(1.28rem, 7vw, 1.75rem);
   font-weight: 900;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .categoryShortcutGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px 8px;
-  padding: 6px 18px 12px;
+  gap: 7px 6px;
+  padding: 2px 12px 5px;
+  overflow: hidden;
 }
 
 .categoryShortcutGrid button {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   justify-items: center;
+  min-height: 50px;
   min-width: 0;
+  padding: 2px;
   background: transparent;
   color: oklch(55% 0.025 235);
   cursor: pointer;
   font-weight: 820;
 }
 
+.categoryShortcutGrid button:nth-child(n + 9) {
+  display: none;
+}
+
 .categoryShortcutGrid button span {
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   background: oklch(92% 0.006 240);
   color: oklch(65% 0.02 235);
 }
@@ -119,7 +165,7 @@
 .categoryShortcutGrid button b {
   max-width: 100%;
   overflow: hidden;
-  font-size: 0.86rem;
+  font-size: 0.72rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -129,24 +175,29 @@
 }
 
 .categoryShortcutGrid .categoryShortcutActive span {
-  background: oklch(75% 0.14 178);
+  background: var(--record-accent);
   color: oklch(100% 0 0);
+}
+
+.categoryShortcutGrid .categoryAllShortcut span {
+  background: oklch(88% 0.01 235);
+  color: oklch(45% 0.025 235);
 }
 
 .noteLine {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 8px;
   align-items: center;
-  padding: 4px 20px 14px;
+  padding: 0 14px 5px;
 }
 
 .noteLine input {
-  min-height: 38px;
+  min-height: 30px;
   border: 0;
   background: transparent;
-  color: oklch(24% 0.034 235);
-  font-size: 0.98rem;
+  color: var(--record-ink);
+  font-size: 0.88rem;
   font-weight: 780;
 }
 
@@ -156,42 +207,243 @@
 
 .recordFieldChips {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 0 16px 12px;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0 12px 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-padding-inline: 12px;
+}
+
+.recordFieldChips::-webkit-scrollbar {
+  display: none;
 }
 
 .recordFieldChips label {
   display: inline-grid;
-  gap: 2px;
-  min-width: 78px;
-  max-width: 142px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  background: oklch(100% 0 0);
+  flex: 0 0 clamp(108px, 31vw, 148px);
+  gap: 3px;
+  min-width: 0;
+  max-width: none;
+  min-height: 48px;
+  padding: 6px 8px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid oklch(94% 0.006 185);
+  background: var(--record-surface);
   box-shadow: 0 7px 18px oklch(55% 0.035 225 / 10%);
 }
 
 .recordFieldChips span {
-  color: oklch(63% 0.024 230);
-  font-size: 0.62rem;
+  overflow: hidden;
+  color: var(--record-muted);
+  font-size: 0.52rem;
   font-weight: 850;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .recordFieldChips select,
 .recordFieldChips input {
+  width: 100%;
   min-width: 0;
+  min-height: 24px;
   border: 0;
   background: transparent;
-  color: oklch(24% 0.034 235);
-  font-size: 0.86rem;
+  color: var(--record-ink);
+  font-size: 0.72rem;
   font-weight: 850;
 }
 
+.categorySheetOverlay {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  background: oklch(10% 0.022 245 / 48%);
+}
+
+.categorySheet {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: 100%;
+  max-height: min(78dvh, 720px);
+  min-height: min(68dvh, 640px);
+  overflow: hidden;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  background: var(--record-surface);
+  color: var(--record-ink);
+  box-shadow: 0 -18px 60px oklch(22% 0.035 235 / 25%);
+}
+
+.categorySheetHeader {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: center;
+  min-height: 54px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--record-border);
+}
+
+.categorySheetHeader button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--record-ink);
+  cursor: pointer;
+}
+
+.categorySheetHeader h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 900;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.categorySheetSearch {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  margin: 10px 14px;
+  padding: 0 12px;
+  border: 1px solid var(--record-border);
+  border-radius: 10px;
+  background: var(--record-bg);
+  color: var(--record-muted);
+}
+
+.categorySheetSearch input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--record-ink);
+  font: inherit;
+  font-weight: 760;
+}
+
+.categorySheetBody {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 0 max(18px, env(safe-area-inset-bottom));
+}
+
+.categorySheetGroup {
+  display: grid;
+  gap: 0;
+}
+
+.categorySheetGroup h3 {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  margin: 0;
+  padding: 8px 18px 6px;
+  background: color-mix(in oklch, var(--record-surface) 92%, var(--record-bg));
+  color: var(--record-muted);
+  font-size: 0.68rem;
+  font-weight: 860;
+  text-transform: uppercase;
+}
+
+.categorySheetList {
+  display: grid;
+}
+
+.categorySheetItem {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 56px;
+  padding: 7px 18px;
+  border-top: 1px solid var(--record-border);
+  background: transparent;
+  color: var(--record-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.categorySheetItem span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--record-accent);
+  color: oklch(100% 0 0);
+}
+
+.categorySheetItem b {
+  overflow: hidden;
+  font-size: 0.92rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.categorySheetItemActive {
+  background: oklch(94% 0.024 178);
+  color: oklch(30% 0.075 178);
+}
+
+.categorySheetEmpty {
+  margin: 0;
+  padding: 28px 18px;
+  color: var(--record-muted);
+  font-weight: 760;
+  text-align: center;
+}
+
+.categorySheetManage {
+  margin: 12px 14px 0;
+  border: 1px solid var(--record-border);
+  border-radius: 12px;
+  background: var(--record-bg);
+  overflow: hidden;
+}
+
+.categorySheetManage summary {
+  min-height: 46px;
+  padding: 13px 14px;
+  color: var(--record-ink);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.categorySheetManage .categoryManager {
+  padding: 0 10px 12px;
+  background: transparent;
+}
+
+.categorySheetManage .sectionTitle {
+  display: none;
+}
+
 .calculatorPad {
-  margin-top: 0;
-  background: oklch(36% 0.028 260);
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  margin-top: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--record-keypad);
   color: oklch(100% 0 0);
 }
 
@@ -200,8 +452,8 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  min-height: 44px;
-  padding: 6px 10px 6px 18px;
+  min-height: 34px;
+  padding: 4px 10px 4px 18px;
 }
 
 .calculatorDisplay output {
@@ -214,7 +466,7 @@
 }
 
 .calculatorDisplay button {
-  min-height: 32px;
+  min-height: 28px;
   padding: 0 12px;
   border-radius: 999px;
   background: oklch(100% 0 0 / 12%);
@@ -226,21 +478,24 @@
 
 .calculatorGrid {
   display: grid;
+  width: 100%;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: 60px;
+  grid-auto-rows: minmax(46px, 1fr);
 }
 
 .calculatorGridOpen {
-  grid-auto-rows: 54px;
+  grid-auto-rows: minmax(42px, 1fr);
 }
 
 .calculatorGrid button {
-  border-top: 1px solid oklch(42% 0.027 260);
-  border-left: 1px solid oklch(42% 0.027 260);
+  min-width: 0;
+  min-height: 44px;
+  border-top: 1px solid var(--record-keypad-line);
+  border-left: 1px solid var(--record-keypad-line);
   background: transparent;
   color: oklch(100% 0 0);
   cursor: pointer;
-  font-size: 1.28rem;
+  font-size: 1.12rem;
   font-weight: 820;
 }
 
@@ -267,7 +522,7 @@
   display: grid;
   gap: 10px;
   padding: 18px 16px 20px;
-  background: oklch(98.5% 0.004 180);
+  background: var(--record-bg);
 }
 
 .sectionTitle h2 {
@@ -369,6 +624,80 @@
   }
 }
 
+@media (max-height: 700px) and (max-width: 767px) {
+  .recordHero {
+    min-height: 50px;
+  }
+
+  .selectedCategoryCard {
+    min-height: 58px;
+    margin-block: 5px 6px;
+  }
+
+  .categoryShortcutGrid {
+    padding-bottom: 3px;
+  }
+
+  .categoryShortcutGrid button {
+    min-height: 46px;
+  }
+
+  .categoryShortcutGrid button span {
+    width: 30px;
+    height: 30px;
+  }
+
+  .recordFieldChips label {
+    min-height: 44px;
+  }
+
+  .calculatorGrid {
+    grid-auto-rows: minmax(44px, 1fr);
+  }
+
+  .calculatorGridOpen {
+    grid-auto-rows: minmax(40px, 1fr);
+  }
+}
+
+.mobileShellThemeDark .recordEntryPanel {
+  --record-bg: oklch(18% 0.014 235);
+  --record-surface: oklch(22% 0.015 235);
+  --record-ink: oklch(91% 0.012 230);
+  --record-muted: oklch(72% 0.018 230);
+  --record-border: oklch(33% 0.018 235);
+  --record-keypad: oklch(24% 0.022 258);
+  --record-keypad-line: oklch(32% 0.024 258);
+}
+
+.mobileShellThemeDark .selectedCategoryCard,
+.mobileShellThemeDark .recordFieldChips label,
+.mobileShellThemeDark .recordRecentList li,
+.mobileShellThemeDark .recordRecentActions input {
+  border-color: var(--record-border);
+  box-shadow: none;
+}
+
+.mobileShellThemeDark .categoryShortcutGrid button span {
+  background: oklch(30% 0.018 235);
+  color: oklch(78% 0.018 230);
+}
+
+.mobileShellThemeDark .categoryShortcutGrid .categoryShortcutActive span {
+  background: var(--record-accent);
+  color: oklch(100% 0 0);
+}
+
+.mobileShellThemeDark .categoryShortcutGrid .categoryAllShortcut span {
+  background: oklch(31% 0.018 235);
+  color: oklch(82% 0.018 230);
+}
+
+.mobileShellThemeDark .categorySheetItemActive {
+  background: oklch(29% 0.035 178);
+  color: oklch(88% 0.07 178);
+}
+
 /*
  * Desktop record layout (>=1024px, via the Foundation `appMain` inline-size container
  * on `.mobileContent`, which only exists at >=1024px so nothing below matches).
@@ -377,13 +706,14 @@
  * query, their children flow as direct grid items of `.recordEntryPanel` exactly as
  * on phones (pixel-identical). At desktop the wrappers become real boxes and split.
  */
-.recordComposer,
 .recordAside {
-  display: contents;
+  display: none;
 }
 
 @container appMain (min-width: 680px) {
   .recordEntryPanel {
+    height: auto;
+    overflow: visible;
     grid-template-columns: minmax(0, 1.3fr) minmax(340px, 0.7fr);
     gap: var(--panel-gap);
     align-items: start;
@@ -416,6 +746,10 @@
   /* Fluid tiles fill the wider composer column instead of a fixed 4-up grid. */
   .categoryShortcutGrid {
     grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+
+  .categoryShortcutGrid button:nth-child(n + 9) {
+    display: grid;
   }
 
   /* Legible, aligned field controls instead of tiny wrapping pills. */

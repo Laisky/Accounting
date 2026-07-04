@@ -25,6 +25,56 @@
   padding: 4px 0 10px;
 }
 
+.meScreenCompact {
+  align-content: start;
+  min-height: 100%;
+  padding-top: 10px;
+}
+
+.meIndex {
+  display: grid;
+  gap: 9px;
+}
+
+.meIndexButton {
+  min-height: 58px;
+}
+
+.meSubpageHeader {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 0 2px;
+}
+
+.meSubpageHeader h1 {
+  margin: 0;
+  color: var(--me-ink);
+  font-size: 1.16rem;
+  font-weight: 880;
+  line-height: 1.2;
+}
+
+.meBackButton {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--me-line);
+  border-radius: 12px;
+  background: var(--me-surface);
+  color: var(--me-ink);
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.meBackButton:hover {
+  background: var(--me-surface-sunken);
+  border-color: oklch(89% 0.01 240);
+}
+
 /* ── Identity banner — the one distinct card ── */
 .meIdentity {
   display: grid;
@@ -294,7 +344,56 @@
   white-space: nowrap;
 }
 
-/* ── Preferences: language row ── */
+/* ── Security: password reset ── */
+.passwordResetForm {
+  display: grid;
+  gap: 12px;
+}
+
+/* ── Preferences ── */
+.mePreferenceRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  min-height: var(--me-row-min);
+  padding: 12px 15px;
+  border: 1px solid var(--me-line);
+  border-radius: var(--me-radius);
+  background: var(--me-surface);
+}
+
+.mePreferenceRow span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mePreferenceRow b {
+  color: var(--me-ink);
+  font-size: 0.96rem;
+  font-weight: 840;
+  line-height: 1.2;
+}
+
+.mePreferenceRow small {
+  color: var(--me-ink-muted);
+  font-size: 0.76rem;
+  font-weight: 680;
+  line-height: 1.3;
+}
+
+.mePreferenceRow select {
+  min-height: 38px;
+  padding: 0 30px 0 12px;
+  border: 1px solid oklch(88% 0.012 250);
+  border-radius: 9px;
+  background: var(--me-surface-sunken);
+  color: var(--me-ink);
+  font-weight: 780;
+  cursor: pointer;
+}
+
 .meLanguageRow {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto;
@@ -385,8 +484,10 @@
 
 /* Shared focus ring for interactive Me controls (WCAG 2.2 focus visible). */
 .meCopyButton:focus-visible,
+.meBackButton:focus-visible,
 .meNavRow:focus-visible,
 .meSignOutButton:focus-visible,
+.mePreferenceRow select:focus-visible,
 .meLanguageRow select:focus-visible {
   outline: 2px solid var(--me-accent);
   outline-offset: 2px;
@@ -394,6 +495,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .meCopyButton,
+  .meBackButton,
   .meNavRow,
   .meSignOutButton {
     transition: none;

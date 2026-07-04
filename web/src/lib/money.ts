@@ -24,26 +24,32 @@ export function compactMoney(cents: number): string {
 // convertEntryAmountCents receives an entry, target currency, and rates and returns converted cents or null when FX is missing.
 export function convertEntryAmountCents(entry: Entry, targetCurrency: string, rates: Map<string, number>): number | null {
   const sourceCurrency = normalizeCurrencyCode(entry.transactionCurrency || entry.bookReportingCurrency || targetCurrency);
+  return convertCurrencyAmountCents(entry.amountCents, sourceCurrency, targetCurrency, rates, entry.exchangeRate);
+}
+
+// convertCurrencyAmountCents receives cents and source/target currencies and returns converted cents or null when FX is missing.
+export function convertCurrencyAmountCents(amountCents: number, sourceCurrency: string, targetCurrency: string, rates: Map<string, number>, exchangeRate?: string): number | null {
+  const normalizedSource = normalizeCurrencyCode(sourceCurrency);
   const normalizedTarget = normalizeCurrencyCode(targetCurrency);
-  if (sourceCurrency === normalizedTarget) {
-    return entry.amountCents;
+  if (normalizedSource === normalizedTarget) {
+    return amountCents;
   }
 
-  const rate = parseExchangeRate(entry.exchangeRate);
-  if (rate?.from === sourceCurrency && rate.to === normalizedTarget) {
-    return Math.round(entry.amountCents * rate.rate);
+  const rate = parseExchangeRate(exchangeRate);
+  if (rate?.from === normalizedSource && rate.to === normalizedTarget) {
+    return Math.round(amountCents * rate.rate);
   }
-  if (rate?.from === normalizedTarget && rate.to === sourceCurrency) {
-    return Math.round(entry.amountCents / rate.rate);
+  if (rate?.from === normalizedTarget && rate.to === normalizedSource) {
+    return Math.round(amountCents / rate.rate);
   }
 
-  const sourceRate = rates.get(sourceCurrency);
+  const sourceRate = rates.get(normalizedSource);
   const targetRate = rates.get(normalizedTarget);
   if (!sourceRate || !targetRate) {
     return null;
   }
 
-  return Math.round((entry.amountCents * targetRate) / sourceRate);
+  return Math.round((amountCents * targetRate) / sourceRate);
 }
 
 // formatMoney receives cents and an ISO currency code and returns localized currency text.

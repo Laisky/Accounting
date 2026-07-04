@@ -1,7 +1,8 @@
 import { CalendarDays } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type BookListItem, type BookMember, type Category, type Entry } from '../../lib/api/ledger';
+import { type Account, type BookListItem, type BookMember, type Category, type Entry, type EntryUpdateInput } from '../../lib/api/ledger';
 import { formatMoney } from '../../lib/money';
+import { EntryDetailEditor } from './EntryDetailEditor';
 import './entry-detail.css';
 
 type EntryDetailViewProps = {
@@ -9,8 +10,12 @@ type EntryDetailViewProps = {
   books: BookListItem[];
   categories: Category[];
   entry?: Entry;
+  editorOpenSignal?: number;
   isLoading: boolean;
+  isSaving: boolean;
   members: BookMember[];
+  onDeleteEntry: (entryId: string) => Promise<void>;
+  onUpdateEntry: (entryId: string, input: EntryUpdateInput) => Promise<void>;
 };
 
 type DetailRow = {
@@ -19,7 +24,18 @@ type DetailRow = {
 };
 
 // EntryDetailView receives one ledger entry and returns the mobile bill detail page.
-export function EntryDetailView({ accounts, books, categories, entry, isLoading, members }: EntryDetailViewProps) {
+export function EntryDetailView({
+  accounts,
+  books,
+  categories,
+  editorOpenSignal,
+  entry,
+  isLoading,
+  isSaving,
+  members,
+  onDeleteEntry,
+  onUpdateEntry,
+}: EntryDetailViewProps) {
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -89,6 +105,19 @@ export function EntryDetailView({ accounts, books, categories, entry, isLoading,
       <section className="entryDetailNote" aria-label={t('mobile.entryDetail.note')}>
         {entry.note || t('mobile.entryDetail.noNote')}
       </section>
+
+      <ul className="entryDetailEditorList">
+        <EntryDetailEditor
+          account={account}
+          accounts={accounts}
+          categories={categories}
+          entry={entry}
+          isBusy={isSaving}
+          openSignal={editorOpenSignal}
+          onDeleteEntry={onDeleteEntry}
+          onUpdateEntry={onUpdateEntry}
+        />
+      </ul>
 
       <footer className="entryDetailAudit">
         {auditRows.map((row) => (

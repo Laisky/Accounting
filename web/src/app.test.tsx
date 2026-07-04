@@ -14,6 +14,17 @@ const fixtureBook = {
   updatedAt: '2026-07-01T00:00:00Z',
 };
 
+const fixtureUser = {
+  id: 'user-1',
+  email: 'person@example.test',
+  status: 'active',
+  emailVerified: true,
+  totpEnabled: false,
+  baseCurrency: 'USD',
+  createdAt: '2026-07-01T00:00:00Z',
+  updatedAt: '2026-07-01T00:00:00Z',
+};
+
 let currentBook = fixtureBook;
 
 const fixtureGroup = {
@@ -61,6 +72,7 @@ const fixtureBookMember = {
 const fixtureCategory = {
   id: 'category-1',
   bookId: 'book-1',
+  parentId: undefined as string | undefined,
   name: 'Dining',
   direction: 'expense',
   sortOrder: 0,
@@ -253,7 +265,10 @@ function ledgerResponse(url: string, init?: RequestInit): Response | null {
   }
   if (url.startsWith('/api/books/book-1/entries')) {
     if (init?.method === 'POST') {
-      return response({ ...fixtureEntry, id: 'entry-created', note: 'Team lunch' });
+      const body = JSON.parse(String(init.body ?? '{}')) as Partial<typeof fixtureEntry>;
+      const createdEntry = { ...fixtureEntry, ...body, id: 'entry-created', note: body.note ?? 'Team lunch' };
+      currentEntry = createdEntry;
+      return response(createdEntry);
     }
     if (init?.method === 'PATCH') {
       const body = JSON.parse(String(init.body ?? '{}')) as Partial<typeof fixtureEntry>;
@@ -294,6 +309,34 @@ async function openRecordTab() {
   const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
   fireEvent.click(within(nav).getByRole('button', { name: 'Record' }));
   return screen.findByRole('region', { name: 'Record entry' });
+}
+
+// openMeIndex clicks the bottom Me navigation item and waits for the compact settings index.
+async function openMeIndex() {
+  const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
+  fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
+  return screen.findByRole('region', { name: 'Me' });
+}
+
+// openMeProfile enters the compact Me index and opens the profile subpage.
+async function openMeProfile() {
+  await openMeIndex();
+  fireEvent.click(await screen.findByRole('button', { name: /Profile/ }));
+  return screen.findByRole('region', { name: 'Profile' });
+}
+
+// openMeSecurity enters the compact Me index and opens the security subpage.
+async function openMeSecurity() {
+  await openMeIndex();
+  fireEvent.click(await screen.findByRole('button', { name: /Security/ }));
+  return screen.findByRole('region', { name: 'Security' });
+}
+
+// openImportFromMe enters the compact Me index and opens the import workflow.
+async function openImportFromMe() {
+  await openMeIndex();
+  fireEvent.click(await screen.findByRole('button', { name: /Import/ }));
+  return screen.findByRole('region', { name: 'Import data' });
 }
 
 describe('App', () => {
@@ -358,6 +401,9 @@ describe('App', () => {
                 },
               }),
           });
+        }
+        if (url === '/api/users/me') {
+          return Promise.resolve(response({ user: fixtureUser }));
         }
         if (url === '/api/auth/totp/status') {
           return Promise.resolve(response({ enabled: currentTotpEnabled }));
@@ -427,6 +473,25 @@ describe('App', () => {
     expect(fetch).toHaveBeenCalledWith('/api/ledger/summary', { signal: expect.any(AbortSignal) });
   });
 
+  it('uses the header book switcher and workspace menu actions', async () => {
+    renderApp('/home');
+
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Switch book')).toHaveValue('book-1'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    expect(screen.getByLabelText('Select language')).toBeInTheDocument();
+    expect(screen.getByText('Theme')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dark' }));
+    expect(screen.getByRole('main')).toHaveClass('mobileShellThemeDark');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit book' }));
+    expect(await screen.findByRole('region', { name: 'Accounts' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Accounts' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Book name')).toHaveValue('Household');
+  });
+
   it.each([
     ['/home', 'Home', 'Home'],
     ['/accounts', 'Accounts', 'Accounts'],
@@ -456,6 +521,19 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: 'Bill facts' })).toHaveTextContent('Person');
     expect(screen.getByRole('region', { name: 'Source' })).toHaveTextContent('Manual entry');
     expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit entry' }));
+    const editor = await screen.findByRole('form', { name: 'Edit Lunch' });
+    fireEvent.change(within(editor).getByLabelText('Note for Lunch'), { target: { value: 'Dinner' } });
+    fireEvent.click(within(editor).getByRole('button', { name: 'Save details' }));
+
+    expect(await screen.findByText('Entry updated.')).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: expect.stringContaining('"note":"Dinner"'),
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to home' }));
     expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
@@ -594,6 +672,64 @@ describe('App', () => {
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"transactionCurrency":"USD"'),
     });
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
+    const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
+    expect(within(nav).getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Transactions' })).toHaveTextContent('Team lunch'));
+  });
+
+  it('opens grouped categories from the All record shortcut and edits a category there', async () => {
+    currentCategories = [
+      {
+        ...fixtureCategory,
+        id: 'category-parent-food',
+        name: 'Food',
+        sortOrder: -1,
+      },
+      {
+        ...fixtureCategory,
+        parentId: 'category-parent-food',
+      },
+      {
+        ...fixtureCategory,
+        id: 'category-fuel',
+        name: 'Fuel',
+        sortOrder: 1,
+      },
+      {
+        ...fixtureCategory,
+        id: 'category-office',
+        name: 'Office',
+        sortOrder: 2,
+      },
+    ];
+
+    renderApp();
+
+    expect(await openRecordTab()).toBeInTheDocument();
+    const shortcuts = await screen.findByRole('group', { name: 'Category shortcuts' });
+    expect(within(shortcuts).getByRole('button', { name: 'All' })).toBeInTheDocument();
+    fireEvent.click(within(shortcuts).getByRole('button', { name: 'All' }));
+
+    const sheet = await screen.findByRole('region', { name: 'Select category' });
+    expect(within(sheet).getByRole('region', { name: 'Food' })).toHaveTextContent('Dining');
+    fireEvent.click(within(sheet).getByRole('button', { name: /Fuel/ }));
+
+    expect(await screen.findByRole('region', { name: 'Selected category' })).toHaveTextContent('Fuel');
+
+    fireEvent.click(within(shortcuts).getByRole('button', { name: 'All' }));
+    const reopenedSheet = await screen.findByRole('region', { name: 'Select category' });
+    fireEvent.click(within(reopenedSheet).getByText('Manage categories'));
+    const diningRow = within(reopenedSheet).getByLabelText('Name for Dining').closest('li') as HTMLElement;
+    fireEvent.change(within(diningRow).getByLabelText('Name for Dining'), { target: { value: 'Meals' } });
+    fireEvent.click(within(diningRow).getByRole('button', { name: 'Save category' }));
+
+    expect(await screen.findByText('Category updated.')).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/categories/category-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: expect.stringContaining('"name":"Meals"'),
+    });
   });
 
   it('creates, renames, and archives a category from the record tab', async () => {
@@ -672,11 +808,7 @@ describe('App', () => {
   it('stages and applies a Wacai import from the import tab', async () => {
     renderApp();
 
-    const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
-    fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Import' }));
-
-    expect(await screen.findByRole('region', { name: 'Import data' })).toBeInTheDocument();
+    expect(await openImportFromMe()).toBeInTheDocument();
     expect(screen.getByLabelText('Destination book')).toHaveTextContent('Household');
     fireEvent.change(screen.getByLabelText('New book'), { target: { value: 'Fish pond' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
@@ -726,10 +858,11 @@ describe('App', () => {
   it('opens the profile tab and loads audit activity', async () => {
     renderApp();
 
-    const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
-    fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
-    expect(await screen.findByRole('region', { name: 'Me' })).toBeInTheDocument();
+    expect(await openMeProfile()).toBeInTheDocument();
     expect(screen.getByText('person@example.test')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Me' }));
+    expect(await openMeSecurity()).toBeInTheDocument();
     expect(await screen.findByRole('article', { name: 'Authenticator app' })).toHaveTextContent('Authenticator app is off.');
 
     fireEvent.click(screen.getByRole('button', { name: 'Set up TOTP' }));
@@ -757,6 +890,8 @@ describe('App', () => {
       body: '{"code":"654321"}',
     });
 
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Me' }));
+    expect(await openMeProfile()).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Load activity' }));
     expect(await screen.findByText('entry / created')).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('/api/audit?page=1&page_size=20');
@@ -770,9 +905,7 @@ describe('App', () => {
     try {
       renderApp();
 
-      const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
-      fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
-      expect(await screen.findByRole('region', { name: 'Me' })).toBeInTheDocument();
+      expect(await openMeProfile()).toBeInTheDocument();
       expect(screen.getByText('user-1')).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Copy account UID' }));
@@ -790,12 +923,9 @@ describe('App', () => {
   it('opens the import view from the Me tab', async () => {
     renderApp();
 
-    const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
-    fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Import' }));
-
-    expect(await screen.findByRole('region', { name: 'Import data' })).toBeInTheDocument();
+    expect(await openImportFromMe()).toBeInTheDocument();
     // The Me tab stays highlighted while the import sub-view is open.
+    const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
     expect(within(nav).getByRole('button', { name: 'Me' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -818,6 +948,9 @@ describe('App', () => {
           status: 500,
           json: () => Promise.resolve({}),
         } as Response);
+      }
+      if (url === '/api/users/me') {
+        return Promise.resolve(response({ user: fixtureUser }));
       }
       if (url === '/api/ledger/summary') {
         return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) } as Response);
@@ -913,6 +1046,7 @@ describe('App', () => {
                 status: 'active',
                 emailVerified: true,
                 totpEnabled: false,
+                baseCurrency: 'USD',
                 createdAt: '2026-07-01T00:00:00Z',
                 updatedAt: '2026-07-01T00:00:00Z',
               },
@@ -946,9 +1080,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with email' }));
 
     expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
-    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
-    fireEvent.click(within(nav).getByRole('button', { name: 'Me' }));
-    expect(await screen.findByRole('region', { name: 'Me' })).toBeInTheDocument();
+    expect(await openMeProfile()).toBeInTheDocument();
     expect(screen.getByText('person@example.test')).toBeInTheDocument();
   });
 });

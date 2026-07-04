@@ -33,6 +33,7 @@ func TestServiceRegisterLoginAndLogout(t *testing.T) {
 	require.Equal(t, "person@example.test", user.Email)
 	require.Equal(t, UserStatusActive, user.Status)
 	require.True(t, user.EmailVerified)
+	require.Equal(t, DefaultBaseCurrency, user.BaseCurrency)
 	require.Equal(t, now, user.CreatedAt)
 	require.Equal(t, now, user.UpdatedAt)
 	require.True(t, user.CreatedAt.Equal(user.CreatedAt.UTC()))
@@ -58,6 +59,43 @@ func TestServiceRegisterLoginAndLogout(t *testing.T) {
 	_, err = service.SessionFromToken(context.Background(), result.SessionToken)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "load session")
+}
+
+// TestServiceUserProfileUpdatesBaseCurrency verifies profile preferences persist on the user record.
+func TestServiceUserProfileUpdatesBaseCurrency(t *testing.T) {
+	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	service := NewService(Config{
+		EmailRegisterEnabled:      true,
+		EmailVerificationRequired: false,
+	}, NewMemoryStore(), NoopTurnstileVerifier{}).WithClock(func() time.Time {
+		return now
+	})
+
+	user, err := service.Register(context.Background(), RegisterRequest{
+		Email:    "person@example.test",
+		Password: "correct horse battery staple",
+	})
+	require.NoError(t, err)
+
+	next := "eur"
+	updated, err := service.UpdateUserProfile(context.Background(), UpdateUserProfileRequest{
+		Actor:        Actor{UserID: user.ID, Email: user.Email, Status: user.Status},
+		BaseCurrency: &next,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "EUR", updated.BaseCurrency)
+	require.Equal(t, now, updated.UpdatedAt)
+
+	profile, err := service.UserProfile(context.Background(), Actor{UserID: user.ID})
+	require.NoError(t, err)
+	require.Equal(t, "EUR", profile.BaseCurrency)
+
+	unsupported := "JPY"
+	_, err = service.UpdateUserProfile(context.Background(), UpdateUserProfileRequest{
+		Actor:        Actor{UserID: user.ID, Email: user.Email, Status: user.Status},
+		BaseCurrency: &unsupported,
+	})
+	require.Error(t, err)
 }
 
 // requireUUIDv7 receives a user id and verifies it is a UUID version 7 value.

@@ -2,7 +2,7 @@ import { Package } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Account, type Category, type Entry, type LedgerSummary } from '../../lib/api/ledger';
-import { formatMoney } from '../../lib/money';
+import { convertEntryAmountCents, formatMoney } from '../../lib/money';
 
 type HomeViewProps = {
   accounts: Account[];
@@ -11,6 +11,7 @@ type HomeViewProps = {
   currencyCode: string;
   entries: Entry[];
   onOpenEntry?: (entryId: string) => void;
+  rateIndex: Map<string, number>;
   summary: LedgerSummary;
 };
 
@@ -23,11 +24,12 @@ type EntryDayGroup = {
 };
 
 // HomeView receives the current ledger snapshot and returns the mobile transaction feed.
-export function HomeView({ accounts, bookName, categories, currencyCode, entries, onOpenEntry, summary }: HomeViewProps) {
+export function HomeView({ accounts, bookName, categories, currencyCode, entries, onOpenEntry, rateIndex, summary }: HomeViewProps) {
   const { t } = useTranslation();
-  const groups = useMemo(() => groupEntriesByDay(entries), [entries]);
-  const monthlyExpenseCents = useMemo(() => currentMonthExpenseCents(entries), [entries]);
-  const budgetTotalCents = Math.max(monthlyExpenseCents, summary.balanceCents, 0);
+  const groups = useMemo(() => groupEntriesByDay(entries, currencyCode, rateIndex), [currencyCode, entries, rateIndex]);
+  const monthlyExpenseCents = useMemo(() => currentMonthExpenseCents(entries, currencyCode, rateIndex), [currencyCode, entries, rateIndex]);
+  const summaryBalanceCents = convertSummaryBalanceCents(summary, currencyCode, rateIndex);
+  const budgetTotalCents = Math.max(monthlyExpenseCents, summaryBalanceCents, 0);
   const remainingCents = Math.max(0, budgetTotalCents - monthlyExpenseCents);
   const progress = budgetTotalCents > 0 ? Math.min(100, Math.round((monthlyExpenseCents / budgetTotalCents) * 100)) : 0;
 
@@ -97,7 +99,7 @@ export function HomeView({ accounts, bookName, categories, currencyCode, entries
 }
 
 // currentMonthExpenseCents receives entries and returns expense cents for the current UTC month.
-function currentMonthExpenseCents(entries: Entry[]): number {
+function currentMonthExpenseCents(entries: Entry[], currencyCode: string, rates: Map<string, number>): number {
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth();
@@ -108,7 +110,7 @@ function currentMonthExpenseCents(entries: Entry[]): number {
       return sum;
     }
 
-    return sum + entry.amountCents;
+    return sum + (convertEntryAmountCents(entry, currencyCode, rates) ?? 0);
   }, 0);
 }
 
@@ -133,7 +135,7 @@ function formatGroupDate(value: string): string {
 }
 
 // groupEntriesByDay receives entries and returns descending UTC day groups with daily totals.
-function groupEntriesByDay(entries: Entry[]): EntryDayGroup[] {
+function groupEntriesByDay(entries: Entry[], currencyCode: string, rates: Map<string, number>): EntryDayGroup[] {
   const groups = new Map<string, EntryDayGroup>();
   const sorted = [...entries].sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime());
 
@@ -146,14 +148,30 @@ function groupEntriesByDay(entries: Entry[]): EntryDayGroup[] {
       expenseCents: 0,
       entries: [],
     };
+    const amountCents = convertEntryAmountCents(entry, currencyCode, rates) ?? 0;
     if (entry.type === 'income') {
-      group.incomeCents += entry.amountCents;
+      group.incomeCents += amountCents;
     } else if (entry.type === 'expense') {
-      group.expenseCents += entry.amountCents;
+      group.expenseCents += amountCents;
     }
     group.entries.push(entry);
     groups.set(id, group);
   }
 
   return [...groups.values()];
+}
+
+// convertSummaryBalanceCents receives the API summary and returns balance cents in the display currency when rates are available.
+function convertSummaryBalanceCents(summary: LedgerSummary, currencyCode: string, rates: Map<string, number>): number {
+  if (summary.currency === currencyCode) {
+    return summary.balanceCents;
+  }
+
+  const sourceRate = rates.get(summary.currency);
+  const targetRate = rates.get(currencyCode);
+  if (!sourceRate || !targetRate) {
+    return 0;
+  }
+
+  return Math.round((summary.balanceCents * targetRate) / sourceRate);
 }

@@ -133,6 +133,24 @@
   border-top: 1px solid oklch(93% 0.006 185);
 }
 
+.accountTransactionButton {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: inherit;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.accountTransactionButton:focus-visible {
+  outline: 2px solid oklch(69% 0.14 255);
+  outline-offset: -3px;
+}
+
 .accountTransactionIcon {
   display: inline-flex;
   width: 34px;

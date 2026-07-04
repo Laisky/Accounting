@@ -48,6 +48,8 @@ const (
 	ActionPasskeyRenamed Action = "auth.passkey_renamed"
 	// ActionPasskeyDeleted records a passkey deletion.
 	ActionPasskeyDeleted Action = "auth.passkey_deleted"
+	// ActionUserProfileUpdated records a user profile preference update.
+	ActionUserProfileUpdated Action = "user.profile_updated"
 	// ActionBookCreated records a book creation.
 	ActionBookCreated Action = "book.created"
 	// ActionBookUpdated records a book settings update.

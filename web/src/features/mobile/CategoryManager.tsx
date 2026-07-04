@@ -7,6 +7,7 @@ import './category-manager.css';
 type CategoryManagerProps = {
   canManageCategories: boolean;
   categories: Category[];
+  defaultDirection?: string;
   isBusy: boolean;
   onCreateCategory: (input: CategoryCreateInput) => Promise<void>;
   onUpdateCategory: (categoryId: string, input: CategoryUpdateInput) => Promise<void>;
@@ -19,10 +20,10 @@ type CategoryDraft = {
 };
 
 // CategoryManager receives category data and returns create, rename, direction, and archive controls.
-export function CategoryManager({ canManageCategories, categories, isBusy, onCreateCategory, onUpdateCategory }: CategoryManagerProps) {
+export function CategoryManager({ canManageCategories, categories, defaultDirection = 'expense', isBusy, onCreateCategory, onUpdateCategory }: CategoryManagerProps) {
   const { t } = useTranslation();
   const [name, setName] = useState('');
-  const [direction, setDirection] = useState('expense');
+  const [direction, setDirection] = useState(defaultDirection);
   const sortedCategories = [...categories].sort((left, right) => Number(left.archived) - Number(right.archived) || left.name.localeCompare(right.name));
 
   // handleCreate receives a form event and creates a category for the selected book.

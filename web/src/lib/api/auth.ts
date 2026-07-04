@@ -4,6 +4,7 @@ export type AuthUser = {
   status: string;
   emailVerified: boolean;
   totpEnabled: boolean;
+  baseCurrency: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -71,6 +72,32 @@ export type TotpSetup = {
   otpauth: string;
   expiresAt: string;
 };
+
+// fetchUserProfile receives an AbortSignal, loads the current user's public profile, and returns user preferences.
+export async function fetchUserProfile(signal?: AbortSignal): Promise<AuthUser> {
+  const response = await fetch('/api/users/me', { signal });
+  if (!response.ok) {
+    throw new Error(`user profile request failed: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { user: AuthUser };
+  return payload.user;
+}
+
+// updateUserProfile receives mutable profile preferences and returns the updated public user profile.
+export async function updateUserProfile(input: { baseCurrency?: string }): Promise<AuthUser> {
+  const response = await fetch('/api/users/me', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(`user profile update failed: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { user: AuthUser };
+  return payload.user;
+}
 
 // fetchSession receives an AbortSignal, loads the active browser session, and returns actor metadata.
 export async function fetchSession(signal?: AbortSignal): Promise<SessionResult> {

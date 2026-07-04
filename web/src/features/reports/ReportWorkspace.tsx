@@ -51,6 +51,7 @@ type ReportData = {
 };
 
 type ReportWorkspaceProps = {
+  baseCurrency?: string;
   refreshKey?: number;
 };
 
@@ -65,7 +66,7 @@ const reportTabs: Array<{ id: ReportTab }> = [
 ];
 
 // ReportWorkspace renders interactive reporting over real ledger entries.
-export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
+export function ReportWorkspace({ baseCurrency, refreshKey = 0 }: ReportWorkspaceProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -81,7 +82,7 @@ export function ReportWorkspace({ refreshKey = 0 }: ReportWorkspaceProps) {
 
   const selectedBook = data.books.find((book) => book.id === selectedBookId) ?? data.books[0];
   const activeTab = reportTabFromPath(location.pathname) ?? 'category';
-  const reportCurrency = selectedBook?.reportingCurrency ?? 'USD';
+  const reportCurrency = baseCurrency ?? selectedBook?.reportingCurrency ?? 'USD';
   const filteredEntries = useMemo(
     () => filterEntries(data.entries, flowFilter, timeMode, cursorDate),
     [cursorDate, data.entries, flowFilter, timeMode],

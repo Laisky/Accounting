@@ -24,6 +24,7 @@ type User struct {
 	Status        UserStatus `json:"status"`
 	EmailVerified bool       `json:"emailVerified"`
 	TOTPEnabled   bool       `json:"totpEnabled"`
+	BaseCurrency  string     `json:"baseCurrency"`
 	CreatedAt     time.Time  `json:"createdAt"`
 	UpdatedAt     time.Time  `json:"updatedAt"`
 }
@@ -71,6 +72,12 @@ type ExternalSSOLoginRequest struct {
 type ResolveUserRequest struct {
 	UserID string
 	Email  string
+}
+
+// UpdateUserProfileRequest contains authenticated profile preference updates.
+type UpdateUserProfileRequest struct {
+	Actor        Actor
+	BaseCurrency *string
 }
 
 // ExternalSSOIdentity contains validated identity metadata from the configured SSO provider.

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -446,6 +447,9 @@ func (s *MemoryStore) DeletePasskeyCeremony(_ context.Context, ceremonyID string
 
 // cloneUserRecord receives a user record and returns a detached copy.
 func cloneUserRecord(user UserRecord) UserRecord {
+	if strings.TrimSpace(user.BaseCurrency) == "" {
+		user.BaseCurrency = DefaultBaseCurrency
+	}
 	return user
 }
 

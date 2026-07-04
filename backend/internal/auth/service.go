@@ -154,6 +154,7 @@ func (s *Service) Register(ctx context.Context, request RegisterRequest) (User, 
 			EmailVerified: emailVerified,
 			CreatedAt:     now,
 			UpdatedAt:     now,
+			BaseCurrency:  DefaultBaseCurrency,
 		},
 		PasswordHash: passwordHash,
 	}
@@ -271,6 +272,7 @@ func (s *Service) LoginWithExternalSSO(ctx context.Context, request ExternalSSOL
 			EmailVerified: true,
 			CreatedAt:     now,
 			UpdatedAt:     now,
+			BaseCurrency:  DefaultBaseCurrency,
 		},
 	})
 	if err != nil {
@@ -278,6 +280,48 @@ func (s *Service) LoginWithExternalSSO(ctx context.Context, request ExternalSSOL
 	}
 
 	return s.createSession(ctx, created)
+}
+
+// UserProfile receives an authenticated actor and returns the current public user profile.
+func (s *Service) UserProfile(ctx context.Context, actor Actor) (User, error) {
+	if strings.TrimSpace(actor.UserID) == "" {
+		return User{}, errors.WithStack(errors.New("actor user id is required"))
+	}
+
+	record, err := s.store.UserByID(ctx, actor.UserID)
+	if err != nil {
+		return User{}, errors.Wrap(err, "load user profile")
+	}
+
+	return record.User, nil
+}
+
+// UpdateUserProfile receives authenticated profile preferences, stores them, and returns the updated public user.
+func (s *Service) UpdateUserProfile(ctx context.Context, request UpdateUserProfileRequest) (User, error) {
+	if strings.TrimSpace(request.Actor.UserID) == "" {
+		return User{}, errors.WithStack(errors.New("actor user id is required"))
+	}
+	if request.BaseCurrency == nil {
+		return User{}, errors.WithStack(errors.New("profile update field is required"))
+	}
+
+	baseCurrency, err := NormalizeBaseCurrency(*request.BaseCurrency)
+	if err != nil {
+		return User{}, err
+	}
+	record, err := s.store.UserByID(ctx, request.Actor.UserID)
+	if err != nil {
+		return User{}, errors.Wrap(err, "load user profile")
+	}
+
+	record.BaseCurrency = baseCurrency
+	record.UpdatedAt = s.clock().UTC()
+	updated, err := s.store.UpdateUser(ctx, record)
+	if err != nil {
+		return User{}, errors.Wrap(err, "update user profile")
+	}
+
+	return updated.User, nil
 }
 
 // ResolveUser receives a user id or email address and returns the matching public active user.

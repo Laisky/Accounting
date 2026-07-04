@@ -78,6 +78,59 @@ async function removePasskeyAuthenticator(authenticator: VirtualAuthenticator): 
   await authenticator.client.send('WebAuthn.disable');
 }
 
+// openMeIndex opens the compact Me index from the bottom navigation.
+async function openMeIndex(page: Page): Promise<void> {
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Me', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
+}
+
+// openMeProfile opens the Profile subpage from the compact Me index.
+async function openMeProfile(page: Page): Promise<void> {
+  await openMeIndex(page);
+  await page.getByRole('button', { name: /Profile/ }).click();
+  await expect(page.getByRole('region', { name: 'Profile' })).toBeVisible();
+}
+
+// openMeSecurity opens the Security subpage from the compact Me index.
+async function openMeSecurity(page: Page): Promise<void> {
+  await openMeIndex(page);
+  await page.getByRole('button', { name: /Security/ }).click();
+  await expect(page.getByRole('region', { name: 'Security' })).toBeVisible();
+}
+
+// phoneRecordLayout receives the record panel element and returns phone viewport fit measurements.
+function phoneRecordLayout(panel: Element) {
+  const content = panel.closest('.mobileContent');
+  const keypad = panel.querySelector('.calculatorPad');
+  if (!(content instanceof HTMLElement) || !(keypad instanceof HTMLElement) || !(panel instanceof HTMLElement)) {
+    throw new Error('record layout elements missing');
+  }
+
+  const contentRect = content.getBoundingClientRect();
+  const keypadRect = keypad.getBoundingClientRect();
+  const visibleBelowKeypad = Array.from(panel.querySelectorAll<HTMLElement>('*')).some((element) => {
+    if (element === keypad || keypad.contains(element)) {
+      return false;
+    }
+    const style = getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden' || element.offsetParent === null) {
+      return false;
+    }
+    return element.getBoundingClientRect().top > keypadRect.bottom + 1;
+  });
+
+  return {
+    appViewportHeight: Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-viewport-height')),
+    contentOverflowY: content.scrollHeight - content.clientHeight,
+    keypadLeftGap: Math.abs(contentRect.left - keypadRect.left),
+    keypadRightGap: Math.abs(contentRect.right - keypadRect.right),
+    keypadBottomGap: Math.abs(contentRect.bottom - keypadRect.bottom),
+    panelOverflowY: panel.scrollHeight - panel.clientHeight,
+    visualViewportHeight: window.visualViewport?.height ?? window.innerHeight,
+    visibleBelowKeypad,
+  };
+}
+
 test('user can start external SSO from the authentication screen', async ({ page }) => {
   await page.goto('/login');
 
@@ -97,6 +150,56 @@ test('signed-out visitors see the public landing page first', async ({ page }) =
   await page.getByRole('link', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Enter the ledger with an auditable identity.' })).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test('record entry fits the phone viewport', async ({ isMobile, page }) => {
+  test.skip(!isMobile, 'Record viewport fit is covered by the mobile browser project.');
+  await page.setViewportSize({ width: 390, height: 844 });
+  const email = `record-layout-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
+  const password = 'correct horse battery staple';
+
+  const registerResponse = await page.request.post('/api/auth/register', {
+    data: { email, password },
+  });
+  expect(registerResponse.status()).toBe(201);
+
+  const loginResponse = await page.request.post('/api/auth/login', {
+    data: { email, password },
+  });
+  expect(loginResponse.status()).toBe(200);
+
+  await page.goto('/record');
+  await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Expense' })).toBeInViewport();
+  expect(await page.evaluate(() => {
+    const content = document.querySelector('.mobileContent');
+    return Boolean(content && content.scrollWidth <= content.clientWidth);
+  })).toBe(true);
+
+  const closedRecordLayout = await page.locator('.recordEntryPanel').evaluate(phoneRecordLayout);
+  expect(Math.abs(closedRecordLayout.appViewportHeight - closedRecordLayout.visualViewportHeight)).toBeLessThanOrEqual(1);
+  expect(closedRecordLayout.contentOverflowY).toBeLessThanOrEqual(1);
+  expect(closedRecordLayout.panelOverflowY).toBeLessThanOrEqual(1);
+  expect(closedRecordLayout.keypadLeftGap).toBeLessThanOrEqual(1);
+  expect(closedRecordLayout.keypadRightGap).toBeLessThanOrEqual(1);
+  expect(closedRecordLayout.keypadBottomGap).toBeLessThanOrEqual(1);
+  expect(closedRecordLayout.visibleBelowKeypad).toBe(false);
+
+  await page.getByRole('button', { name: 'Open calculator' }).click();
+  const openRecordLayout = await page.locator('.recordEntryPanel').evaluate(phoneRecordLayout);
+  expect(Math.abs(openRecordLayout.appViewportHeight - openRecordLayout.visualViewportHeight)).toBeLessThanOrEqual(1);
+  expect(openRecordLayout.contentOverflowY).toBeLessThanOrEqual(1);
+  expect(openRecordLayout.panelOverflowY).toBeLessThanOrEqual(1);
+  expect(openRecordLayout.keypadLeftGap).toBeLessThanOrEqual(1);
+  expect(openRecordLayout.keypadRightGap).toBeLessThanOrEqual(1);
+  expect(openRecordLayout.keypadBottomGap).toBeLessThanOrEqual(1);
+  expect(openRecordLayout.visibleBelowKeypad).toBe(false);
+
+  await page.getByRole('button', { name: 'All' }).click();
+  await expect(page.getByRole('region', { name: 'Select category' })).toBeVisible();
+  await expect(page.getByLabel('Search categories')).toBeVisible();
+  await page.getByLabel('Close categories').click();
+  await expect(page.getByRole('region', { name: 'Select category' })).toHaveCount(0);
 });
 
 test('user can register and request recovery from the authentication screen', async ({ page }) => {
@@ -135,8 +238,9 @@ test.describe('passkeys', () => {
       expect(loginResponse.status()).toBe(200);
 
       await page.goto('/');
-      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Me', exact: true }).click();
-      const passkeys = page.getByRole('article', { name: 'Passkeys' });
+      await openMeSecurity(page);
+      let passkeys = page.getByRole('article', { name: 'Passkeys' });
+      await expect(passkeys).toBeVisible();
       await expect(passkeys.getByText('Registered passkeys: 0')).toBeVisible();
       await page.getByLabel('Passkey label').fill('Acceptance passkey');
       await passkeys.getByRole('button', { name: 'Register passkey' }).click();
@@ -148,6 +252,8 @@ test.describe('passkeys', () => {
       await expect(page.getByText('Passkey renamed.')).toBeVisible();
       await expect(page.getByLabel('Label for Renamed acceptance passkey')).toBeVisible();
 
+      await page.getByRole('button', { name: 'Back to Me' }).click();
+      await page.getByRole('button', { name: /Profile/ }).click();
       await page.getByRole('button', { name: 'Sign out' }).click();
       await expect(page.getByRole('heading', { name: 'A ledger for every shared money story.' })).toBeVisible();
       await page.getByRole('link', { name: 'Sign in' }).click();
@@ -155,12 +261,16 @@ test.describe('passkeys', () => {
       await page.getByRole('button', { name: 'Use passkey' }).click();
       await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
 
-      await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Me', exact: true }).click();
+      await openMeSecurity(page);
+      passkeys = page.getByRole('article', { name: 'Passkeys' });
+      await expect(passkeys).toBeVisible();
       await expect(page.getByLabel('Label for Renamed acceptance passkey')).toBeVisible();
       await passkeys.getByRole('button', { name: 'Delete' }).click();
       await expect(page.getByText('Passkey deleted.')).toBeVisible();
       await expect(page.getByText('No passkeys registered yet.')).toBeVisible();
 
+      await page.getByRole('button', { name: 'Back to Me' }).click();
+      await page.getByRole('button', { name: /Profile/ }).click();
       await page.getByRole('button', { name: 'Load activity' }).click();
       await expect(page.getByText('auth / passkey_deleted')).toBeVisible();
       await expect(page.getByText('auth / passkey_login')).toBeVisible();
@@ -266,34 +376,39 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
     const content = document.querySelector('.mobileContent');
     return Boolean(content && content.scrollWidth <= content.clientWidth);
   })).toBe(true);
-  await page.getByLabel('Category name').fill('Fuel');
-  await page.getByRole('button', { name: 'Create category' }).click();
-  await expect(page.getByText('Category created.')).toBeVisible();
-  await expect(page.getByLabel('Name for Fuel')).toBeVisible();
-  const fuelRow = page.getByRole('listitem').filter({ has: page.getByLabel('Name for Fuel') });
-  await fuelRow.getByLabel('Name for Fuel').fill('Road fuel');
-  await fuelRow.getByRole('button', { name: 'Save category' }).click();
-  await expect(page.getByText('Category updated.')).toBeVisible();
-  const roadFuelRow = page.getByRole('listitem').filter({ has: page.getByLabel('Name for Road fuel') });
-  await roadFuelRow.getByRole('button', { name: 'Archive' }).click();
-  await roadFuelRow.getByRole('button', { name: 'Save category' }).click();
-  await expect(page.getByText('Category updated.')).toBeVisible();
-  await expect(roadFuelRow.getByRole('button', { name: 'Restore' })).toBeVisible();
-  await page.getByLabel('Category name').fill('Dining');
-  await page.getByRole('button', { name: 'Create category' }).click();
-  await expect(page.getByText('Category created.')).toBeVisible();
+  if ((page.viewportSize()?.width ?? 0) < 768) {
+    await expect(nav).toBeVisible();
+    const closedRecordLayout = await page.locator('.recordEntryPanel').evaluate(phoneRecordLayout);
+    expect(closedRecordLayout.contentOverflowY).toBeLessThanOrEqual(1);
+    expect(closedRecordLayout.panelOverflowY).toBeLessThanOrEqual(1);
+    expect(closedRecordLayout.keypadLeftGap).toBeLessThanOrEqual(1);
+    expect(closedRecordLayout.keypadRightGap).toBeLessThanOrEqual(1);
+    expect(closedRecordLayout.keypadBottomGap).toBeLessThanOrEqual(1);
+    expect(closedRecordLayout.visibleBelowKeypad).toBe(false);
+  }
   await page.getByRole('button', { name: '2' }).click();
   await page.getByRole('button', { name: '4' }).click();
   await page.getByRole('button', { name: 'Open calculator' }).click();
+  if ((page.viewportSize()?.width ?? 0) < 768) {
+    await expect(nav).toBeVisible();
+    const openRecordLayout = await page.locator('.recordEntryPanel').evaluate(phoneRecordLayout);
+    expect(openRecordLayout.contentOverflowY).toBeLessThanOrEqual(1);
+    expect(openRecordLayout.panelOverflowY).toBeLessThanOrEqual(1);
+    expect(openRecordLayout.keypadLeftGap).toBeLessThanOrEqual(1);
+    expect(openRecordLayout.keypadRightGap).toBeLessThanOrEqual(1);
+    expect(openRecordLayout.keypadBottomGap).toBeLessThanOrEqual(1);
+    expect(openRecordLayout.visibleBelowKeypad).toBe(false);
+  }
   await page.getByRole('button', { name: '+' }).click();
   await page.getByRole('button', { name: '6' }).click();
   await page.getByRole('button', { name: 'Apply calculation' }).click();
   await page.getByPlaceholder('Add a note...').fill('Team lunch');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText('Entry posted.')).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Transactions' })).toHaveCount(0);
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole('region', { name: 'Transactions' }).getByText('Team lunch')).toBeVisible();
 
-  await nav.getByRole('button', { name: 'Reports' }).click();
+  await page.goto('/reports/category');
   await expect(page.getByRole('region', { name: 'Reports' })).toBeVisible();
   await expect(page).toHaveURL(/\/reports\/category$/);
   await page.getByRole('button', { name: 'Report filters' }).click();
@@ -317,7 +432,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await page.getByRole('button', { name: 'Close search' }).click();
   await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
 
-  await nav.getByRole('button', { name: 'Me', exact: true }).click();
+  await page.goto('/me');
   await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
   await expect(page).toHaveURL(/\/me$/);
   await page.getByRole('button', { name: 'Import' }).click();
@@ -347,9 +462,10 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Transactions' }).getByText('Import lunch')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Transactions' }).getByText('-CN¥12.30', { exact: true })).toBeVisible();
 
-  await nav.getByRole('button', { name: 'Me', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
+  await openMeProfile(page);
   await expect(page.getByText(email)).toBeVisible();
+  await page.getByRole('button', { name: 'Back to Me' }).click();
+  await page.getByRole('button', { name: /Security/ }).click();
   await expect(page.getByRole('article', { name: 'Authenticator app' }).getByText('Authenticator app is off.')).toBeVisible();
   await page.getByRole('button', { name: 'Set up TOTP' }).click();
   await expect(page.getByText('TOTP setup started.')).toBeVisible();
@@ -358,6 +474,8 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await page.getByRole('button', { name: 'Confirm TOTP' }).click();
   await expect(page.getByText('TOTP enabled.')).toBeVisible();
   await expect(page.getByRole('article', { name: 'Authenticator app' }).getByText('Authenticator app is on.')).toBeVisible();
+  await page.getByRole('button', { name: 'Back to Me' }).click();
+  await page.getByRole('button', { name: /Profile/ }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { name: 'A ledger for every shared money story.' })).toBeVisible();
   await page.getByRole('link', { name: 'Sign in' }).click();
@@ -369,11 +487,12 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await page.getByLabel('TOTP code').fill(generateTotpCode(otpauth));
   await page.getByRole('button', { name: 'Verify code' }).click();
   await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
-  const postTotpNav = page.getByRole('navigation', { name: 'Main navigation' });
-  await postTotpNav.getByRole('button', { name: 'Me', exact: true }).click();
+  await openMeSecurity(page);
   await page.getByLabel('TOTP code').fill(generateTotpCode(otpauth, 30000));
   await page.getByRole('button', { name: 'Disable TOTP' }).click();
   await expect(page.getByText('TOTP disabled.')).toBeVisible();
+  await page.getByRole('button', { name: 'Back to Me' }).click();
+  await page.getByRole('button', { name: /Profile/ }).click();
   await page.getByRole('button', { name: 'Load activity' }).click();
   await expect(page.getByText('auth / totp_disabled')).toBeVisible();
   await expect(page.getByText('auth / login_totp_challenge')).toBeVisible();

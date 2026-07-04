@@ -12,6 +12,7 @@ type AccountTransactionsViewProps = {
   entries: Entry[];
   isLoading: boolean;
   members: BookMember[];
+  onOpenEntry?: (entryId: string) => void;
 };
 
 type BalancePoint = {
@@ -38,6 +39,7 @@ export function AccountTransactionsView({
   entries,
   isLoading,
   members,
+  onOpenEntry,
 }: AccountTransactionsViewProps) {
   const { t } = useTranslation();
   const [expandedMonthIds, setExpandedMonthIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -119,22 +121,29 @@ export function AccountTransactionsView({
                 <ul className="accountTransactionList">
                   {[...month.points].reverse().map((point) => (
                     <li key={point.entry.id}>
-                      <span className={`accountTransactionIcon ${point.deltaCents >= 0 ? 'accountTransactionIconIncome' : ''}`}>
-                        {point.deltaCents >= 0 ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
-                      </span>
-                      <div>
-                        <strong>{entryTitle(point.entry, categories, t('mobile.transactions.accountFallback'))}</strong>
-                        <small>
-                          {t('mobile.accountDetail.entryMeta', {
-                            member: memberName(point.entry.creatorUserId, members),
-                            time: formatEntryTime(point.entry.occurredAt),
-                          })}
-                        </small>
-                      </div>
-                      <b className={point.deltaCents >= 0 ? 'accountTransactionIncome' : undefined}>
-                        {formatSignedMoney(point.deltaCents, account.currency)}
-                        <small>{t('mobile.accountDetail.balanceAfter', { amount: formatMoney(point.balanceCents, account.currency) })}</small>
-                      </b>
+                      <button
+                        type="button"
+                        className="accountTransactionButton"
+                        aria-label={t('mobile.transactions.openEntry', { title: entryTitle(point.entry, categories, t('mobile.transactions.accountFallback')) })}
+                        onClick={() => onOpenEntry?.(point.entry.id)}
+                      >
+                        <span className={`accountTransactionIcon ${point.deltaCents >= 0 ? 'accountTransactionIconIncome' : ''}`}>
+                          {point.deltaCents >= 0 ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                        </span>
+                        <div>
+                          <strong>{entryTitle(point.entry, categories, t('mobile.transactions.accountFallback'))}</strong>
+                          <small>
+                            {t('mobile.accountDetail.entryMeta', {
+                              member: memberName(point.entry.creatorUserId, members),
+                              time: formatEntryTime(point.entry.occurredAt),
+                            })}
+                          </small>
+                        </div>
+                        <b className={point.deltaCents >= 0 ? 'accountTransactionIncome' : undefined}>
+                          {formatSignedMoney(point.deltaCents, account.currency)}
+                          <small>{t('mobile.accountDetail.balanceAfter', { amount: formatMoney(point.balanceCents, account.currency) })}</small>
+                        </b>
+                      </button>
                     </li>
                   ))}
                 </ul>

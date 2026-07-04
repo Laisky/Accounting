@@ -2,7 +2,7 @@ import { ChevronDown, CreditCard, Eye, Globe2, Landmark, PiggyBank, TrendingUp }
 import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Account, type AccountGroup, type BookListItem, type BookMember } from '../../lib/api/ledger';
-import { formatMoney, supportedCurrencies } from '../../lib/money';
+import { convertCurrencyAmountCents, formatMoney, supportedCurrencies } from '../../lib/money';
 import './accounts.css';
 
 export type AccountCreateInput = {
@@ -15,7 +15,8 @@ export type AccountCreateInput = {
 type AccountsViewProps = {
   accounts: Account[];
   books: BookListItem[];
-  currencyCode: string;
+  bookCurrencyCode: string;
+  displayCurrencyCode: string;
   groups: AccountGroup[];
   isBusy: boolean;
   members: BookMember[];
@@ -25,6 +26,7 @@ type AccountsViewProps = {
   onUpdateAccountGroupName: (groupId: string, name: string) => Promise<void>;
   onUpdateBookName: (name: string) => Promise<void>;
   onUpdateBookCurrency: (currency: string) => void;
+  rateIndex: Map<string, number>;
   selectedBookId: string;
   setSelectedBookId: (value: string) => void;
 };
@@ -42,7 +44,8 @@ type AccountSection = {
 export function AccountsView({
   accounts,
   books,
-  currencyCode,
+  bookCurrencyCode,
+  displayCurrencyCode,
   groups,
   isBusy,
   members,
@@ -52,20 +55,21 @@ export function AccountsView({
   onUpdateAccountGroupName,
   onUpdateBookName,
   onUpdateBookCurrency,
+  rateIndex,
   selectedBookId,
   setSelectedBookId,
 }: AccountsViewProps) {
   const { t } = useTranslation();
   const [accountName, setAccountName] = useState('');
   const [accountType, setAccountType] = useState('cash');
-  const [accountCurrency, setAccountCurrency] = useState(currencyCode);
+  const [accountCurrency, setAccountCurrency] = useState(bookCurrencyCode);
   const [openingBalance, setOpeningBalance] = useState('');
   const [expandedSectionIds, setExpandedSectionIds] = useState<ReadonlySet<string>>(() => new Set(['cash']));
   const selectedBook = books.find((book) => book.id === selectedBookId) ?? books[0];
   const primaryGroup = groups[0];
-  const sections = useMemo(() => buildAccountSections(accounts, expandedSectionIds, t), [accounts, expandedSectionIds, t]);
-  const totalAssetsCents = accounts.reduce((sum, account) => sum + Math.max(0, account.openingBalanceCents), 0);
-  const totalLiabilitiesCents = accounts.reduce((sum, account) => sum + Math.min(0, account.openingBalanceCents), 0);
+  const sections = useMemo(() => buildAccountSections(accounts, expandedSectionIds, t, displayCurrencyCode, rateIndex), [accounts, displayCurrencyCode, expandedSectionIds, rateIndex, t]);
+  const totalAssetsCents = accounts.reduce((sum, account) => sum + Math.max(0, accountDisplayBalanceCents(account, displayCurrencyCode, rateIndex)), 0);
+  const totalLiabilitiesCents = accounts.reduce((sum, account) => sum + Math.min(0, accountDisplayBalanceCents(account, displayCurrencyCode, rateIndex)), 0);
   const netAssetsCents = totalAssetsCents + totalLiabilitiesCents;
   const normalizedName = accountName.trim();
   const canCreateAccount = Boolean(normalizedName) && !isBusy;
@@ -114,21 +118,21 @@ export function AccountsView({
         <div>
           <span>{t('mobile.accounts.netAssets')}</span>
           <strong>
-            {formatMoney(netAssetsCents, currencyCode)}
+            {formatMoney(netAssetsCents, displayCurrencyCode)}
             <Eye size={20} />
           </strong>
         </div>
         <footer>
-          <span>{t('mobile.accounts.totalAssets', { amount: formatMoney(totalAssetsCents, currencyCode) })}</span>
+          <span>{t('mobile.accounts.totalAssets', { amount: formatMoney(totalAssetsCents, displayCurrencyCode) })}</span>
           <i />
-          <span>{t('mobile.accounts.totalLiabilities', { amount: formatMoney(Math.abs(totalLiabilitiesCents), currencyCode) })}</span>
+          <span>{t('mobile.accounts.totalLiabilities', { amount: formatMoney(Math.abs(totalLiabilitiesCents), displayCurrencyCode) })}</span>
         </footer>
       </section>
 
       <BookSettingsView
         key={selectedBook?.id ?? 'empty-book-settings'}
         books={books}
-        currencyCode={currencyCode}
+        currencyCode={bookCurrencyCode}
         isBusy={isBusy}
         onUpdateBookCurrency={onUpdateBookCurrency}
         onUpdateBookName={onUpdateBookName}
@@ -189,7 +193,7 @@ export function AccountsView({
         {sections.map((section) => (
           <AccountSectionView
             key={section.id}
-            currencyCode={currencyCode}
+            currencyCode={displayCurrencyCode}
             onOpenAccount={onOpenAccount}
             onToggle={handleToggleSection}
             section={section}
@@ -425,7 +429,7 @@ function accountIcon(account: Account) {
 }
 
 // buildAccountSections receives accounts and returns display groups matching the mobile account layout.
-function buildAccountSections(accounts: Account[], expandedSectionIds: ReadonlySet<string>, t: (key: string) => string): AccountSection[] {
+function buildAccountSections(accounts: Account[], expandedSectionIds: ReadonlySet<string>, t: (key: string) => string, displayCurrencyCode: string, rates: Map<string, number>): AccountSection[] {
   const cashAccounts = accounts.filter((account) => isCashAccount(account));
   const creditAccounts = accounts.filter((account) => isCreditAccount(account));
   const savingsAccounts = accounts.filter((account) => isSavingsAccount(account));
@@ -434,25 +438,30 @@ function buildAccountSections(accounts: Account[], expandedSectionIds: ReadonlyS
   const storedAccounts = accounts.filter((account) => !isCreditAccount(account) && isStoredValueAccount(account));
 
   return [
-    buildSection('cash', t('mobile.accounts.sections.cash'), cashAccounts.length ? cashAccounts : accounts, expandedSectionIds.has('cash')),
-    buildSection('credit', t('mobile.accounts.sections.credit'), creditAccounts, expandedSectionIds.has('credit')),
-    buildSection('savings', t('mobile.accounts.sections.savings'), savingsAccounts, expandedSectionIds.has('savings')),
-    buildSection('online', t('mobile.accounts.sections.online'), onlineAccounts, expandedSectionIds.has('online')),
-    buildSection('investment', t('mobile.accounts.sections.investment'), investmentAccounts, expandedSectionIds.has('investment')),
-    buildSection('stored', t('mobile.accounts.sections.stored'), storedAccounts, expandedSectionIds.has('stored')),
+    buildSection('cash', t('mobile.accounts.sections.cash'), cashAccounts.length ? cashAccounts : accounts, expandedSectionIds.has('cash'), displayCurrencyCode, rates),
+    buildSection('credit', t('mobile.accounts.sections.credit'), creditAccounts, expandedSectionIds.has('credit'), displayCurrencyCode, rates),
+    buildSection('savings', t('mobile.accounts.sections.savings'), savingsAccounts, expandedSectionIds.has('savings'), displayCurrencyCode, rates),
+    buildSection('online', t('mobile.accounts.sections.online'), onlineAccounts, expandedSectionIds.has('online'), displayCurrencyCode, rates),
+    buildSection('investment', t('mobile.accounts.sections.investment'), investmentAccounts, expandedSectionIds.has('investment'), displayCurrencyCode, rates),
+    buildSection('stored', t('mobile.accounts.sections.stored'), storedAccounts, expandedSectionIds.has('stored'), displayCurrencyCode, rates),
   ];
 }
 
 // buildSection receives section parts and returns a normalized account section.
-function buildSection(id: string, label: string, accounts: Account[], expanded: boolean): AccountSection {
+function buildSection(id: string, label: string, accounts: Account[], expanded: boolean, displayCurrencyCode: string, rates: Map<string, number>): AccountSection {
   return {
     id,
     label,
     count: accounts.length,
-    totalCents: accounts.reduce((sum, account) => sum + account.openingBalanceCents, 0),
+    totalCents: accounts.reduce((sum, account) => sum + accountDisplayBalanceCents(account, displayCurrencyCode, rates), 0),
     expanded,
     accounts,
   };
+}
+
+// accountDisplayBalanceCents receives an account and returns its balance in the profile display currency.
+function accountDisplayBalanceCents(account: Account, displayCurrencyCode: string, rates: Map<string, number>): number {
+  return convertCurrencyAmountCents(account.openingBalanceCents, account.currency, displayCurrencyCode, rates) ?? 0;
 }
 
 // parseMajorAmountToCents receives a user-entered decimal amount and returns cents for API payloads.

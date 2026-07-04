@@ -8,12 +8,15 @@ import {
   Fuel,
   Gift,
   Home,
+  List,
   Package,
   ParkingCircle,
   PiggyBank,
+  Search,
   Smartphone,
   Trash2,
   Utensils,
+  X,
 } from 'lucide-react';
 import { type TFunction } from 'i18next';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -59,6 +62,12 @@ type CategoryShortcut = {
   count: number;
 };
 
+type CategoryGroup = {
+  id: string;
+  title: string;
+  categories: Category[];
+};
+
 const recordTypes: Array<{ id: RecordType; entryType: string }> = [
   { id: 'income', entryType: 'income' },
   { id: 'expense', entryType: 'expense' },
@@ -94,6 +103,7 @@ export function RecordEntryView({
   const [amountExpression, setAmountExpression] = useState('0');
   const [note, setNote] = useState('');
   const [occurredAt, setOccurredAt] = useState(() => toDateTimeLocalValue(new Date()));
+  const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
 
   const visibleCategories = useMemo(() => filterCategories(categories, recordType), [categories, recordType]);
   const shortcuts = useMemo(() => buildCategoryShortcuts(visibleCategories, recentEntries), [recentEntries, visibleCategories]);
@@ -104,6 +114,7 @@ export function RecordEntryView({
   const amountCents = amountToCents(calculateExpression(amountExpression));
   const isMultiCurrency = supportedCurrencies.length > 1 || rates.size > 0;
   const canSave = Boolean(selectedAccount) && amountCents > 0 && (recordType !== 'transfer' || Boolean(destinationAccount));
+  const categoryCreateDirection = recordType === 'income' || recordType === 'borrow' ? 'income' : 'expense';
 
   useEffect(() => {
     if (!accountId && accounts[0]) {
@@ -148,6 +159,12 @@ export function RecordEntryView({
     if (preference?.member) {
       setMember(preference.member);
     }
+  }
+
+  // handleSheetCategorySelect receives a category from the expanded sheet and returns to the compact composer.
+  function handleSheetCategorySelect(category: Category) {
+    applyCategoryPreference(category);
+    setIsCategorySheetOpen(false);
   }
 
   // handleKeyPress receives one calculator key and updates the amount expression safely.
@@ -225,6 +242,10 @@ export function RecordEntryView({
               <b>{shortcut.category.name}</b>
             </button>
           ))}
+          <button type="button" className="categoryAllShortcut" onClick={() => setIsCategorySheetOpen(true)}>
+            <span><List size={20} /></span>
+            <b>{t('mobile.record.allCategories')}</b>
+          </button>
         </div>
 
         <label className="noteLine">
@@ -281,16 +302,128 @@ export function RecordEntryView({
         />
       </div>
 
+      {isCategorySheetOpen ? (
+        <CategorySheet
+          canManageCategories={canManageCategories}
+          categories={visibleCategories}
+          defaultDirection={categoryCreateDirection}
+          isBusy={isBusy}
+          selectedCategoryId={selectedCategory?.id ?? ''}
+          sourceCategories={categories}
+          onClose={() => setIsCategorySheetOpen(false)}
+          onCreateCategory={onCreateCategory}
+          onSelectCategory={handleSheetCategorySelect}
+          onUpdateCategory={onUpdateCategory}
+        />
+      ) : null}
+
       <div className="recordAside">
         <CategoryManager
+          key={`aside-${categoryCreateDirection}`}
           canManageCategories={canManageCategories}
           categories={categories}
+          defaultDirection={categoryCreateDirection}
           isBusy={isBusy}
           onCreateCategory={onCreateCategory}
           onUpdateCategory={onUpdateCategory}
         />
       </div>
     </section>
+  );
+}
+
+// CategorySheet receives category state and returns a grouped full picker with management controls.
+function CategorySheet({
+  canManageCategories,
+  categories,
+  defaultDirection,
+  isBusy,
+  onClose,
+  onCreateCategory,
+  onSelectCategory,
+  onUpdateCategory,
+  selectedCategoryId,
+  sourceCategories,
+}: {
+  canManageCategories: boolean;
+  categories: Category[];
+  defaultDirection: string;
+  isBusy: boolean;
+  onClose: () => void;
+  onCreateCategory: (input: CategoryCreateInput) => Promise<void>;
+  onSelectCategory: (category: Category) => void;
+  onUpdateCategory: (categoryId: string, input: CategoryUpdateInput) => Promise<void>;
+  selectedCategoryId: string;
+  sourceCategories: Category[];
+}) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleCategories = normalizedQuery
+    ? categories.filter((category) => category.name.toLowerCase().includes(normalizedQuery))
+    : categories;
+  const groups = buildCategoryGroups(visibleCategories, sourceCategories, t);
+
+  return (
+    <div className="categorySheetOverlay" role="presentation">
+      <section className="categorySheet" aria-label={t('mobile.record.categorySheetTitle')}>
+        <header className="categorySheetHeader">
+          <button type="button" aria-label={t('mobile.record.closeCategories')} onClick={onClose}>
+            <X size={22} aria-hidden="true" />
+          </button>
+          <h2>{t('mobile.record.categorySheetTitle')}</h2>
+          <span aria-hidden="true" />
+        </header>
+
+        <label className="categorySheetSearch">
+          <Search size={18} aria-hidden="true" />
+          <input
+            aria-label={t('mobile.record.searchCategories')}
+            placeholder={t('mobile.record.searchCategoriesPlaceholder')}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+
+        <div className="categorySheetBody">
+          {groups.length ? (
+            groups.map((group) => (
+              <section className="categorySheetGroup" key={group.id} aria-label={group.title}>
+                <h3>{group.title}</h3>
+                <div className="categorySheetList">
+                  {group.categories.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      className={category.id === selectedCategoryId ? 'categorySheetItem categorySheetItemActive' : 'categorySheetItem'}
+                      onClick={() => onSelectCategory(category)}
+                    >
+                      <span>{categoryIcon(category.name)}</span>
+                      <b>{category.name}</b>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))
+          ) : (
+            <p className="categorySheetEmpty">{t('mobile.categories.empty')}</p>
+          )}
+
+          <details className="categorySheetManage">
+            <summary>{t('mobile.record.manageCategories')}</summary>
+            <CategoryManager
+              key={`sheet-${defaultDirection}`}
+              canManageCategories={canManageCategories}
+              categories={sourceCategories}
+              defaultDirection={defaultDirection}
+              isBusy={isBusy}
+              onCreateCategory={onCreateCategory}
+              onUpdateCategory={onUpdateCategory}
+            />
+          </details>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -406,7 +539,36 @@ function buildCategoryShortcuts(categories: Category[], entries: Entry[]): Categ
     .filter((category) => !category.archived)
     .map((category) => ({ category, count: counts.get(category.id) ?? 0 }))
     .sort((left, right) => right.count - left.count || left.category.sortOrder - right.category.sortOrder || left.category.name.localeCompare(right.category.name))
-    .slice(0, 16);
+    .slice(0, 7);
+}
+
+// buildCategoryGroups receives compatible categories and groups them by parent category or direction.
+function buildCategoryGroups(categories: Category[], sourceCategories: Category[], t: TFunction): CategoryGroup[] {
+  const parentById = new Map(sourceCategories.map((category) => [category.id, category]));
+  const groups = new Map<string, CategoryGroup>();
+
+  for (const category of [...categories].sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name))) {
+    const parent = category.parentId ? parentById.get(category.parentId) : undefined;
+    const groupId = parent ? `parent-${parent.id}` : `direction-${category.direction}`;
+    const title = parent?.name ?? categoryDirectionLabel(category.direction, t);
+    const group: CategoryGroup = groups.get(groupId) ?? { id: groupId, title, categories: [] };
+    group.categories.push(category);
+    groups.set(groupId, group);
+  }
+
+  return [...groups.values()];
+}
+
+// categoryDirectionLabel receives a category direction and returns the localized group heading.
+function categoryDirectionLabel(direction: string, t: TFunction): string {
+  if (direction === 'income') {
+    return t('mobile.record.types.income');
+  }
+  if (direction === 'expense') {
+    return t('mobile.record.types.expense');
+  }
+
+  return t('mobile.record.uncategorized');
 }
 
 // calculateExpression receives a calculator expression and returns the evaluated value without using eval.

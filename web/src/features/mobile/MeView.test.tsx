@@ -24,23 +24,47 @@ const activityEvents = [
 function renderMeView(overrides: Partial<Parameters<typeof MeView>[0]> = {}) {
   vi.spyOn(authApi, 'fetchPasskeys').mockResolvedValue({ items: [], page: 1, pageSize: 20, total: 0 });
   vi.spyOn(authApi, 'fetchTotpStatus').mockResolvedValue({ enabled: false });
+  vi.spyOn(authApi, 'requestPasswordReset').mockResolvedValue(undefined);
+  vi.spyOn(authApi, 'confirmPasswordReset').mockResolvedValue({
+    user: {
+      id: 'user-1',
+      email: 'person@example.test',
+      status: 'active',
+      emailVerified: true,
+      totpEnabled: false,
+      baseCurrency: 'USD',
+      createdAt: '2026-07-01T00:00:00Z',
+      updatedAt: '2026-07-01T00:00:00Z',
+    },
+  });
+  const onBack = vi.fn();
   const onLoadActivity = vi.fn();
   const onLogout = vi.fn();
   const onOpenImports = vi.fn();
+  const onOpenProfile = vi.fn();
+  const onOpenSecurity = vi.fn();
+  const onUpdateBaseCurrency = vi.fn();
   render(
     <MeView
       actor={actor}
       activityEvents={activityEvents}
+      baseCurrency="USD"
       isActivityLoading={false}
       isLoggingOut={false}
+      isProfileSaving={false}
+      meSection="index"
+      onBack={onBack}
       onLoadActivity={onLoadActivity}
       onLogout={onLogout}
       onOpenImports={onOpenImports}
+      onOpenProfile={onOpenProfile}
+      onOpenSecurity={onOpenSecurity}
+      onUpdateBaseCurrency={onUpdateBaseCurrency}
       runtimeConfig={runtimeConfig}
       {...overrides}
     />,
   );
-  return { onLoadActivity, onLogout, onOpenImports };
+  return { onBack, onLoadActivity, onLogout, onOpenImports, onOpenProfile, onOpenSecurity, onUpdateBaseCurrency };
 }
 
 describe('MeView', () => {
@@ -48,27 +72,46 @@ describe('MeView', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders a grouped identity + security + preferences + data index', async () => {
+  it('renders a compact Me index with drill-in buttons only', () => {
     renderMeView();
 
-    // Identity banner exposes the account region, email, UID and status.
     expect(screen.getByRole('region', { name: 'Me' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Profile/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Security/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Import/ })).toBeInTheDocument();
+    expect(screen.queryByText('person@example.test')).not.toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: 'Passkeys' })).not.toBeInTheDocument();
+  });
+
+  it('renders profile details after entering the profile page', () => {
+    renderMeView({ meSection: 'profile' });
+
+    expect(screen.getByRole('region', { name: 'Profile' })).toBeInTheDocument();
     expect(screen.getByText('person@example.test')).toBeInTheDocument();
     expect(screen.getByText('user-1')).toBeInTheDocument();
-
-    // Grouped section headers give the tab a scannable structure.
-    expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Preferences' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Data' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Primary currency/)).toHaveValue('USD');
+    expect(screen.getByText('entry / created')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  });
 
-    // Security panels render with passkeys framed as recommended.
+  it('saves the selected profile currency from the profile page', () => {
+    const { onUpdateBaseCurrency } = renderMeView({ meSection: 'profile' });
+
+    fireEvent.change(screen.getByLabelText(/Primary currency/), { target: { value: 'EUR' } });
+
+    expect(onUpdateBaseCurrency).toHaveBeenCalledWith('EUR');
+  });
+
+  it('renders password, passkey, and authenticator settings after entering security', async () => {
+    renderMeView({ meSection: 'security' });
+
+    expect(screen.getByRole('region', { name: 'Security' })).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Password' })).toBeInTheDocument();
     expect(await screen.findByRole('article', { name: 'Passkeys' })).toBeInTheDocument();
     expect(screen.getByRole('article', { name: 'Authenticator app' })).toBeInTheDocument();
     expect(screen.getByText('Recommended')).toBeInTheDocument();
-
-    // The recent-activity list preserves the "domain / action" audit format.
-    expect(screen.getByText('entry / created')).toBeInTheDocument();
   });
 
   it('copies the account UID and confirms with an accessible status', async () => {
@@ -77,7 +120,7 @@ describe('MeView', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 
     try {
-      renderMeView();
+      renderMeView({ meSection: 'profile' });
       fireEvent.click(screen.getByRole('button', { name: 'Copy account UID' }));
       await waitFor(() => expect(writeText).toHaveBeenCalledWith('user-1'));
       expect(await screen.findByText('Copied')).toBeInTheDocument();
@@ -90,11 +133,24 @@ describe('MeView', () => {
     }
   });
 
-  it('wires the import, activity, and sign-out actions', () => {
-    const { onLoadActivity, onLogout, onOpenImports } = renderMeView();
+  it('wires index navigation actions', () => {
+    const { onOpenImports, onOpenProfile, onOpenSecurity } = renderMeView();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    fireEvent.click(screen.getByRole('button', { name: /Profile/ }));
+    expect(onOpenProfile).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: /Security/ }));
+    expect(onOpenSecurity).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: /Import/ }));
     expect(onOpenImports).toHaveBeenCalledOnce();
+  });
+
+  it('wires profile back, activity, and sign-out actions', () => {
+    const { onBack, onLoadActivity, onLogout } = renderMeView({ meSection: 'profile' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Me' }));
+    expect(onBack).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load activity' }));
     expect(onLoadActivity).toHaveBeenCalledOnce();
@@ -103,8 +159,26 @@ describe('MeView', () => {
     expect(onLogout).toHaveBeenCalledOnce();
   });
 
+  it('requests and confirms a password reset from the security page', async () => {
+    const requestSpy = vi.spyOn(authApi, 'requestPasswordReset');
+    const confirmSpy = vi.spyOn(authApi, 'confirmPasswordReset');
+    renderMeView({ meSection: 'security' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send reset email' }));
+    await waitFor(() => expect(requestSpy).toHaveBeenCalledWith('person@example.test'));
+    expect(await screen.findByText('Password reset email requested.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Reset code'), { target: { value: '123456' } });
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'new correct horse battery staple' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
+
+    await waitFor(() => expect(confirmSpy).toHaveBeenCalledWith('person@example.test', '123456', 'new correct horse battery staple'));
+    expect(await screen.findByText('Password updated. Sign in with the new password.')).toBeInTheDocument();
+  });
+
   it('notes email-only sign-in when no stronger factors are available', () => {
     renderMeView({
+      meSection: 'security',
       runtimeConfig: { ...emptyRuntimeConfig, features: { ...emptyRuntimeConfig.features, passkeyEnabled: false, totpEnabled: false } },
     });
 

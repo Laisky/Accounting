@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from 'lucide-react';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Account, type Category, type Entry, type EntryUpdateInput } from '../../lib/api/ledger';
 import { formatMoney, supportedCurrencies } from '../../lib/money';
@@ -11,6 +11,7 @@ type EntryDetailEditorProps = {
   categories: Category[];
   entry: Entry;
   isBusy: boolean;
+  openSignal?: number;
   onDeleteEntry: (entryId: string) => Promise<void>;
   onUpdateEntry: (entryId: string, input: EntryUpdateInput) => Promise<void>;
 };
@@ -22,6 +23,7 @@ export function EntryDetailEditor({
   categories,
   entry,
   isBusy,
+  openSignal,
   onDeleteEntry,
   onUpdateEntry,
 }: EntryDetailEditorProps) {
@@ -30,6 +32,12 @@ export function EntryDetailEditor({
   const [draft, setDraft] = useState(() => buildDraft(entry));
   const title = entryTitle(entry, categories);
   const canSave = draft.amountCents > 0 && Boolean(draft.accountId);
+
+  useEffect(() => {
+    if (openSignal) {
+      queueMicrotask(() => setIsOpen(true));
+    }
+  }, [openSignal]);
 
   // handleSubmit receives a form event and patches editable transaction details.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

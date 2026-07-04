@@ -200,6 +200,7 @@ Expected direction:
 - Shared UI should move into `src/components` once it is reused.
 - Feature slices should live under `src/features/<feature>`.
 - API clients should live under `src/lib/api`.
+- Frontend implementation decisions for responsive layout, CSS architecture, color, focus, and touch targets should stay aligned with `docs/arch/frontend.md`.
 - Build output stays in `web/dist` and is never hand-edited.
 - Every authenticated page has a canonical browser route that can be opened directly: `/home`, `/accounts`, `/accounts/<accountID>/transactions`, `/record`, `/reports/<dimension>`, `/imports`, and `/me`. The SPA fallback must serve these routes in production.
 - The Reports Trend tab summarizes income, expense, and net balance for the selected month or year, and plots their period buckets in the book reporting currency using the same entry conversion rules as other report dimensions.
@@ -287,6 +288,8 @@ Initial auth, book, account, category, entry, and import request contracts:
 - `POST /api/auth/totp/disable` accepts `code`, validates the current TOTP secret, and clears the stored secret. Login for TOTP-enabled users requires `totp_code`, rejects replayed codes, and applies per-user failed-code limits.
 - Passkey begin endpoints return a server-side `flowId` plus WebAuthn public-key options. Finish endpoints accept `flowId` and a nested browser credential response. Registration requires an authenticated session and stores credential id, public key, sign count, backup flags, transports, AAGUID, label, and timestamps without private key material.
 - External SSO start accepts no body, stores only a hashed state value in an HttpOnly cookie, and redirects to the configured SSO login URL with `redirect_to`. The callback accepts `state` and `sso_token` query values, validates state with a constant-time comparison, validates the token server-side, clears the state cookie, creates the local session cookie, and never returns the token in a response body.
+- `GET /api/users/me` returns the authenticated user's public profile and preferences, including `baseCurrency`.
+- `PATCH /api/users/me` accepts `baseCurrency` and returns the updated public user. The supported initial profile currencies are `USD`, `EUR`, `CNY`, and `CAD`; unsupported currencies and unknown JSON fields are rejected.
 - Paginated list endpoints accept optional `page` and `page_size`, reject unknown query filters, and bound `page_size` to at most `100`. New list endpoints return an envelope with `items`, `page`, `pageSize`, and `total`; the existing entry list keeps its domain-specific `entries` field with the same pagination metadata.
 - `GET /api/audit` accepts optional `page` and `page_size`, returns only audit events for the authenticated actor, and omits secret metadata such as passwords, tokens, secrets, and one-time codes. The initial feed records registration, login, logout, login failures, verification and password-reset requests and confirmations, TOTP setup/enable/disable, passkey registration/login/rename/delete, book create/update, account group create/update, account create, category create/update, entry create/update/delete, and Wacai import-preview creation.
 - `POST /api/books` accepts `name` and `reportingCurrency`. The response returns the created book as a role-aware book list item with owner role for the creator.
@@ -320,7 +323,7 @@ The durable model should support personal cashflow bookkeeping first while leavi
 
 Core entities:
 
-- User: identity, authentication settings, profile, preferences, and audit actor.
+- User: identity, authentication settings, profile, preferences including the primary summary display currency, and audit actor.
 - Session: authenticated browser session with expiry, rotation, and revocation.
 - Book: bookkeeping workspace with owner, settings, base reporting currency, category policy, and membership.
 - Book member: user-to-book relationship with role, display name, invite status, and timestamps.
@@ -332,6 +335,8 @@ Core entities:
 - Exchange rate: rate source, base currency, quote currency, effective time, and precision metadata.
 - Import batch: source upload metadata, parser version, source hash, detected schema, preview rows, row diagnostics, and idempotent preview status, with mapping decisions, commit status, raw-file object storage, and rollback state added when committed imports become durable.
 - Audit event: security-relevant and data-changing events with actor, target, action, timestamp, and sanitized metadata.
+
+Book `reportingCurrency` remains the accounting context for the book and recorded entries. User `baseCurrency` is a profile preference for display: dashboard, account, and report summaries convert visible aggregate totals into the authenticated user's selected currency when exchange-rate data is available.
 
 Entry types should include at least:
 
