@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '@/lib/api/auth';
 import { PasskeySettingsView } from './PasskeySettingsView';
@@ -67,7 +68,7 @@ describe('PasskeySettingsView', () => {
     });
     const deleteSpy = vi.spyOn(authApi, 'deletePasskey').mockResolvedValue();
 
-    render(<PasskeySettingsView featureEnabled />);
+    renderPasskeySettings();
 
     expect(await screen.findByLabelText('Label for Security key')).toBeInTheDocument();
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -115,7 +116,31 @@ describe('PasskeySettingsView', () => {
     await waitFor(() => expect(screen.getByText('Passkey deleted.')).toBeInTheDocument());
     expect(deleteSpy).toHaveBeenCalledWith('passkey-1');
   });
+
+  it('shows an inline error when passkey metadata fails to load', async () => {
+    vi.spyOn(authApi, 'fetchPasskeys').mockRejectedValue(new Error('network down'));
+
+    renderPasskeySettings();
+
+    expect(await screen.findByText('Passkeys could not be loaded.')).toBeInTheDocument();
+  });
 });
+
+// renderPasskeySettings mounts PasskeySettingsView with an isolated QueryClient.
+function renderPasskeySettings() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      mutations: { retry: false },
+      queries: { retry: false },
+    },
+  });
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <PasskeySettingsView featureEnabled />
+    </QueryClientProvider>,
+  );
+}
 
 // registrationOptions receives no parameters and returns minimal WebAuthn creation options for tests.
 function registrationOptions(): RegistrationOptionsJSON {

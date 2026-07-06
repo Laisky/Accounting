@@ -112,6 +112,15 @@ belong in those source-of-truth documents and locale bundles.
 - Mutations must invalidate through the same `queryKeys` factories instead of duplicating key arrays
   inline. Entry mutations should invalidate ledger summary, affected book entries, accounts, and
   report inputs until Phase 3 introduces narrower cache updates.
+- The Me profile activity feed is loaded on demand by `useAuditEventsQuery` with
+  `queryKeys.audit.list({ page: 1, pageSize: 20 })`; `MobileWorkspace` must not own audit event
+  arrays or activity loading state.
+- Passkey metadata is loaded by `usePasskeysQuery` with `queryKeys.auth.passkeys({ page: 1,
+  pageSize: 20 })`. Passkey registration, rename, and delete flows update that Query cache through
+  the shared key instead of keeping a parallel component-owned passkey list.
+- TOTP status is loaded by `useTotpStatusQuery` with `queryKeys.auth.totpStatus()`. Setup remains
+  local pending UI state, while confirm and disable mutations write the returned status into the
+  same Query cache.
 - Authenticated shell client state should move into narrow contexts as it leaves `MobileWorkspace`.
   `web/src/contexts/ThemeContext.tsx` owns the persisted `system`/`light`/`dark` theme preference and
   is composed by `MobileShellLayout`; feature components should consume it through `useThemeContext`
@@ -133,6 +142,12 @@ belong in those source-of-truth documents and locale bundles.
   so the result can be refreshed or shared without replaying local component state. Search entry
   loading is owned by `useMobileSearchEntries`, which uses TanStack Query and
   `queryKeys.entries.list` instead of shell-owned `useState`.
+- Account-detail transaction loading is owned by `useAccountDetailEntries`, keyed through
+  `queryKeys.entries.list(bookId, { accountId, page: 1, pageSize: 100, revision })`. The mobile
+  shell must not keep account-detail entry arrays or loading state.
+- Direct-open entry detail fallback loading is owned by `useEntryDetail`, keyed through
+  `queryKeys.entries.detail(bookId, entryId, revision)`. The shell may keep a short-lived edited
+  entry draft for mutation feedback, but it must not fetch all entries to hydrate detail routes.
 - Route panels are lazy-loaded behind `Suspense` in `MobileWorkspaceContent`: home, accounts, account
   transactions, entry detail, record, reports, imports, me/settings, and transaction search. The
   measured local Vite build after this split produced a main JS asset of 374.08 kB, down from the

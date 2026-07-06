@@ -13,7 +13,7 @@ import {
 import { type FormEvent, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '@/components/LanguageSelector';
-import { type AuditEvent } from '@/lib/api/audit';
+import { useAuditEventsQuery } from '@/hooks/useAudit';
 import { confirmPasswordReset, requestPasswordReset, type AuthActor } from '@/lib/api/auth';
 import { emptyRuntimeConfig, type RuntimeConfig } from '@/lib/api/runtimeConfig';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -25,14 +25,11 @@ import './me-view.css';
 
 type MeViewProps = {
   actor: AuthActor;
-  activityEvents: AuditEvent[];
   baseCurrency: string;
-  isActivityLoading: boolean;
   isLoggingOut: boolean;
   isProfileSaving: boolean;
   meSection: MeSection;
   onBack: () => void;
-  onLoadActivity: () => void;
   onLogout: () => void;
   onOpenImports: () => void;
   onOpenProfile: () => void;
@@ -44,14 +41,11 @@ type MeViewProps = {
 // MeView renders the personal account tab as a compact settings index with drill-in Profile and Security pages.
 export function MeView({
   actor,
-  activityEvents,
   baseCurrency,
-  isActivityLoading,
   isLoggingOut,
   isProfileSaving,
   meSection,
   onBack,
-  onLoadActivity,
   onLogout,
   onOpenImports,
   onOpenProfile,
@@ -62,6 +56,8 @@ export function MeView({
   const { t } = useTranslation();
   const config = runtimeConfig ?? emptyRuntimeConfig;
   const [uidCopied, setUidCopied] = useState(false);
+  const activityQuery = useAuditEventsQuery();
+  const activityEvents = activityQuery.data?.items ?? [];
   const monogram = actor.email.trim().charAt(0).toUpperCase() || '?';
   const statusIsActive = actor.status.toLowerCase() === 'active';
   const securityAvailable = config.features.passkeyEnabled || config.features.totpEnabled;
@@ -110,12 +106,13 @@ export function MeView({
             <button
               className="mobileSecondaryButton"
               type="button"
-              disabled={isActivityLoading}
-              onClick={onLoadActivity}
+              disabled={activityQuery.isFetching}
+              onClick={() => void activityQuery.refetch()}
             >
               <History size={16} aria-hidden="true" />
               {t('mobile.me.loadActivity')}
             </button>
+            {activityQuery.isError ? <p className="mobileInlineError">{t('common.error.activityFailed')}</p> : null}
             {activityEvents.length ? (
               <ul className="meActivityList">
                 {activityEvents.slice(0, 8).map((event) => (

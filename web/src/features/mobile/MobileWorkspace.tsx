@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { useThemeContext } from '@/contexts/ThemeContext';
 import { useMobileBookContextQuery, useMobileFoundationQuery } from '@/hooks/useMobileWorkspaceData';
-import { fetchAuditEvents, type AuditEvent } from '@/lib/api/audit';
 import { updateUserProfile, type AuthActor } from '@/lib/api/auth';
 import {
   createAccount,
@@ -14,7 +13,6 @@ import {
   createEntry,
   deleteEntry,
   emptyLedgerSummary,
-  fetchAllEntries,
   updateCategory,
   updateAccountGroup,
   updateBook,
@@ -28,7 +26,6 @@ import {
 import { type RuntimeConfig } from '@/lib/api/runtimeConfig';
 import { buildRateIndex, normalizeCurrencyCode } from '@/lib/money';
 import type { ReportTab } from '../reports/reportWorkspaceModel';
-import { accountEntries } from './account-transaction-utils';
 import type { AccountCreateInput } from './AccountsView';
 import { entryDetailTitle } from './entry-detail-utils';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -73,13 +70,8 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout, routeState }: 
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [importProcessing, setImportProcessing] = useState('');
-  const [activityEvents, setActivityEvents] = useState<AuditEvent[]>([]);
-  const [isActivityLoading, setIsActivityLoading] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [accountDetailEntries, setAccountDetailEntries] = useState<Entry[]>([]);
-  const [isAccountDetailLoading, setIsAccountDetailLoading] = useState(false);
   const [entryDetailEntry, setEntryDetailEntry] = useState<Entry | undefined>();
-  const [isEntryDetailLoading, setIsEntryDetailLoading] = useState(false);
   const [entryEditorOpenSignal, setEntryEditorOpenSignal] = useState(0);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [baseCurrency, setBaseCurrency] = useState('USD');
@@ -107,7 +99,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout, routeState }: 
   const primaryAccount = sharedAccounts[0] ?? snapshot.accounts[0];
   const processingLabel = importProcessing || (isBusy ? t('common.processing') : '');
   const editTargetLabel = entryDetailId ? t('mobile.menu.editEntry') : t('mobile.menu.editBook');
-  const canEditContext = entryDetailId ? Boolean(visibleEntryDetail) : Boolean(selectedBook);
+  const canEditContext = Boolean(selectedBook);
 
   // openTab receives a top-level page id and navigates to that page's canonical URL.
   function openTab(tab: MobileTab) {
@@ -243,87 +235,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout, routeState }: 
       contentRef.current.scrollTop = 0;
     }
   }, [location.pathname]);
-
-  useEffect(() => {
-    let isActive = true;
-    if (!accountDetailId || !selectedBook) {
-      queueMicrotask(() => {
-        if (isActive) {
-          setAccountDetailEntries([]);
-          setIsAccountDetailLoading(false);
-        }
-      });
-      return () => {
-        isActive = false;
-      };
-    }
-
-    queueMicrotask(() => {
-      if (isActive) {
-        setIsAccountDetailLoading(true);
-      }
-    });
-    fetchAllEntries(selectedBook.id)
-      .then((entries) => {
-        if (isActive) {
-          setAccountDetailEntries(accountEntries(accountDetailId, entries));
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setError(t('mobile.accountDetail.error'));
-          setAccountDetailEntries([]);
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsAccountDetailLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [accountDetailId, refreshKey, selectedBook, t]);
-
-  useEffect(() => {
-    if (!entryDetailId || !selectedBook) {
-      return;
-    }
-
-    if (snapshot.entries.some((entry) => entry.id === entryDetailId)) {
-      return;
-    }
-
-    let isActive = true;
-    Promise.resolve()
-      .then(() => {
-        if (isActive) {
-          setIsEntryDetailLoading(true);
-        }
-        return fetchAllEntries(selectedBook.id);
-      })
-      .then((entries) => {
-        if (isActive) {
-          setEntryDetailEntry(entries.find((entry) => entry.id === entryDetailId));
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setError(t('mobile.entryDetail.error'));
-          setEntryDetailEntry(undefined);
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsEntryDetailLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [entryDetailId, selectedBook, snapshot.entries, t]);
 
   async function handlePrepareAccount() {
     setIsBusy(true);
@@ -633,19 +544,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout, routeState }: 
     return book.id;
   }
 
-  async function handleLoadActivity() {
-    setIsActivityLoading(true);
-    setError('');
-    try {
-      const events = await fetchAuditEvents();
-      setActivityEvents(events.items);
-    } catch {
-      setError(t('common.error.activityFailed'));
-    } finally {
-      setIsActivityLoading(false);
-    }
-  }
-
   function handleOpenSearch() {
     setIsWorkspaceMenuOpen(false);
     const search = searchQuery ? `?${new URLSearchParams({ query: searchQuery }).toString()}` : '';
@@ -725,20 +623,15 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout, routeState }: 
 
         <MobileWorkspaceContent
           accountDetailAccount={accountDetailAccount}
-          accountDetailEntries={accountDetailEntries}
           accountDetailId={accountDetailId}
           activeTab={activeTab}
-          activityEvents={activityEvents}
           actor={actor}
           bookCurrency={bookCurrency}
           canManageCategories={canManageCategories}
           contentRef={contentRef}
           entryDetailId={entryDetailId}
           entryEditorOpenSignal={entryEditorOpenSignal}
-          isAccountDetailLoading={isAccountDetailLoading}
-          isActivityLoading={isActivityLoading}
           isBusy={isBusy}
-          isEntryDetailLoading={isEntryDetailLoading}
           isLoggingOut={isLoggingOut}
           isRecordEntryMode={isRecordEntryMode}
           isSearchOpen={isSearchOpen}
@@ -750,7 +643,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout, routeState }: 
           onCreateCategory={handleCreateCategory}
           onCreateEntry={handleCreateEntry}
           onDeleteEntry={handleDeleteEntry}
-          onLoadActivity={handleLoadActivity}
           onLogout={handleLogoutClick}
           onOpenAccount={handleOpenAccount}
           onOpenEntry={handleOpenEntry}

@@ -1,7 +1,9 @@
 import { Check, Copy, ShieldCheck } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { confirmTotp, disableTotp, fetchTotpStatus, setupTotp } from '@/lib/api/auth';
+import { totpStatusQueryKey, useTotpStatusQuery } from '@/hooks/useTotp';
+import { confirmTotp, disableTotp, setupTotp, type TotpStatus } from '@/lib/api/auth';
 import { copyToClipboard } from '@/lib/clipboard';
 import './totp-settings.css';
 
@@ -12,7 +14,9 @@ type TotpSettingsViewProps = {
 // TotpSettingsView receives runtime feature state and renders signed-in TOTP setup and disable controls.
 export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
   const { t } = useTranslation();
-  const [enabled, setEnabled] = useState(false);
+  const queryClient = useQueryClient();
+  const statusQuery = useTotpStatusQuery(featureEnabled);
+  const enabled = statusQuery.data?.enabled ?? false;
   const [setupURI, setSetupURI] = useState('');
   const [setupCode, setSetupCode] = useState('');
   const [disableCode, setDisableCode] = useState('');
@@ -31,24 +35,6 @@ export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
     setKeyCopied(true);
     window.setTimeout(() => setKeyCopied(false), 2000);
   }
-
-  useEffect(() => {
-    if (!featureEnabled) {
-      return;
-    }
-
-    const controller = new AbortController();
-    fetchTotpStatus(controller.signal)
-      .then((nextStatus) => setEnabled(nextStatus.enabled))
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          return;
-        }
-        setError(t('mobile.error.totpStatusFailed'));
-      });
-
-    return () => controller.abort();
-  }, [featureEnabled, t]);
 
   // handleStartSetup receives no parameters and starts a pending TOTP enrollment.
   async function handleStartSetup() {
@@ -75,7 +61,7 @@ export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
     setStatus('');
     try {
       const nextStatus = await confirmTotp(setupCode);
-      setEnabled(nextStatus.enabled);
+      queryClient.setQueryData<TotpStatus>(totpStatusQueryKey, nextStatus);
       setSetupURI('');
       setSetupCode('');
       setStatus(t('mobile.status.totpEnabled'));
@@ -94,7 +80,7 @@ export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
     setStatus('');
     try {
       const nextStatus = await disableTotp(disableCode);
-      setEnabled(nextStatus.enabled);
+      queryClient.setQueryData<TotpStatus>(totpStatusQueryKey, nextStatus);
       setDisableCode('');
       setStatus(t('mobile.status.totpDisabled'));
     } catch {
@@ -180,6 +166,7 @@ export function TotpSettingsView({ featureEnabled }: TotpSettingsViewProps) {
         </form>
       )}
 
+      {statusQuery.isError ? <p className="mobileInlineError">{t('mobile.error.totpStatusFailed')}</p> : null}
       {error ? <p className="mobileInlineError">{error}</p> : null}
       {status ? <p className="mobileInlineStatus">{status}</p> : null}
     </article>

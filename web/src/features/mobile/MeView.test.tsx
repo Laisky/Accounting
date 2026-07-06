@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as auditApi from '@/lib/api/audit';
 import * as authApi from '@/lib/api/auth';
 import { emptyRuntimeConfig, type RuntimeConfig } from '@/lib/api/runtimeConfig';
 import { MeView } from './MeView';
@@ -22,6 +24,12 @@ const activityEvents = [
 
 // renderMeView mounts MeView with stubbed security APIs and returns the interaction spies.
 function renderMeView(overrides: Partial<Parameters<typeof MeView>[0]> = {}) {
+  vi.spyOn(auditApi, 'fetchAuditEvents').mockResolvedValue({
+    items: activityEvents,
+    page: 1,
+    pageSize: 20,
+    total: activityEvents.length,
+  });
   vi.spyOn(authApi, 'fetchPasskeys').mockResolvedValue({ items: [], page: 1, pageSize: 20, total: 0 });
   vi.spyOn(authApi, 'fetchTotpStatus').mockResolvedValue({ enabled: false });
   vi.spyOn(authApi, 'requestPasswordReset').mockResolvedValue(undefined);
@@ -38,33 +46,37 @@ function renderMeView(overrides: Partial<Parameters<typeof MeView>[0]> = {}) {
     },
   });
   const onBack = vi.fn();
-  const onLoadActivity = vi.fn();
   const onLogout = vi.fn();
   const onOpenImports = vi.fn();
   const onOpenProfile = vi.fn();
   const onOpenSecurity = vi.fn();
   const onUpdateBaseCurrency = vi.fn();
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      mutations: { retry: false },
+      queries: { retry: false },
+    },
+  });
   render(
-    <MeView
-      actor={actor}
-      activityEvents={activityEvents}
-      baseCurrency="USD"
-      isActivityLoading={false}
-      isLoggingOut={false}
-      isProfileSaving={false}
-      meSection="index"
-      onBack={onBack}
-      onLoadActivity={onLoadActivity}
-      onLogout={onLogout}
-      onOpenImports={onOpenImports}
-      onOpenProfile={onOpenProfile}
-      onOpenSecurity={onOpenSecurity}
-      onUpdateBaseCurrency={onUpdateBaseCurrency}
-      runtimeConfig={runtimeConfig}
-      {...overrides}
-    />,
+    <QueryClientProvider client={queryClient}>
+      <MeView
+        actor={actor}
+        baseCurrency="USD"
+        isLoggingOut={false}
+        isProfileSaving={false}
+        meSection="index"
+        onBack={onBack}
+        onLogout={onLogout}
+        onOpenImports={onOpenImports}
+        onOpenProfile={onOpenProfile}
+        onOpenSecurity={onOpenSecurity}
+        onUpdateBaseCurrency={onUpdateBaseCurrency}
+        runtimeConfig={runtimeConfig}
+        {...overrides}
+      />
+    </QueryClientProvider>,
   );
-  return { onBack, onLoadActivity, onLogout, onOpenImports, onOpenProfile, onOpenSecurity, onUpdateBaseCurrency };
+  return { onBack, onLogout, onOpenImports, onOpenProfile, onOpenSecurity, onUpdateBaseCurrency };
 }
 
 describe('MeView', () => {
@@ -92,7 +104,7 @@ describe('MeView', () => {
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Preferences' })).toBeInTheDocument();
     expect(screen.getByLabelText(/Primary currency/)).toHaveValue('USD');
-    expect(screen.getByText('entry / created')).toBeInTheDocument();
+    expect(screen.getByText('No recent activity loaded yet.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
   });
 
@@ -146,17 +158,28 @@ describe('MeView', () => {
     expect(onOpenImports).toHaveBeenCalledOnce();
   });
 
-  it('wires profile back, activity, and sign-out actions', () => {
-    const { onBack, onLoadActivity, onLogout } = renderMeView({ meSection: 'profile' });
+  it('wires profile back, activity, and sign-out actions', async () => {
+    const auditSpy = vi.spyOn(auditApi, 'fetchAuditEvents');
+    const { onBack, onLogout } = renderMeView({ meSection: 'profile' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to Me' }));
     expect(onBack).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load activity' }));
-    expect(onLoadActivity).toHaveBeenCalledOnce();
+    await waitFor(() => expect(auditSpy).toHaveBeenCalledOnce());
+    expect(await screen.findByText('entry / created')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     expect(onLogout).toHaveBeenCalledOnce();
+  });
+
+  it('shows an inline activity load failure from the audit query', async () => {
+    renderMeView({ meSection: 'profile' });
+    vi.spyOn(auditApi, 'fetchAuditEvents').mockRejectedValue(new Error('network down'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load activity' }));
+
+    expect(await screen.findByText('Activity could not be loaded.')).toBeInTheDocument();
   });
 
   it('requests and confirms a password reset from the security page', async () => {

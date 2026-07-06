@@ -18,6 +18,7 @@ type EntryDetailViewProps = {
   categories: Category[];
   entry?: Entry;
   editorOpenSignal?: number;
+  error?: string;
   isLoading: boolean;
   isSaving: boolean;
   members: BookMember[];
@@ -37,6 +38,7 @@ export function EntryDetailView({
   categories,
   editorOpenSignal,
   entry,
+  error,
   isLoading,
   isSaving,
   members,
@@ -56,6 +58,7 @@ export function EntryDetailView({
   if (!entry) {
     return (
       <section className="tabPanel entryDetailPanel" aria-label={t('mobile.entryDetail.title')}>
+        {error ? <p className="mobileInlineError">{error}</p> : null}
         <p className="emptyState">{t('mobile.entryDetail.notFound')}</p>
       </section>
     );

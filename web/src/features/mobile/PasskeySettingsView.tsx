@@ -1,12 +1,14 @@
 import { KeyRound, Pencil, Trash2 } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { passkeyListQueryKey, usePasskeysQuery } from '@/hooks/usePasskeys';
 import {
   beginPasskeyRegistration,
   deletePasskey,
-  fetchPasskeys,
   finishPasskeyRegistration,
   updatePasskey,
+  type PasskeyList,
   type PasskeyListItem,
 } from '@/lib/api/auth';
 import { credentialCreationOptionsFromJSON, isWebAuthnAvailable, publicKeyCredentialToJSON } from '@/lib/webauthn';
@@ -19,34 +21,14 @@ type PasskeySettingsViewProps = {
 // PasskeySettingsView receives runtime feature state and renders signed-in passkey management controls.
 export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps) {
   const { t } = useTranslation();
-  const [passkeys, setPasskeys] = useState<PasskeyListItem[]>([]);
-  const [labels, setLabels] = useState<Record<string, string>>({});
+  const queryClient = useQueryClient();
+  const passkeysQuery = usePasskeysQuery(featureEnabled);
+  const passkeys = passkeysQuery.data?.items ?? [];
+  const [labelDrafts, setLabelDrafts] = useState<Record<string, string>>({});
   const [newLabel, setNewLabel] = useState(t('mobile.me.defaultPasskeyLabel'));
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
-
-  useEffect(() => {
-    if (!featureEnabled) {
-      return;
-    }
-
-    const controller = new AbortController();
-    fetchPasskeys(controller.signal)
-      .then((page) => {
-        const items = Array.isArray(page.items) ? page.items : [];
-        setPasskeys(items);
-        setLabels(passkeyLabels(items));
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          return;
-        }
-        setError(t('mobile.error.passkeysFailed'));
-      });
-
-    return () => controller.abort();
-  }, [featureEnabled, t]);
 
   // handleRegister receives a form submit event and registers a new browser passkey.
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
@@ -68,8 +50,10 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
         newLabel.trim(),
         publicKeyCredentialToJSON(credential as PublicKeyCredential),
       );
-      setPasskeys((current) => [passkey, ...current.filter((item) => item.id !== passkey.id)]);
-      setLabels((current) => ({ ...current, [passkey.id]: passkey.label }));
+      queryClient.setQueryData<PasskeyList>(passkeyListQueryKey, (current) =>
+        passkeyPageWith([passkey, ...(current?.items ?? []).filter((item) => item.id !== passkey.id)], current),
+      );
+      setLabelDrafts((current) => withoutDraft(current, passkey.id));
       setNewLabel(t('mobile.me.defaultPasskeyLabel'));
       setStatus(t('mobile.status.passkeyRegistered'));
     } catch {
@@ -85,10 +69,16 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
     setError('');
     setStatus('');
     try {
-      const nextLabel = labels[passkeyId]?.trim() ?? '';
+      const existing = passkeys.find((passkey) => passkey.id === passkeyId);
+      const nextLabel = (labelDrafts[passkeyId] ?? existing?.label ?? '').trim();
       const passkey = await updatePasskey(passkeyId, nextLabel);
-      setPasskeys((current) => current.map((item) => (item.id === passkey.id ? passkey : item)));
-      setLabels((current) => ({ ...current, [passkey.id]: passkey.label }));
+      queryClient.setQueryData<PasskeyList>(passkeyListQueryKey, (current) =>
+        passkeyPageWith(
+          (current?.items ?? passkeys).map((item) => (item.id === passkey.id ? passkey : item)),
+          current,
+        ),
+      );
+      setLabelDrafts((current) => withoutDraft(current, passkey.id));
       setStatus(t('mobile.status.passkeyRenamed'));
     } catch {
       setError(t('mobile.error.passkeyRenameFailed'));
@@ -104,12 +94,13 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
     setStatus('');
     try {
       await deletePasskey(passkeyId);
-      setPasskeys((current) => current.filter((item) => item.id !== passkeyId));
-      setLabels((current) => {
-        const next = { ...current };
-        delete next[passkeyId];
-        return next;
-      });
+      queryClient.setQueryData<PasskeyList>(passkeyListQueryKey, (current) =>
+        passkeyPageWith(
+          (current?.items ?? passkeys).filter((item) => item.id !== passkeyId),
+          current,
+        ),
+      );
+      setLabelDrafts((current) => withoutDraft(current, passkeyId));
       setStatus(t('mobile.status.passkeyDeleted'));
     } catch {
       setError(t('mobile.error.passkeyDeleteFailed'));
@@ -162,9 +153,9 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
                 <span>{t('mobile.me.passkeyLabelFor', { label: passkey.label })}</span>
                 <input
                   type="text"
-                  value={labels[passkey.id] ?? passkey.label}
+                  value={labelDrafts[passkey.id] ?? passkey.label}
                   maxLength={80}
-                  onChange={(event) => setLabels((current) => ({ ...current, [passkey.id]: event.target.value }))}
+                  onChange={(event) => setLabelDrafts((current) => ({ ...current, [passkey.id]: event.target.value }))}
                 />
               </label>
               <div className="passkeyMeta">
@@ -177,7 +168,7 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
                 <button
                   className="mobileSecondaryButton"
                   type="button"
-                  disabled={isBusy || !(labels[passkey.id] ?? '').trim()}
+                  disabled={isBusy || !(labelDrafts[passkey.id] ?? passkey.label).trim()}
                   onClick={() => void handleRename(passkey.id)}
                 >
                   <Pencil size={16} />
@@ -200,15 +191,28 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
         )}
       </ul>
 
+      {passkeysQuery.isError ? <p className="mobileInlineError">{t('mobile.error.passkeysFailed')}</p> : null}
       {error ? <p className="mobileInlineError">{error}</p> : null}
       {status ? <p className="mobileInlineStatus">{status}</p> : null}
     </article>
   );
 }
 
-// passkeyLabels receives passkey metadata and returns a lookup of editable labels.
-function passkeyLabels(passkeys: PasskeyListItem[]): Record<string, string> {
-  return Object.fromEntries(passkeys.map((passkey) => [passkey.id, passkey.label]));
+// passkeyPageWith receives passkey metadata and returns a normalized passkey list page.
+function passkeyPageWith(items: PasskeyListItem[], current?: PasskeyList): PasskeyList {
+  return {
+    items,
+    page: current?.page ?? 1,
+    pageSize: current?.pageSize ?? 20,
+    total: items.length,
+  };
+}
+
+// withoutDraft receives label drafts and removes one passkey draft value.
+function withoutDraft(drafts: Record<string, string>, passkeyId: string): Record<string, string> {
+  const next = { ...drafts };
+  delete next[passkeyId];
+  return next;
 }
 
 // formatPasskeyTime receives an ISO timestamp and returns a compact UTC string.

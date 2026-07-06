@@ -150,6 +150,37 @@ describe('AccountTransactionsView', () => {
     expect(onOpenEntry).toHaveBeenCalledWith('entry-income');
   });
 
+  it('scrubs the interactive balance chart with the keyboard', () => {
+    render(
+      <AccountTransactionsView
+        account={account}
+        categories={categories}
+        entries={entries}
+        isLoading={false}
+        members={members}
+        onOpenEntry={vi.fn()}
+      />,
+    );
+
+    const slider = screen.getByRole('slider', { name: 'Account balance chart' });
+    // Opening balance plus four entries yields five data points (indices 0-4).
+    expect(slider).toHaveAttribute('aria-valuemax', '4');
+    expect(slider).toHaveAttribute('aria-valuenow', '4');
+    expect(slider).toHaveAttribute('aria-valuetext', expect.stringContaining('$1,258.00'));
+
+    fireEvent.focus(slider);
+    fireEvent.keyDown(slider, { key: 'Home' });
+    expect(slider).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByText('Opening balance')).toBeInTheDocument();
+    expect(screen.getByText('$1,000.00')).toBeInTheDocument();
+
+    fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    expect(slider).toHaveAttribute('aria-valuenow', '1');
+    expect(screen.getByText('Jun 10, 2026')).toBeInTheDocument();
+    expect(screen.getByText('$1,070.00')).toBeInTheDocument();
+    expect(screen.getByText('+$70.00')).toBeInTheDocument();
+  });
+
   it('filters account entries through source and destination transfer accounts', () => {
     expect(accountEntries(account.id, entries).map((entry) => entry.id)).toEqual([
       'entry-income',

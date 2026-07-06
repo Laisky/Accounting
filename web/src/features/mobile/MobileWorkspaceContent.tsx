@@ -1,6 +1,5 @@
 import { lazy, Suspense, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type AuditEvent } from '@/lib/api/audit';
 import { type AuthActor } from '@/lib/api/auth';
 import {
   type Account,
@@ -17,6 +16,8 @@ import type { AccountCreateInput } from './AccountsView';
 import { type MeSection, type MobileTab } from './mobile-workspace-utils';
 import { type LedgerSnapshot } from './mobile-workspace-types';
 import type { RecordEntryInput } from './RecordEntryView';
+import { useAccountDetailEntries } from './useAccountDetailEntries';
+import { useEntryDetail } from './useEntryDetail';
 import { useMobileSearchEntries } from './useMobileSearchEntries';
 
 const AccountTransactionsView = lazy(async () => ({
@@ -49,20 +50,15 @@ const TransactionSearchView = lazy(async () => ({
 
 type MobileWorkspaceContentProps = {
   accountDetailAccount?: Account;
-  accountDetailEntries: Entry[];
   accountDetailId: string | null;
   activeTab: MobileTab;
-  activityEvents: AuditEvent[];
   actor: AuthActor;
   bookCurrency: string;
   canManageCategories: boolean;
   contentRef: RefObject<HTMLDivElement | null>;
   entryDetailId: string | null;
   entryEditorOpenSignal: number;
-  isAccountDetailLoading: boolean;
-  isActivityLoading: boolean;
   isBusy: boolean;
-  isEntryDetailLoading: boolean;
   isLoggingOut: boolean;
   isRecordEntryMode: boolean;
   isSearchOpen: boolean;
@@ -74,7 +70,6 @@ type MobileWorkspaceContentProps = {
   onCreateEntry: (input: RecordEntryInput) => Promise<void>;
   onDeleteEntry: (entryId: string) => Promise<void>;
   onCloseMeSection: () => void;
-  onLoadActivity: () => Promise<void>;
   onLogout: () => Promise<void>;
   onOpenAccount: (accountId: string) => void;
   onOpenEntry: (entryId: string) => void;
@@ -107,20 +102,15 @@ type MobileWorkspaceContentProps = {
 // MobileWorkspaceContent receives shell state and renders the active routed workspace body.
 export function MobileWorkspaceContent({
   accountDetailAccount,
-  accountDetailEntries,
   accountDetailId,
   activeTab,
-  activityEvents,
   actor,
   bookCurrency,
   canManageCategories,
   contentRef,
   entryDetailId,
   entryEditorOpenSignal,
-  isAccountDetailLoading,
-  isActivityLoading,
   isBusy,
-  isEntryDetailLoading,
   isLoggingOut,
   isRecordEntryMode,
   isSearchOpen,
@@ -132,7 +122,6 @@ export function MobileWorkspaceContent({
   onCreateEntry,
   onDeleteEntry,
   onCloseMeSection,
-  onLoadActivity,
   onLogout,
   onOpenAccount,
   onOpenEntry,
@@ -169,6 +158,17 @@ export function MobileWorkspaceContent({
     refreshKey,
     selectedBook,
   });
+  const accountDetailQuery = useAccountDetailEntries({
+    accountId: accountDetailId,
+    bookId: selectedBook?.id,
+    refreshKey,
+  });
+  const entryDetailQuery = useEntryDetail({
+    bookId: selectedBook?.id,
+    entryId: entryDetailId,
+    initialEntry: visibleEntryDetail,
+    refreshKey,
+  });
 
   return (
     <div className={`mobileContent ${isRecordEntryMode ? 'mobileContentRecord' : ''}`} ref={contentRef}>
@@ -201,8 +201,9 @@ export function MobileWorkspaceContent({
               books={snapshot.books}
               categories={snapshot.categories}
               editorOpenSignal={entryEditorOpenSignal}
-              entry={visibleEntryDetail}
-              isLoading={isEntryDetailLoading && !visibleEntryDetail}
+              entry={entryDetailQuery.entry}
+              error={entryDetailQuery.isError ? t('mobile.entryDetail.error') : undefined}
+              isLoading={entryDetailQuery.isLoading && !entryDetailQuery.entry}
               isSaving={isBusy}
               members={snapshot.members}
               onDeleteEntry={onDeleteEntry}
@@ -229,8 +230,9 @@ export function MobileWorkspaceContent({
           <AccountTransactionsView
             account={accountDetailAccount}
             categories={snapshot.categories}
-            entries={accountDetailEntries}
-            isLoading={isAccountDetailLoading}
+            entries={accountDetailQuery.data ?? []}
+            error={accountDetailQuery.isError ? t('mobile.accountDetail.error') : undefined}
+            isLoading={accountDetailQuery.isLoading}
             members={snapshot.members}
             onOpenEntry={onOpenEntry}
           />
@@ -302,14 +304,11 @@ export function MobileWorkspaceContent({
         <Suspense fallback={lazyFallback}>
           <MeView
             actor={actor}
-            activityEvents={activityEvents}
-            isActivityLoading={isActivityLoading}
             isLoggingOut={isLoggingOut}
             baseCurrency={displayCurrency}
             isProfileSaving={isBusy}
             meSection={meSection}
             onBack={onCloseMeSection}
-            onLoadActivity={onLoadActivity}
             onLogout={onLogout}
             onOpenImports={onOpenImports}
             onOpenProfile={onOpenMeProfile}
