@@ -11,13 +11,19 @@ type CredentialDescriptorJSON = Omit<PublicKeyCredentialDescriptor, 'id'> & {
   id: string;
 };
 
-type PublicKeyCredentialCreationOptionsJSON = Omit<PublicKeyCredentialCreationOptions, 'challenge' | 'excludeCredentials' | 'user'> & {
+type PublicKeyCredentialCreationOptionsJSON = Omit<
+  PublicKeyCredentialCreationOptions,
+  'challenge' | 'excludeCredentials' | 'user'
+> & {
   challenge: string;
   excludeCredentials?: CredentialDescriptorJSON[];
   user: Omit<PublicKeyCredentialUserEntity, 'id'> & { id: string };
 };
 
-type PublicKeyCredentialRequestOptionsJSON = Omit<PublicKeyCredentialRequestOptions, 'allowCredentials' | 'challenge'> & {
+type PublicKeyCredentialRequestOptionsJSON = Omit<
+  PublicKeyCredentialRequestOptions,
+  'allowCredentials' | 'challenge'
+> & {
   allowCredentials?: CredentialDescriptorJSON[];
   challenge: string;
 };

@@ -7,11 +7,11 @@
   --landing-teal: oklch(34% 0.11 166);
   --landing-clay: oklch(48% 0.13 35);
   --landing-gold: oklch(75% 0.135 78);
+
   min-height: 100vh;
   color: var(--landing-ink);
   background:
-    linear-gradient(180deg, oklch(99% 0.012 100), var(--landing-paper) 42%, oklch(94% 0.024 105)),
-    var(--landing-paper);
+    linear-gradient(180deg, oklch(99% 0.012 100), var(--landing-paper) 42%, oklch(94% 0.024 105)), var(--landing-paper);
 }
 
 .landingHeader {
@@ -182,7 +182,7 @@
   height: min(44vw, 360px);
   border-radius: 999px;
   background: color-mix(in oklch, var(--landing-gold), transparent 45%);
-  content: "";
+  content: '';
 }
 
 .ledgerWindow {

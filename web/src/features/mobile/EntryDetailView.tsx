@@ -1,7 +1,14 @@
 import { CalendarDays } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type BookListItem, type BookMember, type Category, type Entry, type EntryUpdateInput } from '../../lib/api/ledger';
-import { formatMoney } from '../../lib/money';
+import {
+  type Account,
+  type BookListItem,
+  type BookMember,
+  type Category,
+  type Entry,
+  type EntryUpdateInput,
+} from '@/lib/api/ledger';
+import { formatMoney } from '@/lib/money';
 import { EntryDetailEditor } from './EntryDetailEditor';
 import './entry-detail.css';
 
@@ -133,7 +140,12 @@ export function EntryDetailView({
 }
 
 // entryTitle receives an entry and category context, then returns the display title.
-function entryTitle(entry: Entry, category: Category | undefined, parentCategory: Category | undefined, fallback: string): string {
+function entryTitle(
+  entry: Entry,
+  category: Category | undefined,
+  parentCategory: Category | undefined,
+  fallback: string,
+): string {
   return entry.note || entry.merchant || categoryPath(category, parentCategory) || fallback;
 }
 
@@ -150,7 +162,13 @@ function memberName(userId: string, members: BookMember[]): string {
 
 // signedEntryAmount receives an entry and returns the signed amount shown on detail pages.
 function signedEntryAmount(entry: Entry): number {
-  if (entry.type === 'income' || entry.type === 'refund' || entry.type === 'reimbursement' || entry.type === 'borrow' || entry.type === 'repayment') {
+  if (
+    entry.type === 'income' ||
+    entry.type === 'refund' ||
+    entry.type === 'reimbursement' ||
+    entry.type === 'borrow' ||
+    entry.type === 'repayment'
+  ) {
     return Math.abs(entry.amountCents);
   }
   if (entry.type === 'transfer') {

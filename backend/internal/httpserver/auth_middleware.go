@@ -40,7 +40,7 @@ func RequireSession() gin.HandlerFunc {
 		log := gmw.GetLogger(c)
 		if _, ok := auth.ActorFromContext(c.Request.Context()); !ok {
 			log.Debug("authenticated actor missing")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			abortAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 

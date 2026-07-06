@@ -1,0 +1,57 @@
+name: Web
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Lint, Test, Build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm --dir web install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm --dir web run format:check
+
+      - name: Lint TypeScript
+        run: pnpm --dir web run lint
+
+      - name: Lint CSS
+        run: pnpm --dir web run lint:css
+
+      - name: Detect dead code
+        run: pnpm --dir web run lint:dead
+
+      - name: Check i18n
+        run: pnpm --dir web run check:i18n
+
+      - name: Check generated API types
+        run: pnpm --dir web run check:api
+
+      - name: Test
+        run: pnpm --dir web run test
+
+      - name: Build
+        run: pnpm --dir web run build

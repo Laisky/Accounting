@@ -2,6 +2,7 @@
 
 BACKEND_ADDR ?= :8080
 FRONTEND_PORT ?= 5173
+PNPM ?= $(shell if command -v pnpm >/dev/null 2>&1; then command -v pnpm; else printf 'corepack pnpm'; fi)
 
 build: frontend-build backend-build cli-build
 
@@ -24,10 +25,10 @@ dev: ensure-web-deps
 		:*) api_base_url="http://localhost$$backend_addr" ;; \
 		*) api_base_url="http://$$backend_addr" ;; \
 	esac; \
-	VITE_API_BASE_URL="$$api_base_url" pnpm --dir web run dev --host 0.0.0.0 --port "$(FRONTEND_PORT)"
+	VITE_API_BASE_URL="$$api_base_url" $(PNPM) --dir web run dev --host 0.0.0.0 --port "$(FRONTEND_PORT)"
 
 ensure-web-deps:
-	@if [ ! -d web/node_modules ]; then pnpm --dir web install; fi
+	@if [ ! -d web/node_modules ]; then $(PNPM) --dir web install; fi
 
 lint: backend-lint cli-lint frontend-lint
 
@@ -42,8 +43,12 @@ cli-lint:
 	cd cli && go vet ./...
 
 frontend-lint: ensure-web-deps
-	pnpm --dir web run lint
-	pnpm --dir web run check:i18n
+	$(PNPM) --dir web run format:check
+	$(PNPM) --dir web run lint
+	$(PNPM) --dir web run lint:css
+	$(PNPM) --dir web run lint:dead
+	$(PNPM) --dir web run check:i18n
+	$(PNPM) --dir web run check:api
 
 test: backend-test cli-test frontend-test
 
@@ -54,9 +59,9 @@ cli-test:
 	cd cli && go test -race -cover ./...
 
 frontend-test: ensure-web-deps
-	pnpm --dir web run test
+	$(PNPM) --dir web run test
 
 e2e: frontend-e2e
 
 frontend-e2e: ensure-web-deps
-	pnpm --dir web run test:e2e
+	$(PNPM) --dir web run test:e2e

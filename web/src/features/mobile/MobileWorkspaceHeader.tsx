@@ -1,8 +1,20 @@
-import { Check, ChevronDown, ChevronLeft, Monitor, Moon, MoreHorizontal, Pencil, Plus, Search, Shirt, Sun } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  Monitor,
+  Moon,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Shirt,
+  Sun,
+} from 'lucide-react';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LanguageSelector } from '../../components/LanguageSelector';
-import { type BookListItem } from '../../lib/api/ledger';
+import { LanguageSelector } from '@/components/LanguageSelector';
+import { type BookListItem } from '@/lib/api/ledger';
 import { formatShortDate, type MobileTab, type ThemeMode } from './mobile-workspace-utils';
 
 type MobileWorkspaceHeaderProps = {
@@ -74,7 +86,12 @@ export function MobileWorkspaceHeader({
         </button>
         <h1>{entryTitle}</h1>
         <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>
-          <button type="button" aria-label={t('mobile.a11y.searchTransactions')} aria-expanded={isSearchOpen} onClick={onOpenSearch}>
+          <button
+            type="button"
+            aria-label={t('mobile.a11y.searchTransactions')}
+            aria-expanded={isSearchOpen}
+            onClick={onOpenSearch}
+          >
             <Search size={22} />
           </button>
           {workspaceMenu}
@@ -91,14 +108,24 @@ export function MobileWorkspaceHeader({
             <ChevronLeft size={25} />
           </button>
         ) : (
-          <button type="button" aria-label={t('mobile.a11y.searchTransactions')} aria-expanded={isSearchOpen} onClick={onOpenSearch}>
+          <button
+            type="button"
+            aria-label={t('mobile.a11y.searchTransactions')}
+            aria-expanded={isSearchOpen}
+            onClick={onOpenSearch}
+          >
             <Search size={22} />
           </button>
         )}
         <h1>{accountName ?? t('mobile.nav.accounts')}</h1>
         <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>
           {accountDetailId ? (
-            <button type="button" aria-label={t('mobile.accountDetail.searchAccount')} aria-expanded={isSearchOpen} onClick={onOpenSearch}>
+            <button
+              type="button"
+              aria-label={t('mobile.accountDetail.searchAccount')}
+              aria-expanded={isSearchOpen}
+              onClick={onOpenSearch}
+            >
               <Search size={22} />
             </button>
           ) : (
@@ -122,7 +149,12 @@ export function MobileWorkspaceHeader({
         <button type="button" aria-label={t('mobile.nav.accounts')} onClick={onOpenAccounts}>
           <Shirt size={22} />
         </button>
-        <button type="button" aria-label={t('mobile.a11y.searchTransactions')} aria-expanded={isSearchOpen} onClick={onOpenSearch}>
+        <button
+          type="button"
+          aria-label={t('mobile.a11y.searchTransactions')}
+          aria-expanded={isSearchOpen}
+          onClick={onOpenSearch}
+        >
           <Search size={24} />
         </button>
         {workspaceMenu}
@@ -132,7 +164,15 @@ export function MobileWorkspaceHeader({
 }
 
 // BookSwitcher receives visible books and returns the header ledger selector.
-function BookSwitcher({ books, onSelectBook, selectedBook }: { books: BookListItem[]; onSelectBook: (bookId: string) => void; selectedBook?: BookListItem }) {
+function BookSwitcher({
+  books,
+  onSelectBook,
+  selectedBook,
+}: {
+  books: BookListItem[];
+  onSelectBook: (bookId: string) => void;
+  selectedBook?: BookListItem;
+}) {
   const { t } = useTranslation();
   return (
     <label className="bookSwitcher">
@@ -140,8 +180,21 @@ function BookSwitcher({ books, onSelectBook, selectedBook }: { books: BookListIt
         <span>{selectedBook?.name ?? t('mobile.defaultBookName')}</span>
         <ChevronDown size={16} />
       </span>
-      <select aria-label={t('mobile.a11y.switchBook')} value={selectedBook?.id ?? ''} disabled={!books.length} onChange={(event) => onSelectBook(event.target.value)}>
-        {books.length ? books.map((book) => <option key={book.id} value={book.id}>{book.name}</option>) : <option value="">{t('common.noBookYet')}</option>}
+      <select
+        aria-label={t('mobile.a11y.switchBook')}
+        value={selectedBook?.id ?? ''}
+        disabled={!books.length}
+        onChange={(event) => onSelectBook(event.target.value)}
+      >
+        {books.length ? (
+          books.map((book) => (
+            <option key={book.id} value={book.id}>
+              {book.name}
+            </option>
+          ))
+        ) : (
+          <option value="">{t('common.noBookYet')}</option>
+        )}
       </select>
     </label>
   );
@@ -168,7 +221,14 @@ function WorkspaceMenu({
   const { t } = useTranslation();
   return (
     <div className="workspaceMenuRoot">
-      <button type="button" aria-controls="workspace-menu" aria-expanded={isOpen} aria-haspopup="true" aria-label={t('mobile.a11y.moreOptions')} onClick={onToggle}>
+      <button
+        type="button"
+        aria-controls="workspace-menu"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        aria-label={t('mobile.a11y.moreOptions')}
+        onClick={onToggle}
+      >
         <MoreHorizontal size={25} />
       </button>
       {isOpen ? (
@@ -183,9 +243,27 @@ function WorkspaceMenu({
           <div className="workspaceMenuSection" aria-label={t('mobile.menu.theme')}>
             <span className="workspaceMenuLabel">{t('mobile.menu.theme')}</span>
             <div className="themeChoiceGroup">
-              <ThemeChoice mode="system" selectedMode={themeMode} icon={<Monitor size={16} />} label={t('mobile.menu.themeSystem')} onSelect={onThemeModeChange} />
-              <ThemeChoice mode="light" selectedMode={themeMode} icon={<Sun size={16} />} label={t('mobile.menu.themeLight')} onSelect={onThemeModeChange} />
-              <ThemeChoice mode="dark" selectedMode={themeMode} icon={<Moon size={16} />} label={t('mobile.menu.themeDark')} onSelect={onThemeModeChange} />
+              <ThemeChoice
+                mode="system"
+                selectedMode={themeMode}
+                icon={<Monitor size={16} />}
+                label={t('mobile.menu.themeSystem')}
+                onSelect={onThemeModeChange}
+              />
+              <ThemeChoice
+                mode="light"
+                selectedMode={themeMode}
+                icon={<Sun size={16} />}
+                label={t('mobile.menu.themeLight')}
+                onSelect={onThemeModeChange}
+              />
+              <ThemeChoice
+                mode="dark"
+                selectedMode={themeMode}
+                icon={<Moon size={16} />}
+                label={t('mobile.menu.themeDark')}
+                onSelect={onThemeModeChange}
+              />
             </div>
           </div>
         </div>
@@ -195,7 +273,19 @@ function WorkspaceMenu({
 }
 
 // ThemeChoice receives one theme option and returns a compact menu button for it.
-function ThemeChoice({ icon, label, mode, onSelect, selectedMode }: { icon: ReactNode; label: string; mode: ThemeMode; onSelect: (mode: ThemeMode) => void; selectedMode: ThemeMode }) {
+function ThemeChoice({
+  icon,
+  label,
+  mode,
+  onSelect,
+  selectedMode,
+}: {
+  icon: ReactNode;
+  label: string;
+  mode: ThemeMode;
+  onSelect: (mode: ThemeMode) => void;
+  selectedMode: ThemeMode;
+}) {
   const isSelected = selectedMode === mode;
   return (
     <button type="button" aria-pressed={isSelected} onClick={() => onSelect(mode)}>

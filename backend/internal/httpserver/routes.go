@@ -128,14 +128,14 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 		log := gmw.GetLogger(c)
 		if _, ok := auth.ActorFromContext(c.Request.Context()); !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		rates, err := ledgerService.ExchangeRates(c.Request.Context())
 		if err != nil {
 			log.Debug("exchange rates failed", zap.Error(err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "exchange rates unavailable"})
+			respondAPIMessage(c, http.StatusInternalServerError, "exchange rates unavailable")
 			return
 		}
 
@@ -155,7 +155,7 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -173,12 +173,12 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 		if err != nil {
 			if errors.Is(err, ledger.ErrAccessDenied) {
 				log.Debug("book summary forbidden", zap.Error(err))
-				c.JSON(http.StatusForbidden, gin.H{"error": "book access denied"})
+				respondAPIMessage(c, http.StatusForbidden, "book access denied")
 				return
 			}
 
 			log.Debug("book summary failed", zap.Error(err))
-			c.JSON(http.StatusNotFound, gin.H{"error": "book summary not found"})
+			respondAPIMessage(c, http.StatusNotFound, "book summary not found")
 			return
 		}
 
@@ -192,7 +192,7 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -222,7 +222,7 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -278,7 +278,7 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -334,7 +334,7 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -440,11 +440,11 @@ func decodeStrictJSON(c *gin.Context, dst any) bool {
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(dst); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		respondAPIMessage(c, http.StatusBadRequest, "invalid request body")
 		return false
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		respondAPIMessage(c, http.StatusBadRequest, "invalid request body")
 		return false
 	}
 
@@ -456,7 +456,7 @@ func parseLedgerSummaryFilter(c *gin.Context) (ledgerSummaryFilter, bool) {
 	query := c.Request.URL.Query()
 	for key := range query {
 		if key != "start_date" && key != "end_date" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query filter"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid query filter")
 			return ledgerSummaryFilter{}, false
 		}
 	}
@@ -465,7 +465,7 @@ func parseLedgerSummaryFilter(c *gin.Context) (ledgerSummaryFilter, bool) {
 	if rawStart := c.Query("start_date"); rawStart != "" {
 		startDate, err := time.ParseInLocation(time.DateOnly, rawStart, time.UTC)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_date"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid start_date")
 			return ledgerSummaryFilter{}, false
 		}
 		filter.StartDate = startDate.UTC()
@@ -473,7 +473,7 @@ func parseLedgerSummaryFilter(c *gin.Context) (ledgerSummaryFilter, bool) {
 	if rawEnd := c.Query("end_date"); rawEnd != "" {
 		endDate, err := time.ParseInLocation(time.DateOnly, rawEnd, time.UTC)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_date"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid end_date")
 			return ledgerSummaryFilter{}, false
 		}
 		filter.EndDate = endDate.UTC()
@@ -487,7 +487,7 @@ func parseEntryPagination(c *gin.Context) (entryPagination, bool) {
 	query := c.Request.URL.Query()
 	for key := range query {
 		if key != "page" && key != "page_size" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query filter"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid query filter")
 			return entryPagination{}, false
 		}
 	}
@@ -496,7 +496,7 @@ func parseEntryPagination(c *gin.Context) (entryPagination, bool) {
 	if rawPage := c.Query("page"); rawPage != "" {
 		page, err := strconv.Atoi(rawPage)
 		if err != nil || page < 1 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid page")
 			return entryPagination{}, false
 		}
 		pagination.Page = page
@@ -504,7 +504,7 @@ func parseEntryPagination(c *gin.Context) (entryPagination, bool) {
 	if rawPageSize := c.Query("page_size"); rawPageSize != "" {
 		pageSize, err := strconv.Atoi(rawPageSize)
 		if err != nil || pageSize < 1 || pageSize > 100 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page_size"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid page_size")
 			return entryPagination{}, false
 		}
 		pagination.PageSize = pageSize
@@ -516,13 +516,13 @@ func parseEntryPagination(c *gin.Context) (entryPagination, bool) {
 // parseOccurredAt receives a timestamp string and returns a UTC timestamp.
 func parseOccurredAt(c *gin.Context, rawOccurredAt string) (time.Time, bool) {
 	if rawOccurredAt == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid occurredAt"})
+		respondAPIMessage(c, http.StatusBadRequest, "invalid occurredAt")
 		return time.Time{}, false
 	}
 
 	occurredAt, err := time.Parse(time.RFC3339, rawOccurredAt)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid occurredAt"})
+		respondAPIMessage(c, http.StatusBadRequest, "invalid occurredAt")
 		return time.Time{}, false
 	}
 
@@ -558,16 +558,16 @@ func respondLedgerError(c *gin.Context, log glog.Logger, err error) {
 	switch {
 	case errors.Is(err, ledger.ErrInvalidInput):
 		log.Debug("ledger input rejected", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ledger input"})
+		respondAPIMessage(c, http.StatusBadRequest, "invalid ledger input")
 	case errors.Is(err, ledger.ErrAccessDenied):
 		log.Debug("ledger access denied", zap.Error(err))
-		c.JSON(http.StatusForbidden, gin.H{"error": "ledger access denied"})
+		respondAPIMessage(c, http.StatusForbidden, "ledger access denied")
 	case errors.Is(err, ledger.ErrNotFound):
 		log.Debug("ledger resource not found", zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "ledger resource not found"})
+		respondAPIMessage(c, http.StatusNotFound, "ledger resource not found")
 	default:
 		log.Debug("ledger request failed", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ledger request failed"})
+		respondAPIMessage(c, http.StatusInternalServerError, "ledger request failed")
 	}
 }
 

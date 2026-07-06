@@ -1,0 +1,563 @@
+/ledger/summary:
+  get:
+    tags: [ledger]
+    responses:
+      "200":
+        description: Actor ledger summary.
+        content:
+          application/json:
+            schema:
+              { $ref: "../openapi.yaml#/components/schemas/LedgerSummary" }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/exchange-rates:
+  get:
+    tags: [ledger]
+    responses:
+      "200":
+        description: Supported exchange rates.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                { $ref: "../openapi.yaml#/components/schemas/ExchangeRate" }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books:
+  get:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Book list,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/BookList" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  post:
+    tags: [ledger]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/BookCreateRequest",
+                },
+            },
+        }
+    responses:
+      "201":
+        {
+          description: Created book,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/BookListItem",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}:
+  get:
+    tags: [ledger]
+    parameters: [{ $ref: "../openapi.yaml#/components/parameters/BookID" }]
+    responses:
+      "200":
+        {
+          description: Book settings,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/BookListItem",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  patch:
+    tags: [ledger]
+    parameters: [{ $ref: "../openapi.yaml#/components/parameters/BookID" }]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/BookUpdateRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Updated book,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/BookListItem",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}/members:
+  get:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Book members,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/BookMemberList",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}/ledger/summary:
+  get:
+    tags: [ledger]
+    parameters:
+      - { $ref: "../openapi.yaml#/components/parameters/BookID" }
+      - name: start_date
+        in: query
+        schema: { type: string, format: date }
+      - name: end_date
+        in: query
+        schema: { type: string, format: date }
+    responses:
+      "200":
+        {
+          description: Book ledger summary,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/LedgerSummary",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/accounts/groups:
+  get:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Account groups,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/AccountGroupList",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  post:
+    tags: [ledger]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/AccountGroupCreateRequest",
+                },
+            },
+        }
+    responses:
+      "201":
+        {
+          description: Created account group,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/AccountGroup",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/accounts/groups/{groupID}:
+  patch:
+    tags: [ledger]
+    parameters: [{ $ref: "../openapi.yaml#/components/parameters/GroupID" }]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/AccountGroupUpdateRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Updated account group,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/AccountGroup",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/accounts:
+  get:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Accounts,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/AccountList" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  post:
+    tags: [ledger]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/AccountCreateRequest",
+                },
+            },
+        }
+    responses:
+      "201":
+        {
+          description: Created account,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/Account" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}/categories:
+  get:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Categories,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/CategoryList",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  post:
+    tags: [ledger]
+    parameters: [{ $ref: "../openapi.yaml#/components/parameters/BookID" }]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/CategoryCreateRequest",
+                },
+            },
+        }
+    responses:
+      "201":
+        {
+          description: Created category,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/Category" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}/categories/{categoryID}:
+  patch:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/CategoryID" },
+      ]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/CategoryUpdateRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Updated category,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/Category" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}/entries:
+  get:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Entries,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/EntryList" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  post:
+    tags: [ledger]
+    parameters: [{ $ref: "../openapi.yaml#/components/parameters/BookID" }]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/EntryCreateRequest",
+                },
+            },
+        }
+    responses:
+      "201":
+        {
+          description: Created entry,
+          content:
+            {
+              application/json:
+                {
+                  schema: { $ref: "../openapi.yaml#/components/schemas/Entry" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}/entries/{entryID}:
+  patch:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/EntryID" },
+      ]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/EntryUpdateRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Updated entry,
+          content:
+            {
+              application/json:
+                {
+                  schema: { $ref: "../openapi.yaml#/components/schemas/Entry" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  delete:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/EntryID" },
+      ]
+    responses:
+      "204": { $ref: "../openapi.yaml#/components/responses/Empty" }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/imports/wacai/preview:
+  post:
+    tags: [imports]
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required: [file]
+            properties:
+              file:
+                type: string
+                format: binary
+    responses:
+      "201":
+        {
+          description: Staged preview,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/ImportPreviewBatch",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}/imports/{batchID}/apply:
+  post:
+    tags: [imports]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/BatchID" },
+      ]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/ImportApplyRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Import apply result,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/ImportApplyResponse",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }

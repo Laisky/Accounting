@@ -1,8 +1,8 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type Category, type Entry, type EntryUpdateInput } from '../../lib/api/ledger';
-import { formatMoney, supportedCurrencies } from '../../lib/money';
+import { type Account, type Category, type Entry, type EntryUpdateInput } from '@/lib/api/ledger';
+import { formatMoney, supportedCurrencies } from '@/lib/money';
 import './entry-detail-editor.css';
 
 type EntryDetailEditorProps = {
@@ -61,15 +61,28 @@ export function EntryDetailEditor({
   return (
     <li aria-label={t('mobile.transactions.entryLabel', { title })}>
       <div className="recordRecentSummary">
-        <span className="transactionIcon"><Pencil size={20} /></span>
+        <span className="transactionIcon">
+          <Pencil size={20} />
+        </span>
         <div>
           <strong>{entry.note || entry.merchant || title}</strong>
-          <small>{t('mobile.transactions.entryMeta', { time: formatEntryTime(entry.occurredAt), account: account?.name ?? t('mobile.transactions.accountFallback'), book: entry.bookId.slice(0, 8) })}</small>
+          <small>
+            {t('mobile.transactions.entryMeta', {
+              time: formatEntryTime(entry.occurredAt),
+              account: account?.name ?? t('mobile.transactions.accountFallback'),
+              book: entry.bookId.slice(0, 8),
+            })}
+          </small>
         </div>
         <b>{formatMoney(entry.amountCents, entry.transactionCurrency)}</b>
       </div>
       <div className="recordRecentActions">
-        <button className="mobileSecondaryButton" type="button" aria-expanded={isOpen} onClick={() => setIsOpen((current) => !current)}>
+        <button
+          className="mobileSecondaryButton"
+          type="button"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((current) => !current)}
+        >
           {t('mobile.transactions.editDetails')}
         </button>
         <button className="mobileDangerButton" type="button" disabled={isBusy} onClick={() => onDeleteEntry(entry.id)}>
@@ -78,14 +91,24 @@ export function EntryDetailEditor({
         </button>
       </div>
       {isOpen ? (
-        <form className="entryDetailForm" aria-label={t('mobile.transactions.editFor', { title })} onSubmit={handleSubmit}>
+        <form
+          className="entryDetailForm"
+          aria-label={t('mobile.transactions.editFor', { title })}
+          onSubmit={handleSubmit}
+        >
           <label>
             <span>{t('common.amount')}</span>
             <input
               aria-label={t('mobile.transactions.amountFor', { title })}
               inputMode="decimal"
               value={draft.amount}
-              onChange={(event) => setDraft((current) => ({ ...current, amount: event.target.value, amountCents: parseAmountToCents(event.target.value) }))}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  amount: event.target.value,
+                  amountCents: parseAmountToCents(event.target.value),
+                }))
+              }
             />
           </label>
           <label>
@@ -104,7 +127,11 @@ export function EntryDetailEditor({
               value={draft.accountId}
               onChange={(event) => setDraft((current) => ({ ...current, accountId: event.target.value }))}
             >
-              {accounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              {accounts.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
             </select>
           </label>
           <label>
@@ -115,9 +142,13 @@ export function EntryDetailEditor({
               onChange={(event) => setDraft((current) => ({ ...current, categoryId: event.target.value }))}
             >
               <option value="">{t('mobile.record.categoryFallback')}</option>
-              {categories.filter((category) => !category.archived).map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
+              {categories
+                .filter((category) => !category.archived)
+                .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
             </select>
           </label>
           <label>
@@ -127,7 +158,11 @@ export function EntryDetailEditor({
               value={draft.currency}
               onChange={(event) => setDraft((current) => ({ ...current, currency: event.target.value }))}
             >
-              {supportedCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+              {supportedCurrencies.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
             </select>
           </label>
           <label>

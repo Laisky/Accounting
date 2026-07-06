@@ -1,10 +1,16 @@
 import { AlertCircle, CheckCircle2, FileSpreadsheet, UploadCloud } from 'lucide-react';
 import { type ChangeEvent, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Spinner } from '../../components/Spinner';
-import { type AuthActor } from '../../lib/api/auth';
-import { applyWacaiImport, previewWacaiImport, type ImportApplyResponse, type ImportPreviewBatch } from '../../lib/api/imports';
-import { type BookListItem, type BookMember } from '../../lib/api/ledger';
+import { Spinner } from '@/components/Spinner';
+import { type AuthActor } from '@/lib/api/auth';
+import {
+  applyWacaiImport,
+  previewWacaiImport,
+  type ImportApplyResponse,
+  type ImportPreviewBatch,
+} from '@/lib/api/imports';
+import { type BookListItem, type BookMember } from '@/lib/api/ledger';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import './import-preview.css';
 
 type ImportStage = 'empty' | 'ready' | 'staging' | 'staged' | 'applying' | 'applied' | 'failed';
@@ -55,7 +61,9 @@ export function ImportPreviewView({
   const metrics = usePreviewMetrics(previewBatch);
   const memberRequirements = useMemberMappingRequirements(previewBatch, actor, members);
   const effectiveMemberMappings = useEffectiveMemberMappings(memberRequirements, memberMappings);
-  const hasMissingMemberMappings = memberRequirements.some((requirement) => !effectiveMemberMappings[requirement.sourceName]);
+  const hasMissingMemberMappings = memberRequirements.some(
+    (requirement) => !effectiveMemberMappings[requirement.sourceName],
+  );
   const suggestedBookName = previewBatch?.detected.books?.[0] ?? '';
 
   // handleFileChange receives a file input event, stores the selected import file, and clears stale preview data.
@@ -97,9 +105,9 @@ export function ImportPreviewView({
       setApplyResult(null);
       setMemberMappings(defaultMemberMappings(batch, actor, members));
       setStage('staged');
-    } catch {
+    } catch (err) {
       setPreviewBatch(null);
-      setError(t('imports.error.previewFailed'));
+      setError(apiErrorMessage(t, err, 'imports.error.previewFailed'));
       setStage('failed');
     } finally {
       onProcessingChange('');
@@ -116,12 +124,16 @@ export function ImportPreviewView({
     setError('');
     onProcessingChange(t('imports.stage.applying'));
     try {
-      const result = await applyWacaiImport(selectedBookId, previewBatch, { memberMappings: effectiveMemberMappings });
+      const result = await applyWacaiImport({
+        batch: previewBatch,
+        bookId: selectedBookId,
+        memberMappings: effectiveMemberMappings,
+      });
       setApplyResult(result);
       setStage('applied');
       onApplied();
-    } catch {
-      setError(t('imports.error.applyFailed'));
+    } catch (err) {
+      setError(apiErrorMessage(t, err, 'imports.error.applyFailed'));
       setStage('staged');
     } finally {
       onProcessingChange('');
@@ -146,8 +158,8 @@ export function ImportPreviewView({
       const bookID = await onCreateBook(name);
       setSelectedBookId(bookID);
       setNewBookName('');
-    } catch {
-      setError(t('imports.error.bookCreateFailed'));
+    } catch (err) {
+      setError(apiErrorMessage(t, err, 'imports.error.bookCreateFailed'));
     } finally {
       setIsCreatingBook(false);
     }
@@ -239,7 +251,13 @@ export function ImportPreviewView({
             <button
               className="mobilePrimaryButton"
               type="button"
-              disabled={!selectedBookId || previewBatch.errorCount > 0 || hasMissingMemberMappings || stage === 'applying' || stage === 'applied'}
+              disabled={
+                !selectedBookId ||
+                previewBatch.errorCount > 0 ||
+                hasMissingMemberMappings ||
+                stage === 'applying' ||
+                stage === 'applied'
+              }
               onClick={handleApplyImport}
             >
               {stage === 'applying' ? (
@@ -311,7 +329,9 @@ function BookDestination({
         <span>{t('imports.destination.select')}</span>
         <select value={selectedBookId} disabled={!books.length} onChange={(event) => onSelectBook(event.target.value)}>
           {books.map((book) => (
-            <option key={book.id} value={book.id}>{book.name}</option>
+            <option key={book.id} value={book.id}>
+              {book.name}
+            </option>
           ))}
         </select>
       </label>
@@ -466,7 +486,11 @@ function usePreviewMetrics(batch: ImportPreviewBatch | null): PreviewMetric[] {
 }
 
 // useMemberMappingRequirements receives preview data and returns non-self source members that need resolution.
-function useMemberMappingRequirements(batch: ImportPreviewBatch | null, actor: AuthActor, members: BookMember[]): MemberMappingRequirement[] {
+function useMemberMappingRequirements(
+  batch: ImportPreviewBatch | null,
+  actor: AuthActor,
+  members: BookMember[],
+): MemberMappingRequirement[] {
   return useMemo(() => {
     if (!batch) {
       return [];
@@ -477,7 +501,10 @@ function useMemberMappingRequirements(batch: ImportPreviewBatch | null, actor: A
 }
 
 // useEffectiveMemberMappings receives requirements and typed values, then returns the mappings to submit.
-function useEffectiveMemberMappings(requirements: MemberMappingRequirement[], mappings: Record<string, string>): Record<string, string> {
+function useEffectiveMemberMappings(
+  requirements: MemberMappingRequirement[],
+  mappings: Record<string, string>,
+): Record<string, string> {
   return useMemo(() => {
     const effectiveMappings: Record<string, string> = {};
     for (const requirement of requirements) {
@@ -492,7 +519,11 @@ function useEffectiveMemberMappings(requirements: MemberMappingRequirement[], ma
 }
 
 // defaultMemberMappings receives preview data and returns known member-name matches.
-function defaultMemberMappings(batch: ImportPreviewBatch, actor: AuthActor, members: BookMember[]): Record<string, string> {
+function defaultMemberMappings(
+  batch: ImportPreviewBatch,
+  actor: AuthActor,
+  members: BookMember[],
+): Record<string, string> {
   return Object.fromEntries(
     memberMappingRequirements(batch, actor, members)
       .filter((requirement) => requirement.suggestedUserID)
@@ -501,7 +532,11 @@ function defaultMemberMappings(batch: ImportPreviewBatch, actor: AuthActor, memb
 }
 
 // memberMappingRequirements receives preview data and returns unique non-self source members with optional known matches.
-function memberMappingRequirements(batch: ImportPreviewBatch, actor: AuthActor, members: BookMember[]): MemberMappingRequirement[] {
+function memberMappingRequirements(
+  batch: ImportPreviewBatch,
+  actor: AuthActor,
+  members: BookMember[],
+): MemberMappingRequirement[] {
   const names: string[] = [];
   for (const row of batch.rows) {
     if (row.errors?.length) {
@@ -509,7 +544,11 @@ function memberMappingRequirements(batch: ImportPreviewBatch, actor: AuthActor, 
     }
     for (const sourceName of [row.member, ...(row.participants ?? [])]) {
       const normalized = normalizeImportMemberName(sourceName);
-      if (!normalized || isSelfImportMember(normalized, actor) || names.some((name) => normalizeImportMemberName(name) === normalized)) {
+      if (
+        !normalized ||
+        isSelfImportMember(normalized, actor) ||
+        names.some((name) => normalizeImportMemberName(name) === normalized)
+      ) {
         continue;
       }
       names.push(sourceName ?? '');
@@ -519,7 +558,10 @@ function memberMappingRequirements(batch: ImportPreviewBatch, actor: AuthActor, 
   return names.map((sourceName) => {
     const knownMember = members.find((member) => {
       const sourceKey = normalizeImportMemberName(sourceName);
-      return normalizeImportMemberName(member.userId) === sourceKey || normalizeImportMemberName(member.displayName) === sourceKey;
+      return (
+        normalizeImportMemberName(member.userId) === sourceKey ||
+        normalizeImportMemberName(member.displayName) === sourceKey
+      );
     });
 
     return { sourceName, suggestedUserID: knownMember?.userId ?? '' };
@@ -528,7 +570,14 @@ function memberMappingRequirements(batch: ImportPreviewBatch, actor: AuthActor, 
 
 // isSelfImportMember reports whether a source member name identifies the current actor.
 function isSelfImportMember(sourceName: string, actor: AuthActor): boolean {
-  return ['self', 'me', 'myself', '自己', normalizeImportMemberName(actor.userId), normalizeImportMemberName(actor.email)].includes(sourceName);
+  return [
+    'self',
+    'me',
+    'myself',
+    '自己',
+    normalizeImportMemberName(actor.userId),
+    normalizeImportMemberName(actor.email),
+  ].includes(sourceName);
 }
 
 // normalizeImportMemberName receives a source name and returns a case-insensitive mapping key.

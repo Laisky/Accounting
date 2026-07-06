@@ -1,62 +1,14 @@
-import type { Entry } from './ledger';
+import { apiRequest } from '@/lib/apiClient';
+import type { components } from '@/lib/api/generated/schema';
 
-export type ImportPreviewRow = {
-  rowNumber: number;
-  raw?: Record<string, string>;
-  type?: string;
-  sourceType?: string;
-  occurredAt?: string;
-  account?: string;
-  destinationAccount?: string;
-  category?: string;
-  book?: string;
-  member?: string;
-  participants?: string[];
-  merchant?: string;
-  attribute?: string;
-  note?: string;
-  amount?: string;
-  currency?: string;
-  tags?: string[];
-  warnings?: string[];
-  errors?: string[];
-};
+type Schemas = components['schemas'];
 
-export type ImportPreviewBatch = {
-  id: string;
-  source: string;
-  filename: string;
-  sourceHash: string;
-  parserVersion?: string;
-  detectedSchema?: {
-    columns?: Record<string, string>;
-    missing?: string[];
-  };
-  rows: ImportPreviewRow[];
-  errorCount: number;
-  warningCount: number;
-  detected: {
-    books?: string[];
-    accounts?: string[];
-    categories?: string[];
-    currencies?: string[];
-    members?: string[];
-    merchants?: string[];
-    tags?: string[];
-  };
-};
-
-export type ImportApplyResponse = {
-  batchId: string;
-  bookId: string;
-  status: string;
-  importedCount: number;
-  skippedCount: number;
-  entries: Entry[];
-  skippedRows?: Array<{ rowNumber: number; reason: string }>;
-};
+export type ImportPreviewBatch = Schemas['ImportPreviewBatch'];
+export type ImportApplyResponse = Schemas['ImportApplyResponse'];
 
 export type ImportApplyOptions = {
+  batch: ImportPreviewBatch;
+  bookId: string;
   memberMappings?: Record<string, string>;
   signal?: AbortSignal;
 };
@@ -66,40 +18,22 @@ export async function previewWacaiImport(file: File, signal?: AbortSignal): Prom
   const form = new FormData();
   form.append('file', file);
 
-  const response = await fetch('/api/imports/wacai/preview', {
-    method: 'POST',
-    body: form,
-    signal,
-  });
-  if (!response.ok) {
-    throw new Error(`import preview failed: ${response.status}`);
-  }
-
-  return response.json() as Promise<ImportPreviewBatch>;
+  return apiRequest<ImportPreviewBatch>('/api/imports/wacai/preview', { method: 'POST', body: form, signal });
 }
 
 // applyWacaiImport receives a book and preview batch fingerprint, then commits mapped rows into ledger entries.
-export async function applyWacaiImport(
-  bookId: string,
-  batch: ImportPreviewBatch,
-  options?: AbortSignal | ImportApplyOptions,
-): Promise<ImportApplyResponse> {
-  const signal = options instanceof AbortSignal ? options : options?.signal;
-  const memberMappings = options instanceof AbortSignal ? undefined : options?.memberMappings;
-  const body: { sourceHash: string; memberMappings?: Record<string, string> } = { sourceHash: batch.sourceHash };
-  if (memberMappings && Object.keys(memberMappings).length > 0) {
-    body.memberMappings = memberMappings;
+export async function applyWacaiImport(options: ImportApplyOptions): Promise<ImportApplyResponse> {
+  const body: Schemas['ImportApplyRequest'] = { sourceHash: options.batch.sourceHash };
+  if (options.memberMappings && Object.keys(options.memberMappings).length > 0) {
+    body.memberMappings = options.memberMappings;
   }
 
-  const response = await fetch(`/api/books/${encodeURIComponent(bookId)}/imports/${encodeURIComponent(batch.id)}/apply`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal,
-  });
-  if (!response.ok) {
-    throw new Error(`import apply failed: ${response.status}`);
-  }
-
-  return response.json() as Promise<ImportApplyResponse>;
+  return apiRequest<ImportApplyResponse>(
+    `/api/books/${encodeURIComponent(options.bookId)}/imports/${encodeURIComponent(options.batch.id)}/apply`,
+    {
+      method: 'POST',
+      body,
+      signal: options.signal,
+    },
+  );
 }

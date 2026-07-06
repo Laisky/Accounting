@@ -33,7 +33,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		})
 		if err != nil {
 			log.Debug("registration rejected", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "registration failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "registration failed")
 			return
 		}
 
@@ -73,7 +73,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 				TargetType: "user",
 				Metadata:   map[string]string{"method": "password"},
 			})
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+			respondAPIMessage(c, http.StatusUnauthorized, "invalid email or password")
 			return
 		}
 		if result.TOTPRequired {
@@ -116,7 +116,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		if err == nil {
 			if logoutErr := authService.Logout(c.Request.Context(), sessionCookie.Value); logoutErr != nil {
 				log.Debug("logout session revoke failed", zap.Error(logoutErr))
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "logout failed"})
+				respondAPIMessage(c, http.StatusInternalServerError, "logout failed")
 				return
 			}
 		}
@@ -140,14 +140,14 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		session, ok := auth.SessionFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("session context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -170,7 +170,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		})
 		if err != nil {
 			log.Debug("email verification request rejected", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "email verification request failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "email verification request failed")
 			return
 		}
 
@@ -204,7 +204,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		})
 		if err != nil {
 			log.Debug("email verification rejected", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "email verification failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "email verification failed")
 			return
 		}
 
@@ -234,7 +234,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		})
 		if err != nil {
 			log.Debug("password reset request rejected", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "password reset request failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "password reset request failed")
 			return
 		}
 
@@ -269,7 +269,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		})
 		if err != nil {
 			log.Debug("password reset rejected", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "password reset failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "password reset failed")
 			return
 		}
 
@@ -289,14 +289,14 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		status, err := authService.TOTPStatus(c.Request.Context(), actor)
 		if err != nil {
 			log.Debug("totp status failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "totp status failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "totp status failed")
 			return
 		}
 
@@ -309,7 +309,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		actor, session, ok := authIdentityFromContext(c)
 		if !ok {
 			log.Debug("auth context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -319,7 +319,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		})
 		if err != nil {
 			log.Debug("totp setup failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "totp setup failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "totp setup failed")
 			return
 		}
 
@@ -339,7 +339,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		actor, session, ok := authIdentityFromContext(c)
 		if !ok {
 			log.Debug("auth context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -355,7 +355,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		})
 		if err != nil {
 			log.Debug("totp confirm failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "totp confirm failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "totp confirm failed")
 			return
 		}
 
@@ -375,7 +375,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -390,7 +390,7 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 		})
 		if err != nil {
 			log.Debug("totp disable failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "totp disable failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "totp disable failed")
 			return
 		}
 

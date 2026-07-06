@@ -13,9 +13,10 @@ import {
   requestEmailVerification,
   requestPasswordReset,
   type AuthActor,
-} from '../../lib/api/auth';
-import { emptyRuntimeConfig, type RuntimeConfig } from '../../lib/api/runtimeConfig';
-import { credentialRequestOptionsFromJSON, isWebAuthnAvailable, publicKeyCredentialToJSON } from '../../lib/webauthn';
+} from '@/lib/api/auth';
+import { emptyRuntimeConfig, type RuntimeConfig } from '@/lib/api/runtimeConfig';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
+import { credentialRequestOptionsFromJSON, isWebAuthnAvailable, publicKeyCredentialToJSON } from '@/lib/webauthn';
 import { TurnstileWidget } from './TurnstileWidget';
 import './auth.css';
 
@@ -51,7 +52,8 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [loginTurnstileRequired, setLoginTurnstileRequired] = useState(false);
   const turnstileRequired = shouldRequireTurnstile(config, mode, verificationStep, loginTurnstileRequired);
-  const canSubmit = !isBusy && !(mode === 'login' && !config.auth.emailLoginEnabled) && (!turnstileRequired || Boolean(turnstileToken));
+  const canSubmit =
+    !isBusy && !(mode === 'login' && !config.auth.emailLoginEnabled) && (!turnstileRequired || Boolean(turnstileToken));
 
   useEffect(() => {
     // Steps past the first hold only in-memory state (a server-verified password, a
@@ -81,7 +83,12 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
 
     try {
       if (mode === 'login') {
-        const result = await loginWithPassword(email, password, loginStep === 'totp' ? totpCode : undefined, currentTurnstileToken);
+        const result = await loginWithPassword(
+          email,
+          password,
+          loginStep === 'totp' ? totpCode : undefined,
+          currentTurnstileToken,
+        );
         if (result.kind === 'totpRequired') {
           // Password verified and the account has TOTP enabled; advance to the code step.
           setStatus(t('auth.status.totpRequired'));
@@ -135,11 +142,11 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
       setNewPassword('');
       setStatus(t('auth.status.passwordUpdated'));
       navigate('/login');
-    } catch {
+    } catch (err) {
       if (mode === 'login' && config.features.turnstileEnabled && config.turnstile.loginMode === 'after_failure') {
         setLoginTurnstileRequired(true);
       }
-      setError(authErrorText(t, mode, verificationStep));
+      setError(apiErrorMessage(t, err, authErrorKey(mode, verificationStep)));
     } finally {
       if (turnstileRequired) {
         resetTurnstileChallenge();
@@ -162,14 +169,17 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
       if (!credential) {
         throw new Error('WebAuthn credential is required');
       }
-      const result = await finishPasskeyLogin(start.flowId, publicKeyCredentialToJSON(credential as PublicKeyCredential));
+      const result = await finishPasskeyLogin(
+        start.flowId,
+        publicKeyCredentialToJSON(credential as PublicKeyCredential),
+      );
       onAuthenticated({
         userId: result.user.id,
         email: result.user.email,
         status: result.user.status,
       });
-    } catch {
-      setError(t('auth.error.passkeyUnavailable'));
+    } catch (err) {
+      setError(apiErrorMessage(t, err, 'auth.error.passkeyUnavailable'));
     } finally {
       setIsBusy(false);
     }
@@ -227,7 +237,11 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
           <h1>{t('auth.heading')}</h1>
           <div className="authMethods" aria-label={t('auth.a11y.availableLoginMethods')}>
             {config.auth.emailLoginEnabled ? <span>{t('auth.methods.emailLogin')}</span> : null}
-            {config.auth.emailRegisterEnabled ? <span>{t('auth.methods.registrationOpen')}</span> : <span>{t('auth.methods.registrationClosed')}</span>}
+            {config.auth.emailRegisterEnabled ? (
+              <span>{t('auth.methods.registrationOpen')}</span>
+            ) : (
+              <span>{t('auth.methods.registrationClosed')}</span>
+            )}
             {config.features.externalSsoEnabled ? <span>{t('auth.methods.externalSso')}</span> : null}
             {config.features.passkeyEnabled ? <span>{t('auth.methods.passkeys')}</span> : null}
             {config.features.totpEnabled ? <span>{t('auth.methods.totp')}</span> : null}
@@ -236,7 +250,11 @@ export function AuthWorkspace({ runtimeConfig, onAuthenticated }: AuthWorkspaceP
 
         <div className="authPanel">
           <div className="authTabs" role="tablist" aria-label={t('auth.a11y.authenticationMode')}>
-            <button type="button" className={mode === 'login' ? 'authTabActive' : ''} onClick={() => changeMode('login')}>
+            <button
+              type="button"
+              className={mode === 'login' ? 'authTabActive' : ''}
+              onClick={() => changeMode('login')}
+            >
               <LogIn size={16} />
               <span>{t('auth.tabs.signIn')}</span>
             </button>
@@ -408,7 +426,14 @@ function parseAuthRoute(pathname: string): {
 }
 
 // submitLabel receives the translator and auth state and returns button copy for the current form step.
-function submitLabel(t: TFunction, mode: AuthMode, recoveryStep: RecoveryStep, loginStep: LoginStep, verificationStep: VerificationStep, isBusy: boolean): string {
+function submitLabel(
+  t: TFunction,
+  mode: AuthMode,
+  recoveryStep: RecoveryStep,
+  loginStep: LoginStep,
+  verificationStep: VerificationStep,
+  isBusy: boolean,
+): string {
   if (isBusy) {
     return t('auth.submit.working');
   }
@@ -428,23 +453,28 @@ function submitLabel(t: TFunction, mode: AuthMode, recoveryStep: RecoveryStep, l
   return t('auth.submit.signInWithEmail');
 }
 
-// authErrorText receives the translator and auth state and returns a stable non-enumerating error message.
-function authErrorText(t: TFunction, mode: AuthMode, verificationStep: VerificationStep): string {
+// authErrorKey receives auth state and returns a stable non-enumerating fallback key.
+function authErrorKey(mode: AuthMode, verificationStep: VerificationStep): string {
   if (mode === 'register') {
     if (verificationStep === 'confirm') {
-      return t('auth.error.verificationFailed');
+      return 'auth.error.verificationFailed';
     }
-    return t('auth.error.registrationFailed');
+    return 'auth.error.registrationFailed';
   }
   if (mode === 'recover') {
-    return t('auth.error.recoveryFailed');
+    return 'auth.error.recoveryFailed';
   }
 
-  return t('auth.error.signInFailed');
+  return 'auth.error.signInFailed';
 }
 
 // shouldRequireTurnstile receives runtime auth state and returns whether the current submit needs a challenge token.
-function shouldRequireTurnstile(config: RuntimeConfig, mode: AuthMode, verificationStep: VerificationStep, loginTurnstileRequired: boolean): boolean {
+function shouldRequireTurnstile(
+  config: RuntimeConfig,
+  mode: AuthMode,
+  verificationStep: VerificationStep,
+  loginTurnstileRequired: boolean,
+): boolean {
   if (!config.features.turnstileEnabled) {
     return false;
   }

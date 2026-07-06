@@ -1,8 +1,8 @@
 import { Package } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type Category, type Entry, type LedgerSummary } from '../../lib/api/ledger';
-import { convertEntryAmountCents, formatMoney } from '../../lib/money';
+import { type Account, type Category, type Entry, type LedgerSummary } from '@/lib/api/ledger';
+import { convertEntryAmountCents, formatMoney } from '@/lib/money';
 
 type HomeViewProps = {
   accounts: Account[];
@@ -24,10 +24,22 @@ type EntryDayGroup = {
 };
 
 // HomeView receives the current ledger snapshot and returns the mobile transaction feed.
-export function HomeView({ accounts, bookName, categories, currencyCode, entries, onOpenEntry, rateIndex, summary }: HomeViewProps) {
+export function HomeView({
+  accounts,
+  bookName,
+  categories,
+  currencyCode,
+  entries,
+  onOpenEntry,
+  rateIndex,
+  summary,
+}: HomeViewProps) {
   const { t } = useTranslation();
   const groups = useMemo(() => groupEntriesByDay(entries, currencyCode, rateIndex), [currencyCode, entries, rateIndex]);
-  const monthlyExpenseCents = useMemo(() => currentMonthExpenseCents(entries, currencyCode, rateIndex), [currencyCode, entries, rateIndex]);
+  const monthlyExpenseCents = useMemo(
+    () => currentMonthExpenseCents(entries, currencyCode, rateIndex),
+    [currencyCode, entries, rateIndex],
+  );
   const summaryBalanceCents = convertSummaryBalanceCents(summary, currencyCode, rateIndex);
   const budgetTotalCents = Math.max(monthlyExpenseCents, summaryBalanceCents, 0);
   const remainingCents = Math.max(0, budgetTotalCents - monthlyExpenseCents);
@@ -58,7 +70,12 @@ export function HomeView({ accounts, bookName, categories, currencyCode, entries
             <article className="dayGroup" key={group.id}>
               <header>
                 <span>{group.label}</span>
-                <b>{t('mobile.transactions.dayTotals', { income: formatMoney(group.incomeCents, currencyCode), expense: formatMoney(group.expenseCents, currencyCode) })}</b>
+                <b>
+                  {t('mobile.transactions.dayTotals', {
+                    income: formatMoney(group.incomeCents, currencyCode),
+                    expense: formatMoney(group.expenseCents, currencyCode),
+                  })}
+                </b>
               </header>
               <ul>
                 {group.entries.map((entry) => {
@@ -80,7 +97,13 @@ export function HomeView({ accounts, bookName, categories, currencyCode, entries
                         </span>
                         <div>
                           <strong>{title}</strong>
-                          <small>{t('mobile.transactions.entryMeta', { time: formatEntryTime(entry.occurredAt), account: account?.name ?? t('mobile.transactions.accountFallback'), book: bookName })}</small>
+                          <small>
+                            {t('mobile.transactions.entryMeta', {
+                              time: formatEntryTime(entry.occurredAt),
+                              account: account?.name ?? t('mobile.transactions.accountFallback'),
+                              book: bookName,
+                            })}
+                          </small>
                         </div>
                         <b>{formatMoney(signedAmount, entry.transactionCurrency || currencyCode)}</b>
                       </button>
@@ -137,7 +160,9 @@ function formatGroupDate(value: string): string {
 // groupEntriesByDay receives entries and returns descending UTC day groups with daily totals.
 function groupEntriesByDay(entries: Entry[], currencyCode: string, rates: Map<string, number>): EntryDayGroup[] {
   const groups = new Map<string, EntryDayGroup>();
-  const sorted = [...entries].sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime());
+  const sorted = [...entries].sort(
+    (left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime(),
+  );
 
   for (const entry of sorted) {
     const id = entry.occurredAt.slice(0, 10);

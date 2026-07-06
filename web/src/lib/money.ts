@@ -22,13 +22,25 @@ export function compactMoney(cents: number): string {
 }
 
 // convertEntryAmountCents receives an entry, target currency, and rates and returns converted cents or null when FX is missing.
-export function convertEntryAmountCents(entry: Entry, targetCurrency: string, rates: Map<string, number>): number | null {
-  const sourceCurrency = normalizeCurrencyCode(entry.transactionCurrency || entry.bookReportingCurrency || targetCurrency);
+export function convertEntryAmountCents(
+  entry: Entry,
+  targetCurrency: string,
+  rates: Map<string, number>,
+): number | null {
+  const sourceCurrency = normalizeCurrencyCode(
+    entry.transactionCurrency || entry.bookReportingCurrency || targetCurrency,
+  );
   return convertCurrencyAmountCents(entry.amountCents, sourceCurrency, targetCurrency, rates, entry.exchangeRate);
 }
 
 // convertCurrencyAmountCents receives cents and source/target currencies and returns converted cents or null when FX is missing.
-export function convertCurrencyAmountCents(amountCents: number, sourceCurrency: string, targetCurrency: string, rates: Map<string, number>, exchangeRate?: string): number | null {
+export function convertCurrencyAmountCents(
+  amountCents: number,
+  sourceCurrency: string,
+  targetCurrency: string,
+  rates: Map<string, number>,
+  exchangeRate?: string,
+): number | null {
   const normalizedSource = normalizeCurrencyCode(sourceCurrency);
   const normalizedTarget = normalizeCurrencyCode(targetCurrency);
   if (normalizedSource === normalizedTarget) {
@@ -64,19 +76,29 @@ export function normalizeCurrencyCode(value: string): string {
 
 // parseExchangeRate receives exchange metadata and returns a normalized rate tuple.
 function parseExchangeRate(value?: string): { from: string; to: string; rate: number } | null {
-  const match = (value ?? '').trim().toUpperCase().match(/^([A-Z]{3})\/([A-Z]{3})=([0-9]+(?:\.[0-9]+)?)$/);
+  const match = (value ?? '')
+    .trim()
+    .toUpperCase()
+    .match(/^([A-Z]{3})\/([A-Z]{3})=([0-9]+(?:\.[0-9]+)?)$/);
   if (!match) {
     return null;
   }
 
-  const rate = Number(match[3]);
+  const from = match[1];
+  const to = match[2];
+  const rateToken = match[3];
+  if (!from || !to || !rateToken) {
+    return null;
+  }
+
+  const rate = Number(rateToken);
   if (!Number.isFinite(rate) || rate <= 0) {
     return null;
   }
 
   return {
-    from: match[1],
-    to: match[2],
+    from,
+    to,
     rate,
   };
 }

@@ -1,0 +1,40 @@
+name: Go
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend-and-cli:
+    name: Backend and CLI
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: |
+            backend/go.sum
+            cli/go.sum
+
+      - name: Lint backend
+        run: make backend-lint
+
+      - name: Lint CLI
+        run: make cli-lint
+
+      - name: Verify generated lint edits are committed
+        run: git diff --exit-code -- backend cli
+
+      - name: Test backend and CLI
+        run: |
+          make backend-test
+          make cli-test

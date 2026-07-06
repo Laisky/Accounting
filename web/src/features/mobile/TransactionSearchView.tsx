@@ -1,8 +1,8 @@
 import { Search, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type BookMember, type Category, type Entry } from '../../lib/api/ledger';
-import { formatMoney } from '../../lib/money';
+import { type Account, type BookMember, type Category, type Entry } from '@/lib/api/ledger';
+import { formatMoney } from '@/lib/money';
 import './transaction-search.css';
 
 type TransactionSearchViewProps = {
@@ -14,6 +14,8 @@ type TransactionSearchViewProps = {
   members?: BookMember[];
   onClose: () => void;
   onOpenEntry?: (entryId: string) => void;
+  onQueryChange: (query: string) => void;
+  query: string;
   title?: string;
 };
 
@@ -27,11 +29,15 @@ export function TransactionSearchView({
   members = [],
   onClose,
   onOpenEntry,
+  onQueryChange,
+  query,
   title,
 }: TransactionSearchViewProps) {
   const { t } = useTranslation();
-  const [query, setQuery] = useState('');
-  const results = useMemo(() => filterEntries(entries, accounts, categories, members, query), [accounts, categories, entries, members, query]);
+  const results = useMemo(
+    () => filterEntries(entries, accounts, categories, members, query),
+    [accounts, categories, entries, members, query],
+  );
 
   return (
     <section className="tabPanel transactionSearchPanel" aria-label={title ?? t('mobile.search.title')}>
@@ -52,7 +58,7 @@ export function TransactionSearchView({
           aria-label={t('mobile.search.input')}
           placeholder={t('mobile.search.placeholder')}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => onQueryChange(event.target.value)}
         />
       </label>
 
@@ -75,7 +81,13 @@ export function TransactionSearchView({
                   >
                     <div>
                       <strong>{title}</strong>
-                      <span>{t('mobile.search.resultMeta', { account: account?.name ?? t('mobile.transactions.accountFallback'), time: formatEntryTime(entry.occurredAt), type: entry.type })}</span>
+                      <span>
+                        {t('mobile.search.resultMeta', {
+                          account: account?.name ?? t('mobile.transactions.accountFallback'),
+                          time: formatEntryTime(entry.occurredAt),
+                          type: entry.type,
+                        })}
+                      </span>
                     </div>
                     <b>{formatMoney(entry.amountCents, entry.transactionCurrency)}</b>
                   </button>
@@ -92,40 +104,48 @@ export function TransactionSearchView({
 }
 
 // filterEntries receives entries, ledger dimensions, and a query, and returns matching entries.
-function filterEntries(entries: Entry[], accounts: Account[], categories: Category[], members: BookMember[], query: string): Entry[] {
+function filterEntries(
+  entries: Entry[],
+  accounts: Account[],
+  categories: Category[],
+  members: BookMember[],
+  query: string,
+): Entry[] {
   const normalized = query.trim().toLowerCase();
   if (!normalized) {
     return sortEntries(entries);
   }
 
-  return sortEntries(entries.filter((entry) => {
-    const account = accounts.find((item) => item.id === entry.accountId);
-    const destinationAccount = accounts.find((item) => item.id === entry.destinationAccountId);
-    const category = categories.find((item) => item.id === entry.categoryId);
-    const parentCategory = categories.find((item) => item.id === category?.parentId);
-    const member = members.find((item) => item.userId === entry.creatorUserId);
-    const haystack = [
-      entry.note,
-      entry.merchant,
-      entry.type,
-      entry.transactionCurrency,
-      String(entry.amountCents / 100),
-      formatMoney(entry.amountCents, entry.transactionCurrency),
-      account?.name,
-      destinationAccount?.name,
-      parentCategory?.name,
-      category?.name,
-      member?.displayName,
-      member?.userId,
-      entry.creatorUserId,
-      ...(entry.tags ?? []),
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
+  return sortEntries(
+    entries.filter((entry) => {
+      const account = accounts.find((item) => item.id === entry.accountId);
+      const destinationAccount = accounts.find((item) => item.id === entry.destinationAccountId);
+      const category = categories.find((item) => item.id === entry.categoryId);
+      const parentCategory = categories.find((item) => item.id === category?.parentId);
+      const member = members.find((item) => item.userId === entry.creatorUserId);
+      const haystack = [
+        entry.note,
+        entry.merchant,
+        entry.type,
+        entry.transactionCurrency,
+        String(entry.amountCents / 100),
+        formatMoney(entry.amountCents, entry.transactionCurrency),
+        account?.name,
+        destinationAccount?.name,
+        parentCategory?.name,
+        category?.name,
+        member?.displayName,
+        member?.userId,
+        entry.creatorUserId,
+        ...(entry.tags ?? []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
 
-    return haystack.includes(normalized);
-  }));
+      return haystack.includes(normalized);
+    }),
+  );
 }
 
 // entryTitle receives an entry and categories and returns a compact search result title.

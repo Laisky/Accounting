@@ -1,4 +1,12 @@
-import { type Account, type AccountGroup, type BookListItem, type BookMember, type Category, type Entry, type ExchangeRate } from '../../lib/api/ledger';
+import {
+  type Account,
+  type AccountGroup,
+  type BookListItem,
+  type BookMember,
+  type Category,
+  type Entry,
+  type ExchangeRate,
+} from '@/lib/api/ledger';
 
 export type LedgerSnapshot = {
   groups: AccountGroup[];
@@ -9,4 +17,15 @@ export type LedgerSnapshot = {
   entries: Entry[];
   rates: ExchangeRate[];
   totalEntries: number;
+};
+
+export const emptyLedgerSnapshot: LedgerSnapshot = {
+  groups: [],
+  members: [],
+  books: [],
+  accounts: [],
+  categories: [],
+  entries: [],
+  rates: [],
+  totalEntries: 0,
 };

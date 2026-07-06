@@ -89,7 +89,7 @@ func requireAuthRateLimit(c *gin.Context, limiter *authRateLimiter, route string
 		return true
 	}
 
-	c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
+	respondAPIMessage(c, http.StatusTooManyRequests, "rate limit exceeded")
 	return false
 }
 

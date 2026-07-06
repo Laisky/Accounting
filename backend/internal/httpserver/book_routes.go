@@ -30,7 +30,7 @@ func registerBookRoutes(api *gin.RouterGroup, ledgerService *ledger.Service, aud
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 		pagination, ok := parseEntryPagination(c)
@@ -58,7 +58,7 @@ func registerBookRoutes(api *gin.RouterGroup, ledgerService *ledger.Service, aud
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -97,7 +97,7 @@ func registerBookRoutes(api *gin.RouterGroup, ledgerService *ledger.Service, aud
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -120,7 +120,7 @@ func registerBookRoutes(api *gin.RouterGroup, ledgerService *ledger.Service, aud
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -160,7 +160,7 @@ func registerBookRoutes(api *gin.RouterGroup, ledgerService *ledger.Service, aud
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 		pagination, ok := parseEntryPagination(c)

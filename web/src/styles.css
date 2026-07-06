@@ -1,11 +1,7 @@
 :root {
   color: oklch(22% 0.035 238);
   background: oklch(96% 0.018 112);
-  font-family:
-    "Aptos",
-    "Segoe UI",
-    system-ui,
-    sans-serif;
+  font-family: 'Aptos', 'Segoe UI', system-ui, sans-serif;
   font-synthesis: none;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
@@ -359,9 +355,7 @@ dt {
   padding: 28px;
   border: 2px dashed oklch(70% 0.085 164);
   border-radius: 8px;
-  background:
-    linear-gradient(135deg, oklch(99% 0.01 108), oklch(94% 0.04 152)),
-    oklch(98% 0.014 110);
+  background: linear-gradient(135deg, oklch(99% 0.01 108), oklch(94% 0.04 152)), oklch(98% 0.014 110);
   color: oklch(30% 0.095 164);
   text-align: center;
   cursor: pointer;

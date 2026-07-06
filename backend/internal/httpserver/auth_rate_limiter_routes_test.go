@@ -37,7 +37,7 @@ func TestRegisterRoutesAuthRateLimitLogin(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusTooManyRequests, rec.Code)
-	require.JSONEq(t, `{"error":"rate limit exceeded"}`, rec.Body.String())
+	require.JSONEq(t, `{"code":"rate_limit_exceeded","message":"rate limit exceeded"}`, rec.Body.String())
 	require.NotContains(t, rec.Body.String(), "person@example.test")
 
 	req = httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"other@example.test","password":"wrong password"}`))

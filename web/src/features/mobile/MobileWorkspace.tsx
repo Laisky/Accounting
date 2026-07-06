@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
-import { LoadingOverlay } from '../../components/LoadingOverlay';
-import { fetchAuditEvents, type AuditEvent } from '../../lib/api/audit';
-import { fetchUserProfile, updateUserProfile, type AuthActor } from '../../lib/api/auth';
+import { LoadingOverlay } from '@/components/LoadingOverlay';
+import { useThemeContext } from '@/contexts/ThemeContext';
+import { useMobileBookContextQuery, useMobileFoundationQuery } from '@/hooks/useMobileWorkspaceData';
+import { fetchAuditEvents, type AuditEvent } from '@/lib/api/audit';
+import { updateUserProfile, type AuthActor } from '@/lib/api/auth';
 import {
   createAccount,
   createAccountGroup,
@@ -12,15 +14,7 @@ import {
   createEntry,
   deleteEntry,
   emptyLedgerSummary,
-  fetchAccountGroups,
-  fetchAccounts,
-  fetchBookMembers,
   fetchAllEntries,
-  fetchBooks,
-  fetchCategories,
-  fetchEntries,
-  fetchExchangeRates,
-  fetchLedgerSummary,
   updateCategory,
   updateAccountGroup,
   updateBook,
@@ -30,57 +24,49 @@ import {
   type Entry,
   type EntryUpdateInput,
   type LedgerSummary,
-} from '../../lib/api/ledger';
-import { type RuntimeConfig } from '../../lib/api/runtimeConfig';
-import { buildRateIndex, normalizeCurrencyCode } from '../../lib/money';
+} from '@/lib/api/ledger';
+import { type RuntimeConfig } from '@/lib/api/runtimeConfig';
+import { buildRateIndex, normalizeCurrencyCode } from '@/lib/money';
+import type { ReportTab } from '../reports/reportWorkspaceModel';
 import { accountEntries } from './account-transaction-utils';
 import type { AccountCreateInput } from './AccountsView';
 import { entryDetailTitle } from './entry-detail-utils';
 import { MobileBottomNav } from './MobileBottomNav';
 import { MobileWorkspaceContent } from './MobileWorkspaceContent';
 import { MobileWorkspaceHeader } from './MobileWorkspaceHeader';
-import {
-  accountIdFromTransactionsPath,
-  categoryDirection,
-  entryIdFromDetailPath,
-  meSectionFromPath,
-  mobileRoutes,
-  mobileTabFromPath,
-  readStoredThemeMode,
-  storeThemeMode,
-  type ThemeMode,
-  type MobileTab,
-} from './mobile-workspace-utils';
-import { type LedgerSnapshot } from './mobile-workspace-types';
+import { categoryDirection, mobileRoutes, type MeSection, type MobileTab } from './mobile-workspace-utils';
+import { emptyLedgerSnapshot, type LedgerSnapshot } from './mobile-workspace-types';
 import type { RecordEntryInput } from './RecordEntryView';
 import './mobile-shell.css';
+import './mobile-home.css';
+import './mobile-account.css';
+import './mobile-navigation.css';
 
 type MobileWorkspaceProps = {
   actor: AuthActor;
   runtimeConfig: RuntimeConfig | null;
   onLogout: () => Promise<void>;
+  routeState: MobileWorkspaceRouteState;
+};
+
+export type MobileWorkspaceRouteState = {
+  accountDetailId: string | null;
+  activeTab: MobileTab;
+  entryDetailId: string | null;
+  meSection: MeSection;
+  reportTab: ReportTab;
+  searchQuery: string | null;
 };
 
 // MobileWorkspace renders the authenticated mobile-first accounting shell.
-export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorkspaceProps) {
+export function MobileWorkspace({ actor, runtimeConfig, onLogout, routeState }: MobileWorkspaceProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const accountDetailId = accountIdFromTransactionsPath(location.pathname);
-  const entryDetailId = entryIdFromDetailPath(location.pathname);
-  const activeTab = entryDetailId ? 'home' : mobileTabFromPath(location.pathname) ?? 'home';
-  const meSection = meSectionFromPath(location.pathname) ?? 'index';
+  const { setThemeMode, themeMode } = useThemeContext();
+  const { accountDetailId, activeTab, entryDetailId, meSection, reportTab, searchQuery } = routeState;
   const [summary, setSummary] = useState<LedgerSummary>(emptyLedgerSummary);
-  const [snapshot, setSnapshot] = useState<LedgerSnapshot>({
-    groups: [],
-    members: [],
-    books: [],
-    accounts: [],
-    categories: [],
-    entries: [],
-    rates: [],
-    totalEntries: 0,
-  });
+  const [snapshot, setSnapshot] = useState<LedgerSnapshot>(emptyLedgerSnapshot);
   const [selectedBookId, setSelectedBookId] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const [status, setStatus] = useState('');
@@ -90,19 +76,18 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
   const [activityEvents, setActivityEvents] = useState<AuditEvent[]>([]);
   const [isActivityLoading, setIsActivityLoading] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isSearchLoading, setIsSearchLoading] = useState(false);
-  const [searchEntries, setSearchEntries] = useState<Entry[]>([]);
-  const [searchError, setSearchError] = useState('');
   const [accountDetailEntries, setAccountDetailEntries] = useState<Entry[]>([]);
   const [isAccountDetailLoading, setIsAccountDetailLoading] = useState(false);
   const [entryDetailEntry, setEntryDetailEntry] = useState<Entry | undefined>();
   const [isEntryDetailLoading, setIsEntryDetailLoading] = useState(false);
   const [entryEditorOpenSignal, setEntryEditorOpenSignal] = useState(0);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => readStoredThemeMode());
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const contentRef = useRef<HTMLDivElement>(null);
+  const foundationQuery = useMobileFoundationQuery(refreshKey);
+  const bookContextQuery = useMobileBookContextQuery(selectedBookId, refreshKey);
+  const foundation = foundationQuery.data;
+  const bookContext = bookContextQuery.data;
 
   const selectedBook = snapshot.books.find((book) => book.id === selectedBookId) ?? snapshot.books[0];
   const bookCurrency = selectedBook?.reportingCurrency ?? summary.currency;
@@ -114,149 +99,150 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     [selectedBook, snapshot.accounts],
   );
   const accountDetailAccount = sharedAccounts.find((account) => account.id === accountDetailId);
-  const visibleEntryDetail = entryDetailEntry?.id === entryDetailId ? entryDetailEntry : snapshot.entries.find((entry) => entry.id === entryDetailId);
+  const isSearchOpen = searchQuery !== null;
+  const visibleEntryDetail =
+    entryDetailEntry?.id === entryDetailId
+      ? entryDetailEntry
+      : snapshot.entries.find((entry) => entry.id === entryDetailId);
   const primaryAccount = sharedAccounts[0] ?? snapshot.accounts[0];
-  // A single blocking label drives the shell overlay: import work reports its own label, other
-  // server mutations fall back to a generic processing message so duplicate submits are prevented.
   const processingLabel = importProcessing || (isBusy ? t('common.processing') : '');
   const editTargetLabel = entryDetailId ? t('mobile.menu.editEntry') : t('mobile.menu.editBook');
   const canEditContext = entryDetailId ? Boolean(visibleEntryDetail) : Boolean(selectedBook);
 
   // openTab receives a top-level page id and navigates to that page's canonical URL.
   function openTab(tab: MobileTab) {
-    setIsSearchOpen(false);
     setIsWorkspaceMenuOpen(false);
     navigate(mobileRoutes[tab]);
   }
 
-  // handleOpenAccount receives an account id and opens that account's transaction detail route.
   function handleOpenAccount(accountId: string) {
-    setIsSearchOpen(false);
     setIsWorkspaceMenuOpen(false);
     navigate(`/accounts/${encodeURIComponent(accountId)}/transactions`);
   }
 
-  // handleCloseAccountDetail receives no parameters and returns to the account list route.
   function handleCloseAccountDetail() {
-    setIsSearchOpen(false);
     setIsWorkspaceMenuOpen(false);
     navigate('/accounts');
   }
 
-  // handleOpenEntry receives an entry id and opens that entry's canonical detail route.
   function handleOpenEntry(entryId: string) {
-    setIsSearchOpen(false);
     setIsWorkspaceMenuOpen(false);
     setEntryDetailEntry(snapshot.entries.find((entry) => entry.id === entryId));
     navigate(`/entries/${encodeURIComponent(entryId)}`);
   }
 
-  // handleCloseEntryDetail receives no parameters and returns to the home transaction feed.
   function handleCloseEntryDetail() {
-    setIsSearchOpen(false);
     setIsWorkspaceMenuOpen(false);
     navigate('/home');
   }
 
-  // handleOpenMeSection receives a Me subpage id and navigates to that settings page.
   function handleOpenMeSection(section: 'profile' | 'security') {
-    setIsSearchOpen(false);
     setIsWorkspaceMenuOpen(false);
     navigate(`/me/${section}`);
   }
 
-  // handleCloseMeSection receives no parameters and returns to the compact Me index.
   function handleCloseMeSection() {
-    setIsSearchOpen(false);
     setIsWorkspaceMenuOpen(false);
     navigate('/me');
   }
 
-  // handleSelectBook receives a book id from the header switcher and makes it the active ledger context.
   function handleSelectBook(bookId: string) {
-    setIsSearchOpen(false);
     setIsWorkspaceMenuOpen(false);
     setSelectedBookId(bookId);
   }
 
-  const loadFoundation = useCallback(async () => {
-    const [loadedSummary, books, groups, accounts, rates, profile] = await Promise.all([
-      fetchLedgerSummary(new AbortController().signal).catch(() => emptyLedgerSummary),
-      fetchBooks(),
-      fetchAccountGroups(),
-      fetchAccounts(),
-      fetchExchangeRates(),
-      fetchUserProfile(),
-    ]);
-    setSummary(loadedSummary);
-    setSnapshot((current) => ({ ...current, books, groups, accounts, rates }));
-    setBaseCurrency(normalizeCurrencyCode(profile.baseCurrency || 'USD'));
-    setSelectedBookId((current) => current || books[0]?.id || '');
-  }, []);
-
-  const loadBookContext = useCallback(async (bookId: string, isActive: () => boolean = () => true) => {
-    const [categories, entryList, members] = await Promise.all([fetchCategories(bookId), fetchEntries(bookId), fetchBookMembers(bookId)]);
-    if (!isActive()) {
-      // A newer book selection superseded this request; drop the stale response
-      // so it cannot overwrite the currently selected book's data.
-      return;
-    }
-    setSnapshot((current) => ({
-      ...current,
-      categories,
-      entries: entryList.entries,
-      members,
-      totalEntries: entryList.total,
-    }));
-  }, []);
-
   useEffect(() => {
     let isActive = true;
-    setError('');
-    loadFoundation().catch(() => {
-      if (isActive) {
-        setError(t('mobile.error.ledgerDataFailed'));
+    if (!foundation) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    queueMicrotask(() => {
+      if (!isActive) {
+        return;
       }
+      setError('');
+      setSummary(foundation.summary);
+      setSnapshot((current) => ({
+        ...current,
+        accounts: foundation.accounts,
+        books: foundation.books,
+        groups: foundation.groups,
+        rates: foundation.rates,
+      }));
+      setBaseCurrency(foundation.baseCurrency);
+      setSelectedBookId((current) => current || foundation.books[0]?.id || '');
     });
 
     return () => {
       isActive = false;
     };
-  }, [loadFoundation, refreshKey, t]);
+  }, [foundation]);
 
   useEffect(() => {
+    let isActive = true;
     if (!selectedBookId) {
-      setSnapshot((current) => ({ ...current, categories: [], entries: [], members: [], totalEntries: 0 }));
-      return;
+      queueMicrotask(() => {
+        if (isActive) {
+          setSnapshot((current) => ({ ...current, categories: [], entries: [], members: [], totalEntries: 0 }));
+        }
+      });
+      return () => {
+        isActive = false;
+      };
     }
 
-    let isActive = true;
-    loadBookContext(selectedBookId, () => isActive).catch(() => {
-      if (isActive) {
-        setError(t('mobile.error.entriesFailed'));
+    if (!bookContext) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    queueMicrotask(() => {
+      if (!isActive) {
+        return;
       }
+      setSnapshot((current) => ({
+        ...current,
+        categories: bookContext.categories,
+        entries: bookContext.entries,
+        members: bookContext.members,
+        totalEntries: bookContext.totalEntries,
+      }));
     });
 
     return () => {
       isActive = false;
     };
-  }, [loadBookContext, refreshKey, selectedBookId, t]);
+  }, [bookContext, selectedBookId]);
 
   useEffect(() => {
-    if (location.pathname === '/' || (!entryIdFromDetailPath(location.pathname) && !mobileTabFromPath(location.pathname))) {
-      navigate(mobileRoutes.home, { replace: true });
+    let isActive = true;
+    if (!foundationQuery.isError && !bookContextQuery.isError) {
+      return () => {
+        isActive = false;
+      };
     }
-  }, [location.pathname, navigate]);
+
+    queueMicrotask(() => {
+      if (!isActive) {
+        return;
+      }
+      setError(foundationQuery.isError ? t('mobile.error.ledgerDataFailed') : t('mobile.error.entriesFailed'));
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [bookContextQuery.isError, foundationQuery.isError, t]);
 
   useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
   }, [location.pathname]);
-
-  useEffect(() => {
-    storeThemeMode(themeMode);
-  }, [themeMode]);
 
   useEffect(() => {
     let isActive = true;
@@ -339,7 +325,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     };
   }, [entryDetailId, selectedBook, snapshot.entries, t]);
 
-  // handlePrepareAccount receives no parameters and creates missing starter ledger entities.
   async function handlePrepareAccount() {
     setIsBusy(true);
     setStatus('');
@@ -366,7 +351,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleCreateAccount receives account form data and creates a book-shared account for the selected book.
   async function handleCreateAccount(input: AccountCreateInput) {
     setIsBusy(true);
     setStatus('');
@@ -386,7 +370,9 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
         ...current,
         books: current.books.some((item) => item.id === book.id) ? current.books : [...current.books, book],
         groups: current.groups.some((item) => item.id === group.id) ? current.groups : [...current.groups, group],
-        accounts: current.accounts.some((item) => item.id === account.id) ? current.accounts : [...current.accounts, account],
+        accounts: current.accounts.some((item) => item.id === account.id)
+          ? current.accounts
+          : [...current.accounts, account],
       }));
       setSelectedBookId(book.id);
       setStatus(t('mobile.status.accountCreated'));
@@ -399,7 +385,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleCreateEntry receives record-entry input and posts one ledger entry.
   async function handleCreateEntry(input: RecordEntryInput) {
     const account = snapshot.accounts.find((item) => item.id === input.accountId) ?? primaryAccount;
     if (!selectedBook || !account) {
@@ -414,9 +399,9 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
       const category = input.categoryId
         ? snapshot.categories.find((item) => item.id === input.categoryId)
         : await createCategory(selectedBook.id, {
-          name: input.categoryName || 'General',
-          direction: categoryDirection(input.type),
-        });
+            name: input.categoryName || 'General',
+            direction: categoryDirection(input.type),
+          });
       const entry = await createEntry(selectedBook.id, {
         type: input.type,
         accountId: account.id,
@@ -430,12 +415,14 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
       });
       setSnapshot((current) => ({
         ...current,
-        categories: category && !current.categories.some((item) => item.id === category.id) ? [...current.categories, category] : current.categories,
+        categories:
+          category && !current.categories.some((item) => item.id === category.id)
+            ? [...current.categories, category]
+            : current.categories,
         entries: [entry, ...current.entries].slice(0, 20),
         totalEntries: current.totalEntries + 1,
       }));
       setStatus(t('common.status.entryPosted'));
-      setIsSearchOpen(false);
       setIsWorkspaceMenuOpen(false);
       navigate('/home');
       setRefreshKey((current) => current + 1);
@@ -446,7 +433,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleCreateCategory receives category form input and creates a category for the selected book.
   async function handleCreateCategory(input: CategoryCreateInput) {
     if (!selectedBook) {
       setError(t('mobile.error.categoryCreateFailed'));
@@ -460,7 +446,9 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
       const category = await createCategory(selectedBook.id, input);
       setSnapshot((current) => ({
         ...current,
-        categories: current.categories.some((item) => item.id === category.id) ? current.categories : [...current.categories, category],
+        categories: current.categories.some((item) => item.id === category.id)
+          ? current.categories
+          : [...current.categories, category],
       }));
       setStatus(t('mobile.status.categoryCreated'));
       setRefreshKey((current) => current + 1);
@@ -471,7 +459,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleUpdateCategory receives category identity and patch fields, then updates visible category state.
   async function handleUpdateCategory(categoryId: string, input: CategoryUpdateInput) {
     if (!selectedBook) {
       setError(t('mobile.error.categoryUpdateFailed'));
@@ -496,7 +483,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleUpdateBookCurrency receives a target currency and stores it as the selected book base currency.
   async function handleUpdateBookCurrency(currency: string) {
     if (!selectedBook) {
       return;
@@ -521,7 +507,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleUpdateBaseCurrency receives a profile currency and stores it as the user's summary display currency.
   async function handleUpdateBaseCurrency(currency: string) {
     setIsBusy(true);
     setStatus('');
@@ -537,7 +522,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleUpdateAccountGroupName receives a group id and display name, then updates personal group state.
   async function handleUpdateAccountGroupName(groupId: string, name: string) {
     setIsBusy(true);
     setStatus('');
@@ -557,7 +541,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleUpdateBookName receives a target display name and stores it as the selected book name.
   async function handleUpdateBookName(name: string) {
     if (!selectedBook) {
       return;
@@ -581,9 +564,9 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleUpdateEntry receives entry identity and patch fields, then updates visible entry state.
   async function handleUpdateEntry(entryId: string, input: EntryUpdateInput) {
-    const existingEntry = entryDetailEntry?.id === entryId ? entryDetailEntry : snapshot.entries.find((entry) => entry.id === entryId);
+    const existingEntry =
+      entryDetailEntry?.id === entryId ? entryDetailEntry : snapshot.entries.find((entry) => entry.id === entryId);
     const bookId = existingEntry?.bookId ?? selectedBook?.id;
     if (!bookId) {
       setError(t('mobile.error.entryUpdateFailed'));
@@ -609,9 +592,9 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleDeleteEntry receives entry identity, deletes it, and returns the user to the home feed.
   async function handleDeleteEntry(entryId: string) {
-    const existingEntry = entryDetailEntry?.id === entryId ? entryDetailEntry : snapshot.entries.find((entry) => entry.id === entryId);
+    const existingEntry =
+      entryDetailEntry?.id === entryId ? entryDetailEntry : snapshot.entries.find((entry) => entry.id === entryId);
     const bookId = existingEntry?.bookId ?? selectedBook?.id;
     if (!bookId) {
       setError(t('mobile.error.entryDeleteFailed'));
@@ -639,7 +622,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleCreateImportBook receives a destination name, creates a book, and selects it for import.
   async function handleCreateImportBook(name: string): Promise<string> {
     const book = await createBook(name, bookCurrency || baseCurrency || summary.currency || 'USD');
     setSnapshot((current) => ({
@@ -651,7 +633,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     return book.id;
   }
 
-  // handleLoadActivity receives no parameters and refreshes audit events for the profile tab.
   async function handleLoadActivity() {
     setIsActivityLoading(true);
     setError('');
@@ -665,34 +646,23 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
     }
   }
 
-  // handleOpenSearch receives no parameters, opens transaction search, and loads searchable entries.
-  async function handleOpenSearch() {
-    setIsSearchOpen(true);
+  function handleOpenSearch() {
     setIsWorkspaceMenuOpen(false);
-    setSearchError('');
-    setSearchEntries([]);
-    if (!selectedBook) {
-      return;
-    }
-
-    setIsSearchLoading(true);
-    try {
-      const entries = await fetchAllEntries(selectedBook.id);
-      setSearchEntries(accountDetailId ? accountEntries(accountDetailId, entries) : entries);
-    } catch {
-      setSearchError(t('mobile.search.error'));
-    } finally {
-      setIsSearchLoading(false);
-    }
+    const search = searchQuery ? `?${new URLSearchParams({ query: searchQuery }).toString()}` : '';
+    const returnTo =
+      location.pathname === '/search' ? searchReturnTo(location.state) : location.pathname + location.search;
+    navigate({ pathname: '/search', search }, { state: returnTo ? { returnTo } : undefined });
   }
 
-  // handleCloseSearch receives no parameters, closes transaction search, and clears transient search errors.
   function handleCloseSearch() {
-    setIsSearchOpen(false);
-    setSearchError('');
+    navigate(searchReturnTo(location.state) ?? '/home');
   }
 
-  // handleEditContext receives no parameters and opens the edit surface for the current page.
+  function handleSearchQueryChange(nextQuery: string) {
+    const nextSearch = nextQuery ? `?${new URLSearchParams({ query: nextQuery }).toString()}` : '';
+    navigate({ pathname: '/search', search: nextSearch }, { replace: true, state: location.state });
+  }
+
   function handleEditContext() {
     setIsWorkspaceMenuOpen(false);
     if (entryDetailId) {
@@ -700,17 +670,14 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
       return;
     }
 
-    setIsSearchOpen(false);
     navigate('/accounts');
   }
 
-  // handleImportApplied receives no parameters and refreshes ledger data after an import apply operation.
   function handleImportApplied() {
     setStatus(t('imports.stage.applyComplete'));
     setRefreshKey((current) => current + 1);
   }
 
-  // handleLogoutClick receives no parameters and closes the current browser session.
   async function handleLogoutClick() {
     setIsLoggingOut(true);
     try {
@@ -725,7 +692,10 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
 
   return (
     <main className={`mobileShell ${shellThemeClass}`.trim()}>
-      <section className={`phoneFrame ${isRecordEntryMode ? 'phoneFrameRecord' : ''}`} aria-label={t('mobile.a11y.workspace')}>
+      <section
+        className={`phoneFrame ${isRecordEntryMode ? 'phoneFrameRecord' : ''}`}
+        aria-label={t('mobile.a11y.workspace')}
+      >
         <MobileWorkspaceHeader
           accountDetailId={accountDetailId}
           accountName={accountDetailAccount?.name}
@@ -771,7 +741,6 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
           isEntryDetailLoading={isEntryDetailLoading}
           isLoggingOut={isLoggingOut}
           isRecordEntryMode={isRecordEntryMode}
-          isSearchLoading={isSearchLoading}
           isSearchOpen={isSearchOpen}
           meSection={meSection}
           onAppliedImport={handleImportApplied}
@@ -791,6 +760,7 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
           onPrepareAccount={handlePrepareAccount}
           onProcessingChange={setImportProcessing}
           onSearchClose={handleCloseSearch}
+          onSearchQueryChange={handleSearchQueryChange}
           onUpdateAccountGroupName={handleUpdateAccountGroupName}
           onUpdateBookCurrency={handleUpdateBookCurrency}
           onUpdateBaseCurrency={handleUpdateBaseCurrency}
@@ -799,9 +769,9 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
           onUpdateEntry={handleUpdateEntry}
           rateIndex={rateIndex}
           refreshKey={refreshKey}
+          reportTab={reportTab}
           runtimeConfig={runtimeConfig}
-          searchEntries={searchEntries}
-          searchError={searchError}
+          searchQuery={searchQuery ?? ''}
           selectedBook={selectedBook}
           setSelectedBookId={setSelectedBookId}
           snapshot={snapshot}
@@ -816,4 +786,13 @@ export function MobileWorkspace({ actor, runtimeConfig, onLogout }: MobileWorksp
       </section>
     </main>
   );
+}
+
+function searchReturnTo(state: unknown): string | null {
+  if (!state || typeof state !== 'object' || !('returnTo' in state)) {
+    return null;
+  }
+
+  const returnTo = (state as { returnTo?: unknown }).returnTo;
+  return typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('/search') ? returnTo : null;
 }

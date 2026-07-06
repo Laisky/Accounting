@@ -51,7 +51,7 @@ type VirtualAuthenticator = {
 async function addPasskeyAuthenticator(page: Page): Promise<VirtualAuthenticator> {
   const client = await page.context().newCDPSession(page);
   await client.send('WebAuthn.enable', { enableUI: false });
-  const response = (await client.send('WebAuthn.addVirtualAuthenticator', {
+  const response = await client.send('WebAuthn.addVirtualAuthenticator', {
     options: {
       protocol: 'ctap2',
       ctap2Version: 'ctap2_1',
@@ -61,7 +61,7 @@ async function addPasskeyAuthenticator(page: Page): Promise<VirtualAuthenticator
       automaticPresenceSimulation: true,
       isUserVerified: true,
     },
-  })) as { authenticatorId: string };
+  });
   await client.send('WebAuthn.setUserVerified', {
     authenticatorId: response.authenticatorId,
     isUserVerified: true,
@@ -80,7 +80,10 @@ async function removePasskeyAuthenticator(authenticator: VirtualAuthenticator): 
 
 // openMeIndex opens the compact Me index from the bottom navigation.
 async function openMeIndex(page: Page): Promise<void> {
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Me', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Me', exact: true })
+    .click();
   await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
 }
 
@@ -120,7 +123,9 @@ function phoneRecordLayout(panel: Element) {
   });
 
   return {
-    appViewportHeight: Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-viewport-height')),
+    appViewportHeight: Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--app-viewport-height'),
+    ),
     contentOverflowY: content.scrollHeight - content.clientHeight,
     keypadLeftGap: Math.abs(contentRect.left - keypadRect.left),
     keypadRightGap: Math.abs(contentRect.right - keypadRect.right),
@@ -171,13 +176,17 @@ test('record entry fits the phone viewport', async ({ isMobile, page }) => {
   await page.goto('/record');
   await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Expense' })).toBeInViewport();
-  expect(await page.evaluate(() => {
-    const content = document.querySelector('.mobileContent');
-    return Boolean(content && content.scrollWidth <= content.clientWidth);
-  })).toBe(true);
+  expect(
+    await page.evaluate(() => {
+      const content = document.querySelector('.mobileContent');
+      return Boolean(content && content.scrollWidth <= content.clientWidth);
+    }),
+  ).toBe(true);
 
   const closedRecordLayout = await page.locator('.recordEntryPanel').evaluate(phoneRecordLayout);
-  expect(Math.abs(closedRecordLayout.appViewportHeight - closedRecordLayout.visualViewportHeight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(closedRecordLayout.appViewportHeight - closedRecordLayout.visualViewportHeight)).toBeLessThanOrEqual(
+    1,
+  );
   expect(closedRecordLayout.contentOverflowY).toBeLessThanOrEqual(1);
   expect(closedRecordLayout.panelOverflowY).toBeLessThanOrEqual(1);
   expect(closedRecordLayout.keypadLeftGap).toBeLessThanOrEqual(1);
@@ -372,10 +381,12 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   const expenseTab = page.getByRole('tab', { name: 'Expense' });
   await expect(expenseTab).toHaveAttribute('aria-selected', 'true');
   await expect(expenseTab).toBeInViewport();
-  expect(await page.evaluate(() => {
-    const content = document.querySelector('.mobileContent');
-    return Boolean(content && content.scrollWidth <= content.clientWidth);
-  })).toBe(true);
+  expect(
+    await page.evaluate(() => {
+      const content = document.querySelector('.mobileContent');
+      return Boolean(content && content.scrollWidth <= content.clientWidth);
+    }),
+  ).toBe(true);
   if ((page.viewportSize()?.width ?? 0) < 768) {
     await expect(nav).toBeVisible();
     const closedRecordLayout = await page.locator('.recordEntryPanel').evaluate(phoneRecordLayout);
@@ -460,20 +471,26 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await nav.getByRole('button', { name: 'Home' }).click();
   await expect(page.getByRole('region', { name: 'Home' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Transactions' }).getByText('Import lunch')).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Transactions' }).getByText('-CN¥12.30', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Transactions' }).getByText('-CN¥12.30', { exact: true }),
+  ).toBeVisible();
 
   await openMeProfile(page);
   await expect(page.getByText(email)).toBeVisible();
   await page.getByRole('button', { name: 'Back to Me' }).click();
   await page.getByRole('button', { name: /Security/ }).click();
-  await expect(page.getByRole('article', { name: 'Authenticator app' }).getByText('Authenticator app is off.')).toBeVisible();
+  await expect(
+    page.getByRole('article', { name: 'Authenticator app' }).getByText('Authenticator app is off.'),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Set up TOTP' }).click();
   await expect(page.getByText('TOTP setup started.')).toBeVisible();
   const otpauth = await page.getByLabel('Authenticator setup URI').inputValue();
   await page.getByLabel('TOTP code').fill(generateTotpCode(otpauth));
   await page.getByRole('button', { name: 'Confirm TOTP' }).click();
   await expect(page.getByText('TOTP enabled.')).toBeVisible();
-  await expect(page.getByRole('article', { name: 'Authenticator app' }).getByText('Authenticator app is on.')).toBeVisible();
+  await expect(
+    page.getByRole('article', { name: 'Authenticator app' }).getByText('Authenticator app is on.'),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Back to Me' }).click();
   await page.getByRole('button', { name: /Profile/ }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();

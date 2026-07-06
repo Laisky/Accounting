@@ -1,8 +1,8 @@
 import { Check, Copy, ShieldCheck } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { confirmTotp, disableTotp, fetchTotpStatus, setupTotp } from '../../lib/api/auth';
-import { copyToClipboard } from '../../lib/clipboard';
+import { confirmTotp, disableTotp, fetchTotpStatus, setupTotp } from '@/lib/api/auth';
+import { copyToClipboard } from '@/lib/clipboard';
 import './totp-settings.css';
 
 type TotpSettingsViewProps = {

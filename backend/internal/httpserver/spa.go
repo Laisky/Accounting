@@ -65,7 +65,7 @@ func registerStaticSPA(router *gin.Engine, distDir string) error {
 	router.NoRoute(func(c *gin.Context) {
 		log := gmw.GetLogger(c)
 		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "api route not found"})
+			respondAPIMessage(c, http.StatusNotFound, "api route not found")
 			return
 		}
 

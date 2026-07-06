@@ -1,0 +1,196 @@
+openapi: 3.1.2
+info:
+  title: Accounting API
+  version: 0.1.0
+  summary: Browser-first personal and shared bookkeeping API.
+servers:
+  - url: /api
+security:
+  - sessionCookie: []
+tags:
+  - name: system
+  - name: auth
+  - name: users
+  - name: audit
+  - name: ledger
+  - name: imports
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: accounting_session
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    BookID:
+      name: bookID
+      in: path
+      required: true
+      schema: { type: string }
+    EntryID:
+      name: entryID
+      in: path
+      required: true
+      schema: { type: string }
+    CategoryID:
+      name: categoryID
+      in: path
+      required: true
+      schema: { type: string }
+    GroupID:
+      name: groupID
+      in: path
+      required: true
+      schema: { type: string }
+    PasskeyID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    BatchID:
+      name: batchID
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Empty:
+      description: The request completed successfully with no response body.
+    Accepted:
+      description: The request was accepted without revealing account existence or one-time secrets.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AcceptedResponse"
+    Error:
+      description: Error response.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse: { $ref: "./schemas.yaml#/ErrorResponse" }
+    AcceptedResponse: { $ref: "./schemas.yaml#/AcceptedResponse" }
+    StatusResponse: { $ref: "./schemas.yaml#/StatusResponse" }
+    AuthUser: { $ref: "./schemas.yaml#/AuthUser" }
+    AuthActor: { $ref: "./schemas.yaml#/AuthActor" }
+    AuthSession: { $ref: "./schemas.yaml#/AuthSession" }
+    AuthResult: { $ref: "./schemas.yaml#/AuthResult" }
+    UserEnvelope: { $ref: "./schemas.yaml#/UserEnvelope" }
+    SessionResult: { $ref: "./schemas.yaml#/SessionResult" }
+    PasswordCredentials: { $ref: "./schemas.yaml#/PasswordCredentials" }
+    EmailRequest: { $ref: "./schemas.yaml#/EmailRequest" }
+    EmailCodeRequest: { $ref: "./schemas.yaml#/EmailCodeRequest" }
+    PasswordResetConfirmRequest:
+      { $ref: "./schemas.yaml#/PasswordResetConfirmRequest" }
+    TotpStatus: { $ref: "./schemas.yaml#/TotpStatus" }
+    TotpSetup: { $ref: "./schemas.yaml#/TotpSetup" }
+    TotpCodeRequest: { $ref: "./schemas.yaml#/TotpCodeRequest" }
+    PasskeyStart: { $ref: "./schemas.yaml#/PasskeyStart" }
+    PasskeyFinishRequest: { $ref: "./schemas.yaml#/PasskeyFinishRequest" }
+    PasskeyListItem: { $ref: "./schemas.yaml#/PasskeyListItem" }
+    PasskeyList: { $ref: "./schemas.yaml#/PasskeyList" }
+    PasskeyUpdateRequest: { $ref: "./schemas.yaml#/PasskeyUpdateRequest" }
+    RuntimeConfig: { $ref: "./schemas.yaml#/RuntimeConfig" }
+    PageInfo: { $ref: "./schemas.yaml#/PageInfo" }
+    LedgerSummary: { $ref: "./schemas.yaml#/LedgerSummary" }
+    BookListItem: { $ref: "./schemas.yaml#/BookListItem" }
+    BookList: { $ref: "./schemas.yaml#/BookList" }
+    BookCreateRequest: { $ref: "./schemas.yaml#/BookCreateRequest" }
+    BookUpdateRequest: { $ref: "./schemas.yaml#/BookUpdateRequest" }
+    BookMember: { $ref: "./schemas.yaml#/BookMember" }
+    BookMemberList: { $ref: "./schemas.yaml#/BookMemberList" }
+    AccountGroup: { $ref: "./schemas.yaml#/AccountGroup" }
+    AccountGroupList: { $ref: "./schemas.yaml#/AccountGroupList" }
+    AccountGroupCreateRequest:
+      { $ref: "./schemas.yaml#/AccountGroupCreateRequest" }
+    AccountGroupUpdateRequest:
+      { $ref: "./schemas.yaml#/AccountGroupUpdateRequest" }
+    Account: { $ref: "./schemas.yaml#/Account" }
+    AccountList: { $ref: "./schemas.yaml#/AccountList" }
+    AccountCreateRequest: { $ref: "./schemas.yaml#/AccountCreateRequest" }
+    Category: { $ref: "./schemas.yaml#/Category" }
+    CategoryList: { $ref: "./schemas.yaml#/CategoryList" }
+    CategoryCreateRequest: { $ref: "./schemas.yaml#/CategoryCreateRequest" }
+    CategoryUpdateRequest: { $ref: "./schemas.yaml#/CategoryUpdateRequest" }
+    Entry: { $ref: "./schemas.yaml#/Entry" }
+    EntryList: { $ref: "./schemas.yaml#/EntryList" }
+    EntryCreateRequest: { $ref: "./schemas.yaml#/EntryCreateRequest" }
+    EntryUpdateRequest: { $ref: "./schemas.yaml#/EntryUpdateRequest" }
+    ExchangeRate: { $ref: "./schemas.yaml#/ExchangeRate" }
+    AuditEvent: { $ref: "./schemas.yaml#/AuditEvent" }
+    AuditEventList: { $ref: "./schemas.yaml#/AuditEventList" }
+    ImportPreviewRow: { $ref: "./schemas.yaml#/ImportPreviewRow" }
+    ImportPreviewBatch: { $ref: "./schemas.yaml#/ImportPreviewBatch" }
+    ImportApplyRequest: { $ref: "./schemas.yaml#/ImportApplyRequest" }
+    ImportApplyResponse: { $ref: "./schemas.yaml#/ImportApplyResponse" }
+paths:
+  /health: { $ref: "./paths/system.yaml#/~1health" }
+  /runtime-config: { $ref: "./paths/system.yaml#/~1runtime-config" }
+  /ledger/summary: { $ref: "./paths/ledger.yaml#/~1ledger~1summary" }
+  /exchange-rates: { $ref: "./paths/ledger.yaml#/~1exchange-rates" }
+  /auth/register: { $ref: "./paths/system.yaml#/~1auth~1register" }
+  /auth/login: { $ref: "./paths/system.yaml#/~1auth~1login" }
+  /auth/logout: { $ref: "./paths/system.yaml#/~1auth~1logout" }
+  /auth/session: { $ref: "./paths/system.yaml#/~1auth~1session" }
+  /auth/email/verification:
+    { $ref: "./paths/system.yaml#/~1auth~1email~1verification" }
+  /auth/password-reset/request:
+    { $ref: "./paths/system.yaml#/~1auth~1password-reset~1request" }
+  /auth/password-reset/confirm:
+    { $ref: "./paths/system.yaml#/~1auth~1password-reset~1confirm" }
+  /auth/totp/status: { $ref: "./paths/system.yaml#/~1auth~1totp~1status" }
+  /auth/totp/setup: { $ref: "./paths/system.yaml#/~1auth~1totp~1setup" }
+  /auth/totp/confirm: { $ref: "./paths/system.yaml#/~1auth~1totp~1confirm" }
+  /auth/totp/disable: { $ref: "./paths/system.yaml#/~1auth~1totp~1disable" }
+  /auth/passkeys/login/begin:
+    { $ref: "./paths/system.yaml#/~1auth~1passkeys~1login~1begin" }
+  /auth/passkeys/login/finish:
+    { $ref: "./paths/system.yaml#/~1auth~1passkeys~1login~1finish" }
+  /auth/sso/start: { $ref: "./paths/system.yaml#/~1auth~1sso~1start" }
+  /auth/sso/callback: { $ref: "./paths/system.yaml#/~1auth~1sso~1callback" }
+  /auth/passkeys: { $ref: "./paths/system.yaml#/~1auth~1passkeys" }
+  /auth/passkeys/register/begin:
+    { $ref: "./paths/system.yaml#/~1auth~1passkeys~1register~1begin" }
+  /auth/passkeys/register/finish:
+    { $ref: "./paths/system.yaml#/~1auth~1passkeys~1register~1finish" }
+  /auth/passkeys/{id}: { $ref: "./paths/system.yaml#/~1auth~1passkeys~1{id}" }
+  /users/me: { $ref: "./paths/system.yaml#/~1users~1me" }
+  /audit: { $ref: "./paths/system.yaml#/~1audit" }
+  /books: { $ref: "./paths/ledger.yaml#/~1books" }
+  /books/{bookID}: { $ref: "./paths/ledger.yaml#/~1books~1{bookID}" }
+  /books/{bookID}/members:
+    { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1members" }
+  /books/{bookID}/ledger/summary:
+    { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1ledger~1summary" }
+  /accounts/groups: { $ref: "./paths/ledger.yaml#/~1accounts~1groups" }
+  /accounts/groups/{groupID}:
+    { $ref: "./paths/ledger.yaml#/~1accounts~1groups~1{groupID}" }
+  /accounts: { $ref: "./paths/ledger.yaml#/~1accounts" }
+  /books/{bookID}/categories:
+    { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1categories" }
+  /books/{bookID}/categories/{categoryID}:
+    { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1categories~1{categoryID}" }
+  /books/{bookID}/entries:
+    { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1entries" }
+  /books/{bookID}/entries/{entryID}:
+    { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1entries~1{entryID}" }
+  /imports/wacai/preview:
+    { $ref: "./paths/ledger.yaml#/~1imports~1wacai~1preview" }
+  /books/{bookID}/imports/{batchID}/apply:
+    {
+      $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1imports~1{batchID}~1apply",
+    }

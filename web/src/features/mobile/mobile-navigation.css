@@ -1,0 +1,252 @@
+.bottomNav {
+  --bottom-nav-active-fill: oklch(94% 0.05 42);
+  --bottom-nav-active-ink: oklch(56% 0.18 34);
+  --bottom-nav-active-border: oklch(84% 0.09 42);
+  --bottom-nav-active-shadow: oklch(60% 0.16 34 / 18%);
+
+  grid-area: nav;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: 84px;
+  padding: 9px 10px calc(18px + env(safe-area-inset-bottom));
+  border-top: 1px solid oklch(91% 0.006 185);
+  background: oklch(100% 0 0 / 96%);
+  backdrop-filter: blur(14px);
+}
+
+/* navBrand is the sidebar-only brand row; hidden until the >=1024px labeled sidebar. */
+.navBrand {
+  display: none;
+}
+
+.bottomNav button {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  place-items: center;
+  min-width: 0;
+  background: transparent;
+  color: oklch(42% 0.024 230);
+}
+
+.bottomNav span {
+  display: inline-flex;
+  width: 36px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
+}
+
+.bottomNav b {
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.bottomNavActive {
+  color: var(--bottom-nav-active-ink);
+}
+
+.bottomNavActive span {
+  border-color: var(--bottom-nav-active-border);
+  background: var(--bottom-nav-active-fill);
+  box-shadow: 0 7px 18px var(--bottom-nav-active-shadow);
+}
+
+@media (max-width: 520px) {
+  .mobileShell {
+    padding: 0;
+  }
+
+  .phoneFrame {
+    width: 100%;
+    height: var(--app-viewport-height, 100svh);
+    min-height: var(--app-viewport-height, 100svh);
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .phoneFrameRecord {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'header'
+      'notice'
+      'content'
+      'nav';
+  }
+
+  .phoneFrameRecord .mobileHeader {
+    padding: 14px 18px 8px;
+  }
+
+  .phoneFrameRecord .mobileNotice {
+    margin-bottom: 4px;
+  }
+
+  .mobileContentRecord {
+    overflow: hidden;
+    padding: 0;
+  }
+}
+
+/* >=768px: the phone frame fills the window and the bottom tab bar becomes a vertical icon rail. */
+@media (min-width: 768px) {
+  .mobileShell {
+    padding: 0;
+    place-items: stretch;
+    background: oklch(96% 0.018 112);
+  }
+
+  .phoneFrame {
+    width: 100%;
+    max-width: none;
+    height: var(--app-viewport-height, 100dvh);
+    max-height: none;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    grid-template:
+      'nav header' auto
+      'nav notice' auto
+      'nav content' minmax(0, 1fr)
+      / var(--rail-width) 1fr;
+  }
+
+  .bottomNav {
+    grid-template-columns: 1fr;
+    grid-auto-rows: min-content;
+    align-content: start;
+    gap: 6px;
+    min-height: 0;
+    padding: 16px 8px calc(16px + env(safe-area-inset-bottom));
+    border-top: 0;
+    border-right: 1px solid oklch(91% 0.006 185);
+  }
+
+  .bottomNav button {
+    min-height: 60px;
+    padding: 8px 4px;
+    border-radius: 12px;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .bottomNavActive {
+    background: var(--bottom-nav-active-fill);
+  }
+
+  .bottomNavActive span {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+/* >=1024px: the rail expands into a labeled sidebar with a brand row; the header becomes the top bar. */
+@media (min-width: 1024px) {
+  .phoneFrame {
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  .bottomNav {
+    gap: 4px;
+    padding: 20px 14px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .navBrand {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 12px 18px;
+    color: oklch(20% 0.035 235);
+    font-size: 1.05rem;
+    font-weight: 930;
+  }
+
+  .navBrand svg {
+    color: oklch(60% 0.16 31);
+  }
+
+  .bottomNav button {
+    grid-template-columns: auto minmax(0, 1fr);
+    place-items: center start;
+    gap: 12px;
+    min-height: 48px;
+    padding: 10px 14px;
+    text-align: left;
+  }
+
+  .bottomNav button:hover {
+    background: oklch(96% 0.012 235);
+  }
+
+  .bottomNav b {
+    font-size: 0.92rem;
+  }
+
+  .bottomNavActive {
+    background: var(--bottom-nav-active-fill);
+  }
+
+  .mobileHeader {
+    padding: 18px var(--shell-gutter);
+    border-bottom: 1px solid oklch(91% 0.006 185);
+  }
+
+  /* Center and cap the working canvas; expose a named query container for downstream views. */
+  .mobileContent {
+    container: appMain / inline-size;
+    width: 100%;
+    max-width: var(--content-max);
+    margin-inline: auto;
+    padding: 18px var(--shell-gutter) var(--shell-gutter);
+  }
+
+  /* Personal/settings tab spreads into an auto-fit multi-column grid. */
+  .mePanel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    align-items: start;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .bottomNav {
+    --bottom-nav-active-fill: oklch(26% 0.06 38);
+    --bottom-nav-active-ink: oklch(78% 0.12 48);
+    --bottom-nav-active-border: oklch(45% 0.09 42);
+    --bottom-nav-active-shadow: oklch(18% 0.02 235 / 45%);
+
+    border-color: oklch(30% 0.018 235);
+    background: oklch(18% 0.014 235 / 96%);
+  }
+
+  .bottomNav button {
+    color: oklch(72% 0.018 235);
+  }
+
+  .bottomNav button:hover {
+    background: oklch(24% 0.018 235);
+  }
+
+  .navBrand {
+    color: oklch(90% 0.015 235);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottomNav button,
+  .bottomNav span {
+    transition: none;
+  }
+}

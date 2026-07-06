@@ -2,9 +2,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import * as authApi from '../../lib/api/auth';
+import * as authApi from '@/lib/api/auth';
 import { AuthWorkspace } from './AuthWorkspace';
-import { emptyRuntimeConfig } from '../../lib/api/runtimeConfig';
+import { emptyRuntimeConfig } from '@/lib/api/runtimeConfig';
 
 const authenticatedResult = {
   kind: 'authenticated' as const,
@@ -106,7 +106,11 @@ describe('AuthWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Use passkey' }));
 
     await waitFor(() =>
-      expect(onAuthenticated).toHaveBeenCalledWith({ userId: 'user-1', email: 'person@example.test', status: 'active' }),
+      expect(onAuthenticated).toHaveBeenCalledWith({
+        userId: 'user-1',
+        email: 'person@example.test',
+        status: 'active',
+      }),
     );
     expect(beginSpy).toHaveBeenCalledOnce();
     expect(getCredential).toHaveBeenCalledWith({
@@ -156,7 +160,11 @@ describe('AuthWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() =>
-      expect(registerSpy).toHaveBeenCalledWith('person@example.test', 'correct horse battery staple', 'turnstile-register-token'),
+      expect(registerSpy).toHaveBeenCalledWith(
+        'person@example.test',
+        'correct horse battery staple',
+        'turnstile-register-token',
+      ),
     );
   });
 
@@ -192,9 +200,19 @@ describe('AuthWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with email' }));
 
     await waitFor(() =>
-      expect(onAuthenticated).toHaveBeenCalledWith({ userId: 'user-1', email: 'person@example.test', status: 'active' }),
+      expect(onAuthenticated).toHaveBeenCalledWith({
+        userId: 'user-1',
+        email: 'person@example.test',
+        status: 'active',
+      }),
     );
-    expect(loginSpy).toHaveBeenNthCalledWith(2, 'person@example.test', 'correct horse battery staple', undefined, 'turnstile-login-token');
+    expect(loginSpy).toHaveBeenNthCalledWith(
+      2,
+      'person@example.test',
+      'correct horse battery staple',
+      undefined,
+      'turnstile-login-token',
+    );
   });
 
   it('confirms email verification after registration when verification is required', async () => {
@@ -251,15 +269,31 @@ describe('AuthWorkspace', () => {
     // Password step succeeded with a TOTP challenge; the code field now appears.
     expect(await screen.findByLabelText('TOTP code')).toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
-    expect(loginSpy).toHaveBeenNthCalledWith(1, 'person@example.test', 'correct horse battery staple', undefined, undefined);
+    expect(loginSpy).toHaveBeenNthCalledWith(
+      1,
+      'person@example.test',
+      'correct horse battery staple',
+      undefined,
+      undefined,
+    );
 
     fireEvent.change(screen.getByLabelText('TOTP code'), { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verify code' }));
 
     await waitFor(() =>
-      expect(onAuthenticated).toHaveBeenCalledWith({ userId: 'user-1', email: 'person@example.test', status: 'active' }),
+      expect(onAuthenticated).toHaveBeenCalledWith({
+        userId: 'user-1',
+        email: 'person@example.test',
+        status: 'active',
+      }),
     );
-    expect(loginSpy).toHaveBeenNthCalledWith(2, 'person@example.test', 'correct horse battery staple', '123456', undefined);
+    expect(loginSpy).toHaveBeenNthCalledWith(
+      2,
+      'person@example.test',
+      'correct horse battery staple',
+      '123456',
+      undefined,
+    );
   });
 
   it('drops back to the password step when credentials change after a TOTP challenge', async () => {
@@ -281,7 +315,13 @@ describe('AuthWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with email' }));
     await waitFor(() => expect(loginSpy).toHaveBeenCalledTimes(2));
     // The re-submitted password step carries no stale TOTP code.
-    expect(loginSpy).toHaveBeenNthCalledWith(2, 'person@example.test', 'a different password value', undefined, undefined);
+    expect(loginSpy).toHaveBeenNthCalledWith(
+      2,
+      'person@example.test',
+      'a different password value',
+      undefined,
+      undefined,
+    );
   });
 
   it('keeps the user on the TOTP step and shows an error when the code is rejected', async () => {
@@ -305,7 +345,13 @@ describe('AuthWorkspace', () => {
     expect(onAuthenticated).not.toHaveBeenCalled();
     expect(screen.getByLabelText('TOTP code')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Verify code' })).toBeInTheDocument();
-    expect(loginSpy).toHaveBeenNthCalledWith(2, 'person@example.test', 'correct horse battery staple', '000000', undefined);
+    expect(loginSpy).toHaveBeenNthCalledWith(
+      2,
+      'person@example.test',
+      'correct horse battery staple',
+      '000000',
+      undefined,
+    );
   });
 });
 

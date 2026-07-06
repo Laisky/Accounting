@@ -1,34 +1,7 @@
-export type RuntimeConfig = {
-  serverName: string;
-  apiBase: string;
-  auth: {
-    emailLoginEnabled: boolean;
-    emailRegisterEnabled: boolean;
-    emailVerificationRequired: boolean;
-    allowedRegistrationDomains?: string[];
-  };
-  features: {
-    totpEnabled: boolean;
-    passkeyEnabled: boolean;
-    turnstileEnabled: boolean;
-    externalSsoEnabled: boolean;
-  };
-  sso: {
-    enabled: boolean;
-    startPath?: string;
-  };
-  passkey: {
-    enabled: boolean;
-    rpDisplayName: string;
-    rpId: string;
-    rpOrigin: string;
-  };
-  turnstile: {
-    enabled: boolean;
-    loginMode: string;
-    siteKey?: string;
-  };
-};
+import { apiRequest } from '@/lib/apiClient';
+import type { components } from '@/lib/api/generated/schema';
+
+export type RuntimeConfig = components['schemas']['RuntimeConfig'];
 
 export const emptyRuntimeConfig: RuntimeConfig = {
   serverName: 'accounting',
@@ -61,10 +34,5 @@ export const emptyRuntimeConfig: RuntimeConfig = {
 
 // fetchRuntimeConfig receives an AbortSignal, loads public runtime config, and returns parsed settings.
 export async function fetchRuntimeConfig(signal: AbortSignal): Promise<RuntimeConfig> {
-  const response = await fetch('/api/runtime-config', { signal });
-  if (!response.ok) {
-    throw new Error(`runtime config request failed: ${response.status}`);
-  }
-
-  return response.json() as Promise<RuntimeConfig>;
+  return apiRequest<RuntimeConfig>('/api/runtime-config', { signal });
 }

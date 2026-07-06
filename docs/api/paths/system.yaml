@@ -1,0 +1,561 @@
+/health:
+  get:
+    tags: [system]
+    security: []
+    responses:
+      "200": { description: Healthy response }
+/runtime-config:
+  get:
+    tags: [system]
+    security: []
+    responses:
+      "200":
+        description: Public runtime configuration.
+        content:
+          application/json:
+            schema:
+              { $ref: "../openapi.yaml#/components/schemas/RuntimeConfig" }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/register:
+  post:
+    tags: [auth]
+    security: []
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/PasswordCredentials",
+                },
+            },
+        }
+    responses:
+      "201":
+        {
+          description: Registered user,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/UserEnvelope",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/login:
+  post:
+    tags: [auth]
+    security: []
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/PasswordCredentials",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Login result,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/AuthResult" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/logout:
+  post:
+    tags: [auth]
+    responses:
+      "200":
+        {
+          description: Session cleared,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/StatusResponse",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/session:
+  get:
+    tags: [auth]
+    responses:
+      "200":
+        {
+          description: Active session,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/SessionResult",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/email/verification:
+  get:
+    tags: [auth]
+    security: []
+    parameters:
+      - name: email
+        in: query
+        required: true
+        schema: { type: string, format: email }
+    responses:
+      "202": { $ref: "../openapi.yaml#/components/responses/Accepted" }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  post:
+    tags: [auth]
+    security: []
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/EmailCodeRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Activated user,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/UserEnvelope",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/password-reset/request:
+  post:
+    tags: [auth]
+    security: []
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                { $ref: "../openapi.yaml#/components/schemas/EmailRequest" },
+            },
+        }
+    responses:
+      "202": { $ref: "../openapi.yaml#/components/responses/Accepted" }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/password-reset/confirm:
+  post:
+    tags: [auth]
+    security: []
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/PasswordResetConfirmRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Updated user,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/UserEnvelope",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/totp/status:
+  get:
+    tags: [auth]
+    responses:
+      "200":
+        {
+          description: TOTP state,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/TotpStatus" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/totp/setup:
+  post:
+    tags: [auth]
+    responses:
+      "200":
+        {
+          description: TOTP setup URI,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/TotpSetup" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/totp/confirm:
+  post:
+    tags: [auth]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                { $ref: "../openapi.yaml#/components/schemas/TotpCodeRequest" },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: TOTP state,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/TotpStatus" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/totp/disable:
+  post:
+    tags: [auth]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                { $ref: "../openapi.yaml#/components/schemas/TotpCodeRequest" },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: TOTP state,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/TotpStatus" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/passkeys/login/begin:
+  post:
+    tags: [auth]
+    security: []
+    responses:
+      "200":
+        {
+          description: Passkey login ceremony,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/PasskeyStart",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/passkeys/login/finish:
+  post:
+    tags: [auth]
+    security: []
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/PasskeyFinishRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Authenticated session,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/AuthResult" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/sso/start:
+  get:
+    tags: [auth]
+    security: []
+    responses:
+      "302": { description: Redirect to external SSO provider. }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/sso/callback:
+  get:
+    tags: [auth]
+    security: []
+    parameters:
+      - name: state
+        in: query
+        schema: { type: string }
+      - name: sso_token
+        in: query
+        schema: { type: string }
+    responses:
+      "302": { description: Redirect to clean app URL. }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/passkeys:
+  get:
+    tags: [auth]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Passkey list,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/PasskeyList" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/passkeys/register/begin:
+  post:
+    tags: [auth]
+    responses:
+      "200":
+        {
+          description: Passkey registration ceremony,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/PasskeyStart",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/passkeys/register/finish:
+  post:
+    tags: [auth]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/PasskeyFinishRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Stored passkey,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/PasskeyListItem",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/passkeys/{id}:
+  put:
+    tags: [auth]
+    parameters: [{ $ref: "../openapi.yaml#/components/parameters/PasskeyID" }]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/PasskeyUpdateRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Updated passkey,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/PasskeyListItem",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  delete:
+    tags: [auth]
+    parameters: [{ $ref: "../openapi.yaml#/components/parameters/PasskeyID" }]
+    responses:
+      "200":
+        {
+          description: Passkey deleted,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/StatusResponse",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/users/me:
+  get:
+    tags: [users]
+    responses:
+      "200":
+        {
+          description: Current user profile,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/UserEnvelope",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  patch:
+    tags: [users]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              baseCurrency: { type: string }
+    responses:
+      "200":
+        {
+          description: Updated profile,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/UserEnvelope",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/audit:
+  get:
+    tags: [audit]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Audit event list,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/AuditEventList",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }

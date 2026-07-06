@@ -16,7 +16,9 @@ const collectLocaleFiles = (language) =>
 // collectJsonKeyPaths returns sorted leaf paths from a locale JSON object.
 const collectJsonKeyPaths = (value, prefix = '') => {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return Object.entries(value).flatMap(([key, child]) => collectJsonKeyPaths(child, prefix ? `${prefix}.${key}` : key));
+    return Object.entries(value).flatMap(([key, child]) =>
+      collectJsonKeyPaths(child, prefix ? `${prefix}.${key}` : key),
+    );
   }
 
   return [prefix];
@@ -59,7 +61,7 @@ for (const filename of referenceFiles) {
   const lineCounts = supportedLanguages.map((language) => byLanguage.get(language).lineCount);
   if (new Set(lineCounts).size !== 1) {
     failures.push(
-      `${filename} has mismatched line counts: ${supportedLanguages.map((language) => `${language}:${byLanguage.get(language).lineCount}`).join(', ')}.`
+      `${filename} has mismatched line counts: ${supportedLanguages.map((language) => `${language}:${byLanguage.get(language).lineCount}`).join(', ')}.`,
     );
   }
 
@@ -67,7 +69,7 @@ for (const filename of referenceFiles) {
   const keyCounts = supportedLanguages.map((language) => byLanguage.get(language).keyPaths.length);
   if (new Set(keyCounts).size !== 1) {
     failures.push(
-      `${filename} has mismatched key counts: ${supportedLanguages.map((language) => `${language}:${byLanguage.get(language).keyPaths.length}`).join(', ')}.`
+      `${filename} has mismatched key counts: ${supportedLanguages.map((language) => `${language}:${byLanguage.get(language).keyPaths.length}`).join(', ')}.`,
     );
   }
 

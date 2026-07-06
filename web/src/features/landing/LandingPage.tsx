@@ -2,8 +2,8 @@ import { ArrowRight, BookOpenCheck, FileCheck2, Landmark, Route, ShieldCheck, Us
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import { LanguageSelector } from '../../components/LanguageSelector';
-import { type RuntimeConfig } from '../../lib/api/runtimeConfig';
+import { LanguageSelector } from '@/components/LanguageSelector';
+import { type RuntimeConfig } from '@/lib/api/runtimeConfig';
 import './landing.css';
 
 type LandingPageProps = {
@@ -47,7 +47,11 @@ export function LandingPage({ runtimeConfig }: LandingPageProps) {
           <p className="landingLead">{t('landing.hero.lead')}</p>
           <div className="landingHeroActions">
             <AuthLink href={registerHref} className="landingPrimaryAction">
-              <span>{runtimeConfig.auth.emailRegisterEnabled ? t('landing.hero.primaryRegister') : t('landing.hero.primarySignIn')}</span>
+              <span>
+                {runtimeConfig.auth.emailRegisterEnabled
+                  ? t('landing.hero.primaryRegister')
+                  : t('landing.hero.primarySignIn')}
+              </span>
               <ArrowRight size={18} aria-hidden="true" />
             </AuthLink>
             <a className="landingSecondaryAction" href="#model">
@@ -167,7 +171,11 @@ function WorkflowIcon({ name }: { name: (typeof workflowKeys)[number] }) {
 }
 
 function signInPath(runtimeConfig: RuntimeConfig): string {
-  if (!runtimeConfig.auth.emailLoginEnabled && runtimeConfig.features.externalSsoEnabled && runtimeConfig.sso.startPath) {
+  if (
+    !runtimeConfig.auth.emailLoginEnabled &&
+    runtimeConfig.features.externalSsoEnabled &&
+    runtimeConfig.sso.startPath
+  ) {
     return runtimeConfig.sso.startPath;
   }
 

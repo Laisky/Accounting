@@ -1,0 +1,239 @@
+.budgetCard {
+  display: grid;
+  gap: 13px;
+  padding: 18px 18px 16px;
+  border: 1px solid oklch(93% 0.006 185);
+  border-radius: 8px;
+  background: oklch(100% 0 0);
+  box-shadow: 0 10px 26px oklch(62% 0.04 210 / 10%);
+}
+
+.budgetCard > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.budgetCard h1 {
+  margin: 0;
+  color: oklch(24% 0.035 235);
+  font-size: 1.08rem;
+  line-height: 1.15;
+}
+
+.budgetCard p {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  color: oklch(66% 0.025 230);
+  white-space: nowrap;
+}
+
+.budgetCard strong {
+  color: oklch(24% 0.035 235);
+  font-size: 1.04rem;
+}
+
+.budgetTrack {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(95% 0.006 185);
+}
+
+.budgetTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, oklch(71% 0.16 45), oklch(67% 0.18 31));
+}
+
+.budgetCard footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  color: oklch(65% 0.024 230);
+  font-size: 0.78rem;
+  font-weight: 780;
+}
+
+.quickRecord {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid oklch(91% 0.008 185);
+  border-radius: 8px;
+  background: oklch(99% 0.002 180);
+}
+
+.quickRecord label,
+.mobileField {
+  display: grid;
+  gap: 6px;
+}
+
+.quickRecord label:last-of-type {
+  grid-column: 1 / -1;
+}
+
+.quickRecord span,
+.mobileField span {
+  color: oklch(54% 0.03 230);
+  font-size: 0.72rem;
+  font-weight: 860;
+  text-transform: uppercase;
+}
+
+.quickRecord input,
+.mobileField select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid oklch(86% 0.015 185);
+  border-radius: 8px;
+  background: oklch(100% 0 0);
+  color: oklch(20% 0.035 235);
+  font-weight: 760;
+}
+
+.quickRecord button,
+.mobilePrimaryButton,
+.mobileSecondaryButton,
+.mobileDangerButton {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.quickRecord button {
+  grid-column: 1 / -1;
+  background: oklch(67% 0.18 31);
+  color: oklch(99% 0.002 180);
+}
+
+.quickRecord button:disabled,
+.mobilePrimaryButton:disabled,
+.mobileSecondaryButton:disabled,
+.mobileDangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.transactionList,
+.accountCards,
+.settingsList,
+.activityMiniList {
+  display: grid;
+  gap: 0;
+}
+
+.dayGroup {
+  display: grid;
+  gap: 0;
+}
+
+.dayGroup header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 6px 9px;
+  color: oklch(62% 0.025 230);
+  font-size: 0.86rem;
+  font-weight: 820;
+}
+
+.dayGroup header b {
+  font-weight: 760;
+}
+
+.dayGroup ul,
+.activityMiniList {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.dayGroup li {
+  min-height: 82px;
+  border-bottom: 1px solid oklch(93% 0.006 185);
+}
+
+.transactionRowButton {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  min-height: 82px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.transactionRowButton:focus-visible {
+  outline: 2px solid oklch(69% 0.14 255);
+  outline-offset: -3px;
+}
+
+.transactionRowButton:hover {
+  background: oklch(97% 0.006 185);
+}
+
+.transactionIcon {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: oklch(75% 0.14 178);
+  color: oklch(99% 0.002 180);
+}
+
+.dayGroup li div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dayGroup strong {
+  color: oklch(23% 0.034 235);
+  font-size: 1.04rem;
+  overflow-wrap: anywhere;
+}
+
+.dayGroup small,
+.listFooter,
+.emptyState {
+  color: oklch(64% 0.024 230);
+  font-size: 0.87rem;
+  font-weight: 760;
+}
+
+.transactionRowButton > b {
+  color: oklch(20% 0.035 235);
+  font-size: 1.02rem;
+  font-weight: 880;
+  white-space: nowrap;
+}
+
+.listFooter {
+  padding: 14px 0 0;
+  text-align: center;
+}
+
+.emptyState {
+  padding: 22px 6px;
+  text-align: center;
+}

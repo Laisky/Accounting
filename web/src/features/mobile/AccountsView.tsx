@@ -1,8 +1,8 @@
 import { ChevronDown, CreditCard, Eye, Globe2, Landmark, PiggyBank, TrendingUp } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type AccountGroup, type BookListItem, type BookMember } from '../../lib/api/ledger';
-import { convertCurrencyAmountCents, formatMoney, supportedCurrencies } from '../../lib/money';
+import { type Account, type AccountGroup, type BookListItem, type BookMember } from '@/lib/api/ledger';
+import { convertCurrencyAmountCents, formatMoney, supportedCurrencies } from '@/lib/money';
 import './accounts.css';
 
 export type AccountCreateInput = {
@@ -67,9 +67,18 @@ export function AccountsView({
   const [expandedSectionIds, setExpandedSectionIds] = useState<ReadonlySet<string>>(() => new Set(['cash']));
   const selectedBook = books.find((book) => book.id === selectedBookId) ?? books[0];
   const primaryGroup = groups[0];
-  const sections = useMemo(() => buildAccountSections(accounts, expandedSectionIds, t, displayCurrencyCode, rateIndex), [accounts, displayCurrencyCode, expandedSectionIds, rateIndex, t]);
-  const totalAssetsCents = accounts.reduce((sum, account) => sum + Math.max(0, accountDisplayBalanceCents(account, displayCurrencyCode, rateIndex)), 0);
-  const totalLiabilitiesCents = accounts.reduce((sum, account) => sum + Math.min(0, accountDisplayBalanceCents(account, displayCurrencyCode, rateIndex)), 0);
+  const sections = useMemo(
+    () => buildAccountSections(accounts, expandedSectionIds, t, displayCurrencyCode, rateIndex),
+    [accounts, displayCurrencyCode, expandedSectionIds, rateIndex, t],
+  );
+  const totalAssetsCents = accounts.reduce(
+    (sum, account) => sum + Math.max(0, accountDisplayBalanceCents(account, displayCurrencyCode, rateIndex)),
+    0,
+  );
+  const totalLiabilitiesCents = accounts.reduce(
+    (sum, account) => sum + Math.min(0, accountDisplayBalanceCents(account, displayCurrencyCode, rateIndex)),
+    0,
+  );
   const netAssetsCents = totalAssetsCents + totalLiabilitiesCents;
   const normalizedName = accountName.trim();
   const canCreateAccount = Boolean(normalizedName) && !isBusy;
@@ -114,78 +123,94 @@ export function AccountsView({
     <section className="tabPanel accountPanel" aria-label={t('mobile.nav.accounts')}>
       {/* Left column at >=1024px; transparent (display:contents) below, so mobile is unchanged. */}
       <div className="accountPrimaryColumn">
-      <section className="accountHero" aria-label={t('mobile.accounts.netAssets')}>
-        <div>
-          <span>{t('mobile.accounts.netAssets')}</span>
-          <strong>
-            {formatMoney(netAssetsCents, displayCurrencyCode)}
-            <Eye size={20} />
-          </strong>
-        </div>
-        <footer>
-          <span>{t('mobile.accounts.totalAssets', { amount: formatMoney(totalAssetsCents, displayCurrencyCode) })}</span>
-          <i />
-          <span>{t('mobile.accounts.totalLiabilities', { amount: formatMoney(Math.abs(totalLiabilitiesCents), displayCurrencyCode) })}</span>
-        </footer>
-      </section>
+        <section className="accountHero" aria-label={t('mobile.accounts.netAssets')}>
+          <div>
+            <span>{t('mobile.accounts.netAssets')}</span>
+            <strong>
+              {formatMoney(netAssetsCents, displayCurrencyCode)}
+              <Eye size={20} />
+            </strong>
+          </div>
+          <footer>
+            <span>
+              {t('mobile.accounts.totalAssets', { amount: formatMoney(totalAssetsCents, displayCurrencyCode) })}
+            </span>
+            <i />
+            <span>
+              {t('mobile.accounts.totalLiabilities', {
+                amount: formatMoney(Math.abs(totalLiabilitiesCents), displayCurrencyCode),
+              })}
+            </span>
+          </footer>
+        </section>
 
-      <BookSettingsView
-        key={selectedBook?.id ?? 'empty-book-settings'}
-        books={books}
-        currencyCode={bookCurrencyCode}
-        isBusy={isBusy}
-        onUpdateBookCurrency={onUpdateBookCurrency}
-        onUpdateBookName={onUpdateBookName}
-        selectedBook={selectedBook}
-        selectedBookId={selectedBookId}
-        setSelectedBookId={setSelectedBookId}
-      />
+        <BookSettingsView
+          key={selectedBook?.id ?? 'empty-book-settings'}
+          books={books}
+          currencyCode={bookCurrencyCode}
+          isBusy={isBusy}
+          onUpdateBookCurrency={onUpdateBookCurrency}
+          onUpdateBookName={onUpdateBookName}
+          selectedBook={selectedBook}
+          selectedBookId={selectedBookId}
+          setSelectedBookId={setSelectedBookId}
+        />
 
-      <AccountGroupSettingsView
-        key={primaryGroup?.id ?? 'empty-account-group-settings'}
-        group={primaryGroup}
-        isBusy={isBusy}
-        onUpdateAccountGroupName={onUpdateAccountGroupName}
-      />
+        <AccountGroupSettingsView
+          key={primaryGroup?.id ?? 'empty-account-group-settings'}
+          group={primaryGroup}
+          isBusy={isBusy}
+          onUpdateAccountGroupName={onUpdateAccountGroupName}
+        />
 
-      <form className="accountCreateForm" aria-label={t('mobile.accounts.createAccount')} onSubmit={handleCreateSubmit}>
-        <label>
-          <span>{t('mobile.accounts.accountName')}</span>
-          <input
-            value={accountName}
-            onChange={(event) => setAccountName(event.target.value)}
-            placeholder={t('mobile.accounts.accountNamePlaceholder')}
-            maxLength={80}
-          />
-        </label>
-        <label>
-          <span>{t('mobile.accounts.type')}</span>
-          <select value={accountType} onChange={(event) => setAccountType(event.target.value)}>
-            <option value="cash">{t('mobile.accounts.types.cash')}</option>
-            <option value="credit_card">{t('mobile.accounts.types.creditCard')}</option>
-            <option value="savings">{t('mobile.accounts.types.savings')}</option>
-            <option value="loan">{t('mobile.accounts.types.loan')}</option>
-            <option value="payment_platform">{t('mobile.accounts.types.paymentPlatform')}</option>
-            <option value="investment">{t('mobile.accounts.types.investment')}</option>
-          </select>
-        </label>
-        <label>
-          <span>{t('mobile.accounts.currency')}</span>
-          <select value={accountCurrency} onChange={(event) => setAccountCurrency(event.target.value)}>
-            {supportedCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>{t('mobile.accounts.openingBalance')}</span>
-          <input
-            inputMode="decimal"
-            value={openingBalance}
-            onChange={(event) => setOpeningBalance(event.target.value)}
-            placeholder="0.00"
-          />
-        </label>
-        <button type="submit" disabled={!canCreateAccount}>{t('mobile.accounts.createAccount')}</button>
-      </form>
+        <form
+          className="accountCreateForm"
+          aria-label={t('mobile.accounts.createAccount')}
+          onSubmit={handleCreateSubmit}
+        >
+          <label>
+            <span>{t('mobile.accounts.accountName')}</span>
+            <input
+              value={accountName}
+              onChange={(event) => setAccountName(event.target.value)}
+              placeholder={t('mobile.accounts.accountNamePlaceholder')}
+              maxLength={80}
+            />
+          </label>
+          <label>
+            <span>{t('mobile.accounts.type')}</span>
+            <select value={accountType} onChange={(event) => setAccountType(event.target.value)}>
+              <option value="cash">{t('mobile.accounts.types.cash')}</option>
+              <option value="credit_card">{t('mobile.accounts.types.creditCard')}</option>
+              <option value="savings">{t('mobile.accounts.types.savings')}</option>
+              <option value="loan">{t('mobile.accounts.types.loan')}</option>
+              <option value="payment_platform">{t('mobile.accounts.types.paymentPlatform')}</option>
+              <option value="investment">{t('mobile.accounts.types.investment')}</option>
+            </select>
+          </label>
+          <label>
+            <span>{t('mobile.accounts.currency')}</span>
+            <select value={accountCurrency} onChange={(event) => setAccountCurrency(event.target.value)}>
+              {supportedCurrencies.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>{t('mobile.accounts.openingBalance')}</span>
+            <input
+              inputMode="decimal"
+              value={openingBalance}
+              onChange={(event) => setOpeningBalance(event.target.value)}
+              placeholder="0.00"
+            />
+          </label>
+          <button type="submit" disabled={!canCreateAccount}>
+            {t('mobile.accounts.createAccount')}
+          </button>
+        </form>
       </div>
 
       <div className="accountSectionList">
@@ -255,7 +280,8 @@ function AccountGroupSettingsView({
   const { t } = useTranslation();
   const [groupName, setGroupName] = useState(group?.name ?? '');
   const normalizedGroupName = groupName.trim();
-  const canSaveGroupName = Boolean(group) && Boolean(normalizedGroupName) && normalizedGroupName !== group?.name && !isBusy;
+  const canSaveGroupName =
+    Boolean(group) && Boolean(normalizedGroupName) && normalizedGroupName !== group?.name && !isBusy;
 
   // handleGroupNameSubmit receives a form event, updates the group name, and keeps the draft normalized.
   async function handleGroupNameSubmit(event: FormEvent<HTMLFormElement>) {
@@ -279,7 +305,9 @@ function AccountGroupSettingsView({
           disabled={!group || isBusy}
         />
       </label>
-      <button type="submit" disabled={!canSaveGroupName}>{t('mobile.accounts.saveGroup')}</button>
+      <button type="submit" disabled={!canSaveGroupName}>
+        {t('mobile.accounts.saveGroup')}
+      </button>
     </form>
   );
 }
@@ -307,7 +335,8 @@ function BookSettingsView({
   const { t } = useTranslation();
   const [bookName, setBookName] = useState(selectedBook?.name ?? '');
   const normalizedBookName = bookName.trim();
-  const canSaveBookName = Boolean(selectedBook) && Boolean(normalizedBookName) && normalizedBookName !== selectedBook?.name && !isBusy;
+  const canSaveBookName =
+    Boolean(selectedBook) && Boolean(normalizedBookName) && normalizedBookName !== selectedBook?.name && !isBusy;
 
   // handleBookNameSubmit receives a form event, updates the selected book name, and keeps the draft in sync.
   async function handleBookNameSubmit(event: FormEvent<HTMLFormElement>) {
@@ -324,14 +353,34 @@ function BookSettingsView({
     <form className="accountControls" aria-label={t('mobile.accounts.bookSettings')} onSubmit={handleBookNameSubmit}>
       <label>
         <span>{t('mobile.accounts.book')}</span>
-        <select value={selectedBookId} onChange={(event) => setSelectedBookId(event.target.value)} disabled={!books.length}>
-          {books.length ? books.map((book) => <option key={book.id} value={book.id}>{book.name}</option>) : <option>{t('mobile.accounts.noBook')}</option>}
+        <select
+          value={selectedBookId}
+          onChange={(event) => setSelectedBookId(event.target.value)}
+          disabled={!books.length}
+        >
+          {books.length ? (
+            books.map((book) => (
+              <option key={book.id} value={book.id}>
+                {book.name}
+              </option>
+            ))
+          ) : (
+            <option>{t('mobile.accounts.noBook')}</option>
+          )}
         </select>
       </label>
       <label>
         <span>{t('mobile.accounts.baseCurrency')}</span>
-        <select value={currencyCode} onChange={(event) => onUpdateBookCurrency(event.target.value)} disabled={!books.length || isBusy}>
-          {supportedCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+        <select
+          value={currencyCode}
+          onChange={(event) => onUpdateBookCurrency(event.target.value)}
+          disabled={!books.length || isBusy}
+        >
+          {supportedCurrencies.map((currency) => (
+            <option key={currency} value={currency}>
+              {currency}
+            </option>
+          ))}
         </select>
       </label>
       <label className="bookNameField">
@@ -343,7 +392,9 @@ function BookSettingsView({
           disabled={!selectedBook || isBusy}
         />
       </label>
-      <button type="submit" disabled={!canSaveBookName}>{t('mobile.accounts.saveBook')}</button>
+      <button type="submit" disabled={!canSaveBookName}>
+        {t('mobile.accounts.saveBook')}
+      </button>
     </form>
   );
 }
@@ -394,7 +445,9 @@ function AccountSectionView({
                   <span className="accountRowIcon">{accountIcon(account)}</span>
                   <div>
                     <strong>{account.name}</strong>
-                    <small>{account.type} / {account.currency}</small>
+                    <small>
+                      {account.type} / {account.currency}
+                    </small>
                   </div>
                   <b>{formatMoney(account.openingBalanceCents, account.currency)}</b>
                 </button>
@@ -429,7 +482,13 @@ function accountIcon(account: Account) {
 }
 
 // buildAccountSections receives accounts and returns display groups matching the mobile account layout.
-function buildAccountSections(accounts: Account[], expandedSectionIds: ReadonlySet<string>, t: (key: string) => string, displayCurrencyCode: string, rates: Map<string, number>): AccountSection[] {
+function buildAccountSections(
+  accounts: Account[],
+  expandedSectionIds: ReadonlySet<string>,
+  t: (key: string) => string,
+  displayCurrencyCode: string,
+  rates: Map<string, number>,
+): AccountSection[] {
   const cashAccounts = accounts.filter((account) => isCashAccount(account));
   const creditAccounts = accounts.filter((account) => isCreditAccount(account));
   const savingsAccounts = accounts.filter((account) => isSavingsAccount(account));
@@ -438,22 +497,74 @@ function buildAccountSections(accounts: Account[], expandedSectionIds: ReadonlyS
   const storedAccounts = accounts.filter((account) => !isCreditAccount(account) && isStoredValueAccount(account));
 
   return [
-    buildSection('cash', t('mobile.accounts.sections.cash'), cashAccounts.length ? cashAccounts : accounts, expandedSectionIds.has('cash'), displayCurrencyCode, rates),
-    buildSection('credit', t('mobile.accounts.sections.credit'), creditAccounts, expandedSectionIds.has('credit'), displayCurrencyCode, rates),
-    buildSection('savings', t('mobile.accounts.sections.savings'), savingsAccounts, expandedSectionIds.has('savings'), displayCurrencyCode, rates),
-    buildSection('online', t('mobile.accounts.sections.online'), onlineAccounts, expandedSectionIds.has('online'), displayCurrencyCode, rates),
-    buildSection('investment', t('mobile.accounts.sections.investment'), investmentAccounts, expandedSectionIds.has('investment'), displayCurrencyCode, rates),
-    buildSection('stored', t('mobile.accounts.sections.stored'), storedAccounts, expandedSectionIds.has('stored'), displayCurrencyCode, rates),
+    buildSection(
+      'cash',
+      t('mobile.accounts.sections.cash'),
+      cashAccounts.length ? cashAccounts : accounts,
+      expandedSectionIds.has('cash'),
+      displayCurrencyCode,
+      rates,
+    ),
+    buildSection(
+      'credit',
+      t('mobile.accounts.sections.credit'),
+      creditAccounts,
+      expandedSectionIds.has('credit'),
+      displayCurrencyCode,
+      rates,
+    ),
+    buildSection(
+      'savings',
+      t('mobile.accounts.sections.savings'),
+      savingsAccounts,
+      expandedSectionIds.has('savings'),
+      displayCurrencyCode,
+      rates,
+    ),
+    buildSection(
+      'online',
+      t('mobile.accounts.sections.online'),
+      onlineAccounts,
+      expandedSectionIds.has('online'),
+      displayCurrencyCode,
+      rates,
+    ),
+    buildSection(
+      'investment',
+      t('mobile.accounts.sections.investment'),
+      investmentAccounts,
+      expandedSectionIds.has('investment'),
+      displayCurrencyCode,
+      rates,
+    ),
+    buildSection(
+      'stored',
+      t('mobile.accounts.sections.stored'),
+      storedAccounts,
+      expandedSectionIds.has('stored'),
+      displayCurrencyCode,
+      rates,
+    ),
   ];
 }
 
 // buildSection receives section parts and returns a normalized account section.
-function buildSection(id: string, label: string, accounts: Account[], expanded: boolean, displayCurrencyCode: string, rates: Map<string, number>): AccountSection {
+function buildSection(
+  id: string,
+  label: string,
+  accounts: Account[],
+  expanded: boolean,
+  displayCurrencyCode: string,
+  rates: Map<string, number>,
+): AccountSection {
   return {
     id,
     label,
     count: accounts.length,
-    totalCents: accounts.reduce((sum, account) => sum + accountDisplayBalanceCents(account, displayCurrencyCode, rates), 0),
+    totalCents: accounts.reduce(
+      (sum, account) => sum + accountDisplayBalanceCents(account, displayCurrencyCode, rates),
+      0,
+    ),
     expanded,
     accounts,
   };
@@ -499,7 +610,13 @@ function isSavingsAccount(account: Account): boolean {
 // isOnlineAccount receives an account and reports whether it belongs to online accounts.
 function isOnlineAccount(account: Account): boolean {
   const text = `${account.type} ${account.name}`.toLowerCase();
-  return text.includes('online') || text.includes('wallet') || text.includes('paypal') || text.includes('payment') || text.includes('platform');
+  return (
+    text.includes('online') ||
+    text.includes('wallet') ||
+    text.includes('paypal') ||
+    text.includes('payment') ||
+    text.includes('platform')
+  );
 }
 
 // isInvestmentAccount receives an account and reports whether it belongs to investment accounts.

@@ -67,7 +67,9 @@
   background: var(--me-surface);
   color: var(--me-ink);
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
 }
 
 .meBackButton:hover {
@@ -164,7 +166,9 @@
   font-size: 0.8rem;
   font-weight: 840;
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
 }
 
 .meCopyButton:hover {
@@ -250,7 +254,9 @@
   color: var(--me-ink);
   text-align: start;
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
 }
 
 .meNavRow:hover {

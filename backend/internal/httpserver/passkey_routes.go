@@ -39,7 +39,7 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		start, err := authService.BeginPasskeyLogin(c.Request.Context())
 		if err != nil {
 			log.Debug("passkey login start failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "passkey login start failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "passkey login start failed")
 			return
 		}
 
@@ -67,7 +67,7 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 				TargetType: "user",
 				Metadata:   map[string]string{"method": "passkey"},
 			})
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "passkey login failed"})
+			respondAPIMessage(c, http.StatusUnauthorized, "passkey login failed")
 			return
 		}
 
@@ -92,7 +92,7 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 		pagination, ok := parseEntryPagination(c)
@@ -107,7 +107,7 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		})
 		if err != nil {
 			log.Debug("passkey list failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "passkey list failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "passkey list failed")
 			return
 		}
 
@@ -120,14 +120,14 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		start, err := authService.BeginPasskeyRegistration(c.Request.Context(), actor)
 		if err != nil {
 			log.Debug("passkey registration start failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "passkey registration start failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "passkey registration start failed")
 			return
 		}
 
@@ -147,7 +147,7 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -163,7 +163,7 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		}, request.Credential)
 		if err != nil {
 			log.Debug("passkey registration finish failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "passkey registration failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "passkey registration failed")
 			return
 		}
 
@@ -183,7 +183,7 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -199,7 +199,7 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		})
 		if err != nil {
 			log.Debug("passkey update failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "passkey update failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "passkey update failed")
 			return
 		}
 
@@ -219,14 +219,14 @@ func registerPasskeyRoutes(api *gin.RouterGroup, cfg config.Config, authService 
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		passkeyID := c.Param("passkeyID")
 		if err := authService.DeletePasskey(c.Request.Context(), actor, passkeyID); err != nil {
 			log.Debug("passkey delete failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "passkey delete failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "passkey delete failed")
 			return
 		}
 

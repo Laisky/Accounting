@@ -1,0 +1,612 @@
+ErrorResponse:
+  type: object
+  required: [code, message]
+  properties:
+    code: { type: string }
+    message: { type: string }
+    requestId: { type: string }
+AcceptedResponse:
+  type: object
+  properties:
+    status: { type: string }
+    expiresAt: { type: string, format: date-time }
+StatusResponse:
+  type: object
+  required: [status]
+  properties:
+    status: { type: string }
+AuthUser:
+  type: object
+  required:
+    [
+      id,
+      email,
+      status,
+      emailVerified,
+      totpEnabled,
+      baseCurrency,
+      createdAt,
+      updatedAt,
+    ]
+  properties:
+    id: { type: string }
+    email: { type: string, format: email }
+    status: { type: string }
+    emailVerified: { type: boolean }
+    totpEnabled: { type: boolean }
+    baseCurrency: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+AuthActor:
+  type: object
+  required: [userId, email, status]
+  properties:
+    userId: { type: string }
+    email: { type: string, format: email }
+    status: { type: string }
+AuthSession:
+  type: object
+  required: [id, userId, userEmail, status, createdAt, expiresAt]
+  properties:
+    id: { type: string }
+    userId: { type: string }
+    userEmail: { type: string, format: email }
+    status: { type: string }
+    createdAt: { type: string, format: date-time }
+    expiresAt: { type: string, format: date-time }
+AuthResult:
+  type: object
+  required: [user, session]
+  properties:
+    user: { $ref: "#/AuthUser" }
+    session: { $ref: "#/AuthSession" }
+    totpRequired: { type: boolean }
+UserEnvelope:
+  type: object
+  required: [user]
+  properties:
+    user: { $ref: "#/AuthUser" }
+SessionResult:
+  type: object
+  required: [actor, session]
+  properties:
+    actor: { $ref: "#/AuthActor" }
+    session: { $ref: "#/AuthSession" }
+PasswordCredentials:
+  type: object
+  required: [email, password]
+  properties:
+    email: { type: string, format: email }
+    password: { type: string, format: password }
+    totp_code: { type: string }
+    turnstile_token: { type: string }
+EmailRequest:
+  type: object
+  required: [email]
+  properties:
+    email: { type: string, format: email }
+EmailCodeRequest:
+  type: object
+  required: [email, code]
+  properties:
+    email: { type: string, format: email }
+    code: { type: string }
+PasswordResetConfirmRequest:
+  type: object
+  required: [email, code, newPassword]
+  properties:
+    email: { type: string, format: email }
+    code: { type: string }
+    newPassword: { type: string, format: password }
+TotpStatus:
+  type: object
+  required: [enabled]
+  properties:
+    enabled: { type: boolean }
+TotpSetup:
+  type: object
+  required: [otpauth, expiresAt]
+  properties:
+    otpauth: { type: string }
+    expiresAt: { type: string, format: date-time }
+TotpCodeRequest:
+  type: object
+  required: [code]
+  properties:
+    code: { type: string }
+PasskeyStart:
+  type: object
+  required: [flowId, options]
+  properties:
+    flowId: { type: string }
+    options: {}
+PasskeyFinishRequest:
+  type: object
+  required: [flowId, credential]
+  properties:
+    flowId: { type: string }
+    label: { type: string }
+    credential: {}
+PasskeyListItem:
+  type: object
+  required:
+    [
+      id,
+      label,
+      transports,
+      backupEligible,
+      backupState,
+      signCount,
+      createdAt,
+      updatedAt,
+    ]
+  properties:
+    id: { type: string }
+    label: { type: string }
+    transports:
+      type: array
+      items: { type: string }
+    backupEligible: { type: boolean }
+    backupState: { type: boolean }
+    signCount: { type: integer, minimum: 0 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+    lastUsedAt: { type: string, format: date-time }
+PasskeyList:
+  allOf:
+    - $ref: "#/PageInfo"
+    - type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/PasskeyListItem" }
+PasskeyUpdateRequest:
+  type: object
+  required: [label]
+  properties:
+    label: { type: string, minLength: 1 }
+RuntimeConfig:
+  type: object
+  required: [serverName, apiBase, auth, features, sso, passkey, turnstile]
+  properties:
+    serverName: { type: string }
+    apiBase: { type: string }
+    auth:
+      type: object
+      required:
+        [emailLoginEnabled, emailRegisterEnabled, emailVerificationRequired]
+      properties:
+        emailLoginEnabled: { type: boolean }
+        emailRegisterEnabled: { type: boolean }
+        emailVerificationRequired: { type: boolean }
+        allowedRegistrationDomains:
+          type: array
+          items: { type: string }
+    features:
+      type: object
+      required:
+        [totpEnabled, passkeyEnabled, turnstileEnabled, externalSsoEnabled]
+      properties:
+        totpEnabled: { type: boolean }
+        passkeyEnabled: { type: boolean }
+        turnstileEnabled: { type: boolean }
+        externalSsoEnabled: { type: boolean }
+    sso:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+        startPath: { type: string }
+    passkey:
+      type: object
+      required: [enabled, rpDisplayName, rpId, rpOrigin]
+      properties:
+        enabled: { type: boolean }
+        rpDisplayName: { type: string }
+        rpId: { type: string }
+        rpOrigin: { type: string }
+    turnstile:
+      type: object
+      required: [enabled, loginMode]
+      properties:
+        enabled: { type: boolean }
+        loginMode: { type: string }
+        siteKey: { type: string }
+PageInfo:
+  type: object
+  required: [page, pageSize, total]
+  properties:
+    page: { type: integer, minimum: 1 }
+    pageSize: { type: integer, minimum: 1 }
+    total: { type: integer, minimum: 0 }
+LedgerSummary:
+  type: object
+  required: [balanceCents, currency, entryCount]
+  properties:
+    bookId: { type: string }
+    bookName: { type: string }
+    balanceCents: { type: integer }
+    currency: { type: string }
+    entryCount: { type: integer, minimum: 0 }
+BookListItem:
+  type: object
+  required:
+    [id, ownerUserId, name, reportingCurrency, role, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    ownerUserId: { type: string }
+    name: { type: string }
+    reportingCurrency: { type: string }
+    role: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+BookList:
+  allOf:
+    - $ref: "#/PageInfo"
+    - type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/BookListItem" }
+BookCreateRequest:
+  type: object
+  required: [name, reportingCurrency]
+  properties:
+    name: { type: string }
+    reportingCurrency: { type: string }
+BookUpdateRequest:
+  type: object
+  minProperties: 1
+  properties:
+    name: { type: string }
+    reportingCurrency: { type: string }
+BookMember:
+  type: object
+  required: [bookId, userId, role, displayName, createdAt, updatedAt]
+  properties:
+    bookId: { type: string }
+    userId: { type: string }
+    role: { type: string }
+    displayName: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+BookMemberList:
+  allOf:
+    - $ref: "#/PageInfo"
+    - type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/BookMember" }
+AccountGroup:
+  type: object
+  required: [id, userId, name, sortOrder, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    userId: { type: string }
+    name: { type: string }
+    sortOrder: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+AccountGroupList:
+  allOf:
+    - $ref: "#/PageInfo"
+    - type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/AccountGroup" }
+AccountGroupCreateRequest:
+  type: object
+  required: [name]
+  properties:
+    name: { type: string }
+    sortOrder: { type: integer }
+AccountGroupUpdateRequest:
+  type: object
+  minProperties: 1
+  properties:
+    name: { type: string }
+    sortOrder: { type: integer }
+Account:
+  type: object
+  required:
+    [
+      id,
+      userId,
+      groupId,
+      name,
+      type,
+      currency,
+      openingBalanceCents,
+      createdAt,
+      updatedAt,
+    ]
+  properties:
+    id: { type: string }
+    userId: { type: string }
+    groupId: { type: string }
+    name: { type: string }
+    type: { type: string }
+    currency: { type: string }
+    sharedBookIds:
+      type: array
+      items: { type: string }
+    openingBalanceCents: { type: integer }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+AccountList:
+  allOf:
+    - $ref: "#/PageInfo"
+    - type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/Account" }
+AccountCreateRequest:
+  type: object
+  required: [groupId, name, type, currency, sharedBookIds]
+  properties:
+    groupId: { type: string }
+    name: { type: string }
+    type: { type: string }
+    currency: { type: string }
+    sharedBookIds:
+      type: array
+      items: { type: string }
+    openingBalanceCents: { type: integer }
+Category:
+  type: object
+  required:
+    [id, bookId, name, direction, sortOrder, archived, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    bookId: { type: string }
+    parentId: { type: string }
+    name: { type: string }
+    direction: { type: string, enum: [income, expense] }
+    sortOrder: { type: integer }
+    archived: { type: boolean }
+    rawSourceName: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+CategoryList:
+  allOf:
+    - $ref: "#/PageInfo"
+    - type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/Category" }
+CategoryCreateRequest:
+  type: object
+  required: [name, direction]
+  properties:
+    parentId: { type: string }
+    name: { type: string }
+    direction: { type: string, enum: [income, expense] }
+    sortOrder: { type: integer }
+    rawSourceName: { type: string }
+CategoryUpdateRequest:
+  type: object
+  minProperties: 1
+  properties:
+    parentId: { type: string }
+    name: { type: string }
+    direction: { type: string, enum: [income, expense] }
+    sortOrder: { type: integer }
+    archived: { type: boolean }
+    rawSourceName: { type: string }
+Entry:
+  type: object
+  required:
+    [
+      id,
+      bookId,
+      creatorUserId,
+      type,
+      amountCents,
+      transactionCurrency,
+      accountCurrency,
+      bookReportingCurrency,
+      occurredAt,
+      createdAt,
+      updatedAt,
+    ]
+  properties:
+    id: { type: string }
+    bookId: { type: string }
+    creatorUserId: { type: string }
+    type: { type: string }
+    accountId: { type: string }
+    destinationAccountId: { type: string }
+    categoryId: { type: string }
+    amountCents: { type: integer }
+    transactionCurrency: { type: string }
+    accountCurrency: { type: string }
+    bookReportingCurrency: { type: string }
+    exchangeRate: { type: string }
+    occurredAt: { type: string, format: date-time }
+    note: { type: string }
+    merchant: { type: string }
+    tags:
+      type: array
+      items: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+EntryList:
+  allOf:
+    - $ref: "#/PageInfo"
+    - type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items: { $ref: "#/Entry" }
+EntryCreateRequest:
+  type: object
+  required: [type, accountId, amountCents, transactionCurrency, occurredAt]
+  properties:
+    type: { type: string }
+    accountId: { type: string }
+    destinationAccountId: { type: string }
+    categoryId: { type: string }
+    amountCents: { type: integer }
+    transactionCurrency: { type: string }
+    bookReportingCurrency: { type: string }
+    exchangeRate: { type: string }
+    occurredAt: { type: string, format: date-time }
+    note: { type: string }
+    merchant: { type: string }
+    tags:
+      type: array
+      items: { type: string }
+EntryUpdateRequest:
+  type: object
+  minProperties: 1
+  properties:
+    type: { type: string }
+    accountId: { type: string }
+    destinationAccountId: { type: string }
+    categoryId: { type: string }
+    amountCents: { type: integer }
+    transactionCurrency: { type: string }
+    exchangeRate: { type: string }
+    occurredAt: { type: string, format: date-time }
+    note: { type: string }
+    merchant: { type: string }
+    tags:
+      type: array
+      items: { type: string }
+ExchangeRate:
+  type: object
+  required: [currency, unitsPerUsd, source, updatedAt]
+  properties:
+    currency: { type: string }
+    unitsPerUsd: { type: string }
+    source: { type: string }
+    updatedAt: { type: string, format: date-time }
+AuditEvent:
+  type: object
+  required: [id, action, targetType, createdAt]
+  properties:
+    id: { type: string }
+    actorId: { type: string }
+    actorEmail: { type: string, format: email }
+    action: { type: string }
+    targetType: { type: string }
+    targetId: { type: string }
+    metadata:
+      type: object
+      additionalProperties: { type: string }
+    createdAt: { type: string, format: date-time }
+AuditEventList:
+  allOf:
+    - $ref: "#/PageInfo"
+    - type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/AuditEvent" }
+ImportPreviewRow:
+  type: object
+  required: [rowNumber]
+  properties:
+    rowNumber: { type: integer }
+    raw:
+      type: object
+      additionalProperties: { type: string }
+    type: { type: string }
+    sourceType: { type: string }
+    occurredAt: { type: string }
+    account: { type: string }
+    destinationAccount: { type: string }
+    category: { type: string }
+    book: { type: string }
+    member: { type: string }
+    participants:
+      type: array
+      items: { type: string }
+    merchant: { type: string }
+    attribute: { type: string }
+    note: { type: string }
+    amount: { type: string }
+    currency: { type: string }
+    tags:
+      type: array
+      items: { type: string }
+    warnings:
+      type: array
+      items: { type: string }
+    errors:
+      type: array
+      items: { type: string }
+ImportPreviewBatch:
+  type: object
+  required:
+    [id, source, filename, sourceHash, rows, errorCount, warningCount, detected]
+  properties:
+    id: { type: string }
+    source: { type: string }
+    filename: { type: string }
+    sourceHash: { type: string }
+    parserVersion: { type: string }
+    detectedSchema:
+      type: object
+      properties:
+        columns:
+          type: object
+          additionalProperties: { type: string }
+        missing:
+          type: array
+          items: { type: string }
+    rows:
+      type: array
+      items: { $ref: "#/ImportPreviewRow" }
+    errorCount: { type: integer, minimum: 0 }
+    warningCount: { type: integer, minimum: 0 }
+    detected:
+      type: object
+      properties:
+        books: { type: array, items: { type: string } }
+        accounts: { type: array, items: { type: string } }
+        categories: { type: array, items: { type: string } }
+        currencies: { type: array, items: { type: string } }
+        members: { type: array, items: { type: string } }
+        merchants: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+ImportApplyRequest:
+  type: object
+  required: [sourceHash]
+  properties:
+    sourceHash: { type: string }
+    memberMappings:
+      type: object
+      additionalProperties: { type: string }
+ImportApplyResponse:
+  type: object
+  required: [batchId, bookId, status, importedCount, skippedCount, entries]
+  properties:
+    batchId: { type: string }
+    bookId: { type: string }
+    status: { type: string }
+    importedCount: { type: integer, minimum: 0 }
+    skippedCount: { type: integer, minimum: 0 }
+    entries:
+      type: array
+      items: { $ref: "#/Entry" }
+    skippedRows:
+      type: array
+      items:
+        type: object
+        required: [rowNumber, reason]
+        properties:
+          rowNumber: { type: integer }
+          reason: { type: string }

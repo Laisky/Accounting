@@ -1,9 +1,9 @@
 .spinner {
   flex: none;
-  animation: spinnerSpin 0.8s linear infinite;
+  animation: spinner-spin 0.8s linear infinite;
 }
 
-@keyframes spinnerSpin {
+@keyframes spinner-spin {
   to {
     transform: rotate(360deg);
   }
@@ -17,9 +17,8 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: oklch(99% 0.004 180 / 0.66);
+  background: oklch(99% 0.004 180 / 66%);
   backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
 }
 
 .loadingOverlayCard {
@@ -32,7 +31,7 @@
   padding: 18px 24px;
   border-radius: 16px;
   background: oklch(100% 0 0);
-  box-shadow: 0 18px 44px oklch(30% 0.05 235 / 0.22);
+  box-shadow: 0 18px 44px oklch(30% 0.05 235 / 22%);
   color: oklch(28% 0.04 235);
   font-size: 0.9rem;
   font-weight: 840;

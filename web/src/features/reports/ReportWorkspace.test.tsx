@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Navigate, Route, Routes, useParams } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { ReportWorkspace } from './ReportWorkspace';
-import type { Account, BookListItem, BookMember, Category, Entry } from '../../lib/api/ledger';
+import { isReportTab, reportTabPath } from './reportWorkspaceModel';
+import type { Account, BookListItem, BookMember, Category, Entry } from '@/lib/api/ledger';
 
 const fixtures = vi.hoisted(() => {
   const book: BookListItem = {
@@ -130,8 +131,8 @@ const fixtures = vi.hoisted(() => {
   return { account, book, categories: [expenseCategory, incomeCategory], entries, members };
 });
 
-vi.mock('../../lib/api/ledger', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../lib/api/ledger')>();
+vi.mock('@/lib/api/ledger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/ledger')>();
   return {
     ...actual,
     fetchAccounts: vi.fn(async () => [fixtures.account]),
@@ -146,9 +147,21 @@ vi.mock('../../lib/api/ledger', async (importOriginal) => {
 function renderReport(path = '/reports/category') {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <ReportWorkspace />
+      <Routes>
+        <Route path="/reports" element={<Navigate to={reportTabPath('category')} replace />} />
+        <Route path="/reports/:dimension" element={<RoutedReportWorkspace />} />
+      </Routes>
     </MemoryRouter>,
   );
+}
+
+function RoutedReportWorkspace() {
+  const { dimension } = useParams();
+  if (!isReportTab(dimension)) {
+    return <Navigate to={reportTabPath('category')} replace />;
+  }
+
+  return <ReportWorkspace activeTab={dimension} />;
 }
 
 describe('ReportWorkspace', () => {

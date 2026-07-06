@@ -1,12 +1,23 @@
-import { Check, ChevronLeft, ChevronRight, Copy, FileSpreadsheet, History, LockKeyhole, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  FileSpreadsheet,
+  History,
+  LockKeyhole,
+  LogOut,
+  ShieldCheck,
+  UserRound,
+} from 'lucide-react';
 import { type FormEvent, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LanguageSelector } from '../../components/LanguageSelector';
-import { type AuditEvent } from '../../lib/api/audit';
-import { confirmPasswordReset, requestPasswordReset, type AuthActor } from '../../lib/api/auth';
-import { emptyRuntimeConfig, type RuntimeConfig } from '../../lib/api/runtimeConfig';
-import { copyToClipboard } from '../../lib/clipboard';
-import { supportedCurrencies } from '../../lib/money';
+import { LanguageSelector } from '@/components/LanguageSelector';
+import { type AuditEvent } from '@/lib/api/audit';
+import { confirmPasswordReset, requestPasswordReset, type AuthActor } from '@/lib/api/auth';
+import { emptyRuntimeConfig, type RuntimeConfig } from '@/lib/api/runtimeConfig';
+import { copyToClipboard } from '@/lib/clipboard';
+import { supportedCurrencies } from '@/lib/money';
 import { PasskeySettingsView } from './PasskeySettingsView';
 import { TotpSettingsView } from './TotpSettingsView';
 import { type MeSection } from './mobile-workspace-utils';
@@ -96,7 +107,12 @@ export function MeView({
         <section className="meGroup">
           <h2 className="meGroupHeader">{t('mobile.me.groupActivity')}</h2>
           <div className="meCard meActivityCard">
-            <button className="mobileSecondaryButton" type="button" disabled={isActivityLoading} onClick={onLoadActivity}>
+            <button
+              className="mobileSecondaryButton"
+              type="button"
+              disabled={isActivityLoading}
+              onClick={onLoadActivity}
+            >
               <History size={16} aria-hidden="true" />
               {t('mobile.me.loadActivity')}
             </button>
@@ -122,8 +138,16 @@ export function MeView({
               <b>{t('mobile.me.primaryCurrency')}</b>
               <small>{t('mobile.me.primaryCurrencyHint')}</small>
             </span>
-            <select value={baseCurrency} disabled={isProfileSaving} onChange={(event) => onUpdateBaseCurrency(event.target.value)}>
-              {supportedCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
+            <select
+              value={baseCurrency}
+              disabled={isProfileSaving}
+              onChange={(event) => onUpdateBaseCurrency(event.target.value)}
+            >
+              {supportedCurrencies.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
             </select>
           </label>
           <LanguageSelector className="meLanguageRow" />
@@ -193,7 +217,9 @@ function MeIndexButton({
 }) {
   return (
     <button type="button" className="meNavRow meIndexButton" onClick={onClick}>
-      <span className="meNavIcon" aria-hidden="true">{icon}</span>
+      <span className="meNavIcon" aria-hidden="true">
+        {icon}
+      </span>
       <span className="meNavLabel">
         <b>{title}</b>
         <small>{hint}</small>
@@ -221,9 +247,13 @@ function MeIdentity({
 
   return (
     <header className="meIdentity">
-      <span className="meAvatar" aria-hidden="true">{monogram}</span>
+      <span className="meAvatar" aria-hidden="true">
+        {monogram}
+      </span>
       <div className="meIdentityMain">
-        <strong className="meEmail" dir="auto">{actor.email}</strong>
+        <strong className="meEmail" dir="auto">
+          {actor.email}
+        </strong>
         <span className={`mePill ${statusIsActive ? 'mePillPositive' : 'mePillNeutral'}`}>
           <span className="mePillDot" aria-hidden="true" />
           {actor.status}
@@ -236,7 +266,9 @@ function MeIdentity({
         </div>
         <button type="button" className="meCopyButton" aria-label={t('mobile.me.copyUid')} onClick={onCopyUid}>
           {uidCopied ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
-          <span role="status" aria-live="polite">{uidCopied ? t('mobile.me.uidCopied') : t('mobile.me.copy')}</span>
+          <span role="status" aria-live="polite">
+            {uidCopied ? t('mobile.me.uidCopied') : t('mobile.me.copy')}
+          </span>
         </button>
       </div>
     </header>

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import * as authApi from '../../lib/api/auth';
-import { emptyRuntimeConfig, type RuntimeConfig } from '../../lib/api/runtimeConfig';
+import * as authApi from '@/lib/api/auth';
+import { emptyRuntimeConfig, type RuntimeConfig } from '@/lib/api/runtimeConfig';
 import { MeView } from './MeView';
 
 const actor = { userId: 'user-1', email: 'person@example.test', status: 'active' };
@@ -172,14 +172,19 @@ describe('MeView', () => {
     fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'new correct horse battery staple' } });
     fireEvent.click(screen.getByRole('button', { name: 'Reset password' }));
 
-    await waitFor(() => expect(confirmSpy).toHaveBeenCalledWith('person@example.test', '123456', 'new correct horse battery staple'));
+    await waitFor(() =>
+      expect(confirmSpy).toHaveBeenCalledWith('person@example.test', '123456', 'new correct horse battery staple'),
+    );
     expect(await screen.findByText('Password updated. Sign in with the new password.')).toBeInTheDocument();
   });
 
   it('notes email-only sign-in when no stronger factors are available', () => {
     renderMeView({
       meSection: 'security',
-      runtimeConfig: { ...emptyRuntimeConfig, features: { ...emptyRuntimeConfig.features, passkeyEnabled: false, totpEnabled: false } },
+      runtimeConfig: {
+        ...emptyRuntimeConfig,
+        features: { ...emptyRuntimeConfig.features, passkeyEnabled: false, totpEnabled: false },
+      },
     });
 
     expect(screen.getByText('You sign in with your email and password.')).toBeInTheDocument();

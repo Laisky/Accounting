@@ -1,8 +1,8 @@
 import { ArrowDownLeft, ArrowUpRight, ChevronDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type Account, type BookMember, type Category, type Entry } from '../../lib/api/ledger';
-import { formatMoney } from '../../lib/money';
+import { type Account, type BookMember, type Category, type Entry } from '@/lib/api/ledger';
+import { formatMoney } from '@/lib/money';
 import { accountEntries } from './account-transaction-utils';
 import './account-transactions.css';
 
@@ -75,7 +75,10 @@ export function AccountTransactionsView({
   }
 
   return (
-    <section className="tabPanel accountTransactionsPanel" aria-label={t('mobile.accountDetail.label', { name: account.name })}>
+    <section
+      className="tabPanel accountTransactionsPanel"
+      aria-label={t('mobile.accountDetail.label', { name: account.name })}
+    >
       <section className="accountBalanceHero" aria-label={t('mobile.accountDetail.balanceChart')}>
         <div className="accountBalanceHeroText">
           <span>{t('mobile.accountDetail.balance')}</span>
@@ -84,7 +87,9 @@ export function AccountTransactionsView({
         <BalanceSparkline points={accountPoints} openingBalanceCents={account.openingBalanceCents} />
         <footer>
           <span>{t('mobile.accountDetail.totalIn', { amount: formatMoney(totalIncomeCents, account.currency) })}</span>
-          <span>{t('mobile.accountDetail.totalOut', { amount: formatMoney(totalExpenseCents, account.currency) })}</span>
+          <span>
+            {t('mobile.accountDetail.totalOut', { amount: formatMoney(totalExpenseCents, account.currency) })}
+          </span>
         </footer>
       </section>
 
@@ -124,14 +129,20 @@ export function AccountTransactionsView({
                       <button
                         type="button"
                         className="accountTransactionButton"
-                        aria-label={t('mobile.transactions.openEntry', { title: entryTitle(point.entry, categories, t('mobile.transactions.accountFallback')) })}
+                        aria-label={t('mobile.transactions.openEntry', {
+                          title: entryTitle(point.entry, categories, t('mobile.transactions.accountFallback')),
+                        })}
                         onClick={() => onOpenEntry?.(point.entry.id)}
                       >
-                        <span className={`accountTransactionIcon ${point.deltaCents >= 0 ? 'accountTransactionIconIncome' : ''}`}>
+                        <span
+                          className={`accountTransactionIcon ${point.deltaCents >= 0 ? 'accountTransactionIconIncome' : ''}`}
+                        >
                           {point.deltaCents >= 0 ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                         </span>
                         <div>
-                          <strong>{entryTitle(point.entry, categories, t('mobile.transactions.accountFallback'))}</strong>
+                          <strong>
+                            {entryTitle(point.entry, categories, t('mobile.transactions.accountFallback'))}
+                          </strong>
                           <small>
                             {t('mobile.accountDetail.entryMeta', {
                               member: memberName(point.entry.creatorUserId, members),
@@ -141,7 +152,11 @@ export function AccountTransactionsView({
                         </div>
                         <b className={point.deltaCents >= 0 ? 'accountTransactionIncome' : undefined}>
                           {formatSignedMoney(point.deltaCents, account.currency)}
-                          <small>{t('mobile.accountDetail.balanceAfter', { amount: formatMoney(point.balanceCents, account.currency) })}</small>
+                          <small>
+                            {t('mobile.accountDetail.balanceAfter', {
+                              amount: formatMoney(point.balanceCents, account.currency),
+                            })}
+                          </small>
                         </b>
                       </button>
                     </li>
@@ -153,9 +168,7 @@ export function AccountTransactionsView({
         </div>
       ) : null}
 
-      {!isLoading && !monthGroups.length ? (
-        <p className="emptyState">{t('mobile.accountDetail.empty')}</p>
-      ) : null}
+      {!isLoading && !monthGroups.length ? <p className="emptyState">{t('mobile.accountDetail.empty')}</p> : null}
     </section>
   );
 }
@@ -192,7 +205,9 @@ function buildMonthGroups(points: BalancePoint[], expandedMonthIds: ReadonlySet<
   const groups = new Map<string, BalancePoint[]>();
   for (const point of points) {
     const date = new Date(point.entry.occurredAt);
-    const id = Number.isNaN(date.getTime()) ? 'unknown' : `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    const id = Number.isNaN(date.getTime())
+      ? 'unknown'
+      : `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
     groups.set(id, [...(groups.get(id) ?? []), point]);
   }
 

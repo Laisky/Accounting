@@ -1,7 +1,7 @@
 import { ChevronDown, CircleDollarSign } from 'lucide-react';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import { compactMoney, formatMoney } from '../../lib/money';
+import { compactMoney, formatMoney } from '@/lib/money';
 import { reportColors } from './reportColors';
 
 export type RankedItem = {
@@ -207,7 +207,15 @@ function DonutChart({
 }
 
 // RankedList receives ranked report rows and returns a ranked amount list.
-function RankedList({ items, totalCents, currencyCode }: { items: RankedItem[]; totalCents: number; currencyCode: string }) {
+function RankedList({
+  items,
+  totalCents,
+  currencyCode,
+}: {
+  items: RankedItem[];
+  totalCents: number;
+  currencyCode: string;
+}) {
   const { t } = useTranslation();
   if (!items.length) {
     return (
@@ -255,8 +263,10 @@ function TrendChart({ rows, currencyCode }: { rows: TrendBucket[]; currencyCode:
   const values = rows.flatMap((row) => [row.incomeCents, row.expenseCents, row.balanceCents]);
   const minValue = Math.min(0, ...values);
   const maxValue = Math.max(1, ...values);
-  const xFor = (index: number) => padding.left + (rows.length <= 1 ? 0 : (index / (rows.length - 1)) * (width - padding.left - padding.right));
-  const yFor = (value: number) => padding.top + ((maxValue - value) / (maxValue - minValue || 1)) * (height - padding.top - padding.bottom);
+  const xFor = (index: number) =>
+    padding.left + (rows.length <= 1 ? 0 : (index / (rows.length - 1)) * (width - padding.left - padding.right));
+  const yFor = (value: number) =>
+    padding.top + ((maxValue - value) / (maxValue - minValue || 1)) * (height - padding.top - padding.bottom);
   const labelEvery = Math.max(1, Math.ceil(rows.length / 6));
   const series = [
     { id: 'income', label: t('reports.trend.income'), path: trendPath(rows, xFor, yFor, 'incomeCents') },
@@ -271,23 +281,39 @@ function TrendChart({ rows, currencyCode }: { rows: TrendBucket[]; currencyCode:
         <title id="trendChartTitle">{t('reports.trend.chartTitle')}</title>
         <desc id="trendChartDescription">{t('reports.trend.chartDesc')}</desc>
         {[0.25, 0.5, 0.75].map((ratio) => (
-          <line className="trendGridLine" key={ratio} x1={padding.left} x2={width - padding.right} y1={padding.top + ratio * (height - padding.top - padding.bottom)} y2={padding.top + ratio * (height - padding.top - padding.bottom)} />
+          <line
+            className="trendGridLine"
+            key={ratio}
+            x1={padding.left}
+            x2={width - padding.right}
+            y1={padding.top + ratio * (height - padding.top - padding.bottom)}
+            y2={padding.top + ratio * (height - padding.top - padding.bottom)}
+          />
         ))}
         <line className="trendZeroLine" x1={padding.left} x2={width - padding.right} y1={zeroY} y2={zeroY} />
         {series.map((item) => (
           <path className={`trendLine trendLine-${item.id}`} d={item.path} key={item.id} />
         ))}
-        {rows.map((row, index) => index % labelEvery === 0 || index === rows.length - 1 ? (
-          <text className="trendAxisLabel" key={row.id} x={xFor(index)} y={height - 14} textAnchor="middle">
-            {row.label}
-          </text>
-        ) : null)}
+        {rows.map((row, index) =>
+          index % labelEvery === 0 || index === rows.length - 1 ? (
+            <text className="trendAxisLabel" key={row.id} x={xFor(index)} y={height - 14} textAnchor="middle">
+              {row.label}
+            </text>
+          ) : null,
+        )}
       </svg>
       <figcaption>
         {series.map((item) => (
-          <span className={`trendLegend trendLegend-${item.id}`} key={item.id}>{item.label}</span>
+          <span className={`trendLegend trendLegend-${item.id}`} key={item.id}>
+            {item.label}
+          </span>
         ))}
-        <span>{t('reports.trend.range', { low: formatMoney(minValue, currencyCode), high: formatMoney(maxValue, currencyCode) })}</span>
+        <span>
+          {t('reports.trend.range', {
+            low: formatMoney(minValue, currencyCode),
+            high: formatMoney(maxValue, currencyCode),
+          })}
+        </span>
       </figcaption>
     </figure>
   );
@@ -300,5 +326,7 @@ function trendPath<K extends 'incomeCents' | 'expenseCents' | 'balanceCents'>(
   yFor: (value: number) => number,
   key: K,
 ): string {
-  return rows.map((row, index) => `${index === 0 ? 'M' : 'L'} ${xFor(index).toFixed(2)} ${yFor(row[key]).toFixed(2)}`).join(' ');
+  return rows
+    .map((row, index) => `${index === 0 ? 'M' : 'L'} ${xFor(index).toFixed(2)} ${yFor(row[key]).toFixed(2)}`)
+    .join(' ');
 }

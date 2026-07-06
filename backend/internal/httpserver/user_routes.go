@@ -22,14 +22,14 @@ func registerUserRoutes(api *gin.RouterGroup, authService *auth.Service, auditSe
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
 		user, err := authService.UserProfile(c.Request.Context(), actor)
 		if err != nil {
 			log.Debug("user profile failed", zap.Error(err))
-			c.JSON(http.StatusNotFound, gin.H{"error": "user profile not found"})
+			respondAPIMessage(c, http.StatusNotFound, "user profile not found")
 			return
 		}
 
@@ -41,7 +41,7 @@ func registerUserRoutes(api *gin.RouterGroup, authService *auth.Service, auditSe
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -56,7 +56,7 @@ func registerUserRoutes(api *gin.RouterGroup, authService *auth.Service, auditSe
 		})
 		if err != nil {
 			log.Debug("user profile update rejected", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "user profile update failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "user profile update failed")
 			return
 		}
 

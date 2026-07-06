@@ -25,7 +25,7 @@ const normalizeLanguage = (lng?: string): SupportedLanguage => {
 };
 
 // loadLanguageResources receives a language tag, lazily loads its translation bundle once, and returns the resolved language.
-export const loadLanguageResources = async (lng?: string): Promise<SupportedLanguage> => {
+const loadLanguageResources = async (lng?: string): Promise<SupportedLanguage> => {
   const language = normalizeLanguage(lng);
   if (loadedLanguages.has(language)) {
     return language;
@@ -103,5 +103,3 @@ void loadLanguageResources(i18n.language).then((language) => {
     void i18n.changeLanguage(language);
   }
 });
-
-export default i18n;

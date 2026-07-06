@@ -26,7 +26,7 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 	api.GET("/auth/sso/start", func(c *gin.Context) {
 		log := gmw.GetLogger(c)
 		if !cfg.Auth.External.Enabled {
-			c.JSON(http.StatusNotFound, gin.H{"error": "external sso login is disabled"})
+			respondAPIMessage(c, http.StatusNotFound, "external sso login is disabled")
 			return
 		}
 		if !requireAuthRateLimit(c, limiter, "auth.sso.start", c.ClientIP()) {
@@ -36,19 +36,19 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 		state, err := auth.NewSessionToken()
 		if err != nil {
 			log.Debug("external sso state creation failed", zap.Error(err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "external sso start failed"})
+			respondAPIMessage(c, http.StatusInternalServerError, "external sso start failed")
 			return
 		}
 		callbackURL, err := buildSSOCallbackURL(c.Request, cfg, state)
 		if err != nil {
 			log.Debug("external sso callback url rejected", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "external sso start failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "external sso start failed")
 			return
 		}
 		redirectURL, err := buildSSOLoginRedirectURL(cfg.Auth.External.LoginURL, callbackURL)
 		if err != nil {
 			log.Debug("external sso login url rejected", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "external sso start failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "external sso start failed")
 			return
 		}
 
@@ -59,20 +59,20 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 	api.GET("/auth/sso/callback", func(c *gin.Context) {
 		log := gmw.GetLogger(c)
 		if !cfg.Auth.External.Enabled {
-			c.JSON(http.StatusNotFound, gin.H{"error": "external sso login is disabled"})
+			respondAPIMessage(c, http.StatusNotFound, "external sso login is disabled")
 			return
 		}
 		clearSSOStateCookie(c, cfg)
 		if !verifySSOState(c, cfg) {
 			log.Debug("external sso state rejected")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "external sso callback failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "external sso callback failed")
 			return
 		}
 
 		token := strings.TrimSpace(c.Query("sso_token"))
 		if token == "" {
 			log.Debug("external sso token missing")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "external sso callback failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "external sso callback failed")
 			return
 		}
 
@@ -84,7 +84,7 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 				TargetType: "user",
 				Metadata:   map[string]string{"method": "external_sso"},
 			})
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "external sso callback failed"})
+			respondAPIMessage(c, http.StatusUnauthorized, "external sso callback failed")
 			return
 		}
 

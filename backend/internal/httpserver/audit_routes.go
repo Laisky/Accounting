@@ -20,7 +20,7 @@ func registerAuditRoutes(api *gin.RouterGroup, auditService *audit.Service) {
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -36,7 +36,7 @@ func registerAuditRoutes(api *gin.RouterGroup, auditService *audit.Service) {
 		})
 		if err != nil {
 			log.Debug("audit list failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "audit list failed"})
+			respondAPIMessage(c, http.StatusBadRequest, "audit list failed")
 			return
 		}
 
@@ -49,7 +49,7 @@ func parseAuditPagination(c *gin.Context) (entryPagination, bool) {
 	query := c.Request.URL.Query()
 	for key := range query {
 		if key != "page" && key != "page_size" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query filter"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid query filter")
 			return entryPagination{}, false
 		}
 	}
@@ -58,7 +58,7 @@ func parseAuditPagination(c *gin.Context) (entryPagination, bool) {
 	if rawPage := c.Query("page"); rawPage != "" {
 		page, err := strconv.Atoi(rawPage)
 		if err != nil || page < 1 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid page")
 			return entryPagination{}, false
 		}
 		pagination.Page = page
@@ -66,7 +66,7 @@ func parseAuditPagination(c *gin.Context) (entryPagination, bool) {
 	if rawPageSize := c.Query("page_size"); rawPageSize != "" {
 		pageSize, err := strconv.Atoi(rawPageSize)
 		if err != nil || pageSize < 1 || pageSize > 100 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page_size"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid page_size")
 			return entryPagination{}, false
 		}
 		pagination.PageSize = pageSize

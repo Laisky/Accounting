@@ -203,12 +203,60 @@ Expected direction:
 - API clients should live under `src/lib/api`.
 - Frontend implementation decisions for responsive layout, CSS architecture, color, focus, and touch targets should stay aligned with `docs/arch/frontend.md`.
 - Build output stays in `web/dist` and is never hand-edited.
-- Every authenticated page has a canonical browser route that can be opened directly: `/home`, `/accounts`, `/accounts/<accountID>/transactions`, `/record`, `/reports/<dimension>`, `/imports`, and `/me`. The SPA fallback must serve these routes in production.
+- Every authenticated page has a canonical browser route that can be opened directly: `/home`,
+  `/accounts`, `/accounts/<accountID>/transactions`, `/record`, `/entries/<entryID>`,
+  `/reports/<dimension>`, `/imports`, `/me`, `/me/profile`, `/me/security`, and
+  `/search?query=...`. The SPA fallback must serve these routes in production.
 - The Reports Trend tab summarizes income, expense, and net balance for the selected month or year, and plots their period buckets in the book reporting currency using the same entry conversion rules as other report dimensions.
 - When the Reports Category or Subcategory tab uses the all-flow filter, the frontend presents expense, income, and net balance as separate sections instead of mixing opposite cashflow directions in one ranked chart.
 - The Reports Member tab presents member expense, member income, and member balance separately when the all-flow filter is active. Each member section includes a generated family shared row that aggregates all visible members before the individual member rows.
 
 Vite proxies `/api` to the Go server during local development. The Go server serves `web/dist` in production or whenever the built directory exists locally.
+
+## Engineering Gates
+
+Before release, repository changes must keep the root gates passing:
+
+- `make lint` runs Go formatting/tidy/vet for `backend/` and `cli/`, then frontend Prettier,
+  ESLint, Stylelint, Knip, i18n alignment, and OpenAPI generated-type freshness checks.
+- `make test` runs backend and CLI `go test -race -cover ./...` plus frontend Vitest.
+- `make e2e` runs the Playwright browser suite for API/UI flows.
+
+GitHub Actions should enforce these same gates for pull requests, with frontend build and future
+contract, accessibility, visual, and observability checks added as the architecture overhaul phases
+land.
+
+The CI floor is split across `.github/workflows/go.yml`, `.github/workflows/web.yml`,
+`.github/workflows/e2e.yml`, and `.github/workflows/contract.yml`. Web jobs use Node 24 and
+pnpm 10.33.0 so Vite, Knip, OpenAPI generation, and Playwright run on a supported runtime. The
+contract workflow verifies that frontend generated API types are current with `docs/api/openapi.yaml`;
+backend Go tests validate representative httptest responses against the same contract with
+`github.com/getkin/kin-openapi`.
+
+## API Contract
+
+The first persistent API description lives in `docs/api/openapi.yaml` with shared schemas split into
+`docs/api/schemas.yaml` so each manually maintained contract file stays under the repository line
+limit. The document targets OpenAPI 3.1.2 because the chosen frontend generator currently supports
+OpenAPI 3.0/3.1. Frontend API response and request aliases are generated into
+`web/src/lib/api/generated/schema.d.ts` by:
+
+```sh
+pnpm --dir web run gen:api
+```
+
+`pnpm --dir web run check:api` regenerates that file and fails on stale tracked output. Frontend
+domain API modules must import contract-backed schema aliases from the generated file, and only
+`web/src/lib/apiClient.ts` may call `fetch` directly for application API requests.
+
+API error responses use a structured JSON envelope:
+
+```json
+{ "code": "stable_machine_code", "message": "Human readable message", "requestId": "optional" }
+```
+
+The frontend `ApiError` preserves the status, code, optional request id, and parsed body. User-facing
+copy is mapped from `ApiError.code` through `web/src/lib/apiErrorMessage.ts` and the i18n bundles.
 
 ## API Boundary
 

@@ -8,8 +8,8 @@ import {
   finishPasskeyRegistration,
   updatePasskey,
   type PasskeyListItem,
-} from '../../lib/api/auth';
-import { credentialCreationOptionsFromJSON, isWebAuthnAvailable, publicKeyCredentialToJSON } from '../../lib/webauthn';
+} from '@/lib/api/auth';
+import { credentialCreationOptionsFromJSON, isWebAuthnAvailable, publicKeyCredentialToJSON } from '@/lib/webauthn';
 import './passkey-settings.css';
 
 type PasskeySettingsViewProps = {
@@ -63,7 +63,11 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
       if (!credential) {
         throw new Error('WebAuthn credential is required');
       }
-      const passkey = await finishPasskeyRegistration(start.flowId, newLabel.trim(), publicKeyCredentialToJSON(credential as PublicKeyCredential));
+      const passkey = await finishPasskeyRegistration(
+        start.flowId,
+        newLabel.trim(),
+        publicKeyCredentialToJSON(credential as PublicKeyCredential),
+      );
       setPasskeys((current) => [passkey, ...current.filter((item) => item.id !== passkey.id)]);
       setLabels((current) => ({ ...current, [passkey.id]: passkey.label }));
       setNewLabel(t('mobile.me.defaultPasskeyLabel'));
@@ -164,7 +168,9 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
                 />
               </label>
               <div className="passkeyMeta">
-                <span>{passkey.transports.length ? passkey.transports.join(', ') : t('mobile.me.passkeyTransportFallback')}</span>
+                <span>
+                  {passkey.transports.length ? passkey.transports.join(', ') : t('mobile.me.passkeyTransportFallback')}
+                </span>
                 <time dateTime={passkey.createdAt}>{formatPasskeyTime(passkey.createdAt)}</time>
               </div>
               <div className="passkeyActions">
@@ -177,7 +183,12 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
                   <Pencil size={16} />
                   <span>{t('mobile.me.renamePasskey')}</span>
                 </button>
-                <button className="mobileDangerButton" type="button" disabled={isBusy} onClick={() => void handleDelete(passkey.id)}>
+                <button
+                  className="mobileDangerButton"
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => void handleDelete(passkey.id)}
+                >
                   <Trash2 size={16} />
                   <span>{t('mobile.me.deletePasskey')}</span>
                 </button>

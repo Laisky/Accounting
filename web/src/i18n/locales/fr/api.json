@@ -1,0 +1,13 @@
+{
+  "apiError": {
+    "accessDenied": "You do not have access to that ledger data.",
+    "authenticationRequired": "Please sign in again to continue.",
+    "generic": "The request could not be completed.",
+    "invalidCredentials": "The email or password is incorrect.",
+    "invalidImportInput": "The import file or mapping needs review.",
+    "invalidLedgerInput": "The ledger change needs review.",
+    "invalidRequest": "The request could not be understood.",
+    "notFound": "The requested ledger item was not found.",
+    "rateLimited": "Too many attempts. Please wait and try again."
+  }
+}

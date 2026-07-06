@@ -32,7 +32,7 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -40,13 +40,13 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 		fileHeader, err := c.FormFile("file")
 		if err != nil {
 			log.Debug("import file missing", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "import file is required"})
+			respondAPIMessage(c, http.StatusBadRequest, "import file is required")
 			return
 		}
 		file, err := fileHeader.Open()
 		if err != nil {
 			log.Debug("open import file failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "import file is invalid"})
+			respondAPIMessage(c, http.StatusBadRequest, "import file is invalid")
 			return
 		}
 		defer func() {
@@ -58,7 +58,7 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 		data, err := io.ReadAll(file)
 		if err != nil {
 			log.Debug("read import file failed", zap.Error(err))
-			c.JSON(http.StatusBadRequest, gin.H{"error": "import file is invalid"})
+			respondAPIMessage(c, http.StatusBadRequest, "import file is invalid")
 			return
 		}
 
@@ -94,7 +94,7 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 		actor, ok := auth.ActorFromContext(c.Request.Context())
 		if !ok {
 			log.Debug("actor context missing")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
 			return
 		}
 
@@ -112,15 +112,15 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 			return
 		}
 		if batch.Source != "wacai" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid import source"})
+			respondAPIMessage(c, http.StatusBadRequest, "invalid import source")
 			return
 		}
 		if strings.TrimSpace(request.SourceHash) == "" || strings.TrimSpace(request.SourceHash) != batch.SourceHash {
-			c.JSON(http.StatusConflict, gin.H{"error": "import batch source hash mismatch"})
+			respondAPIMessage(c, http.StatusConflict, "import batch source hash mismatch")
 			return
 		}
 		if batch.ErrorCount > 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "import batch has row errors"})
+			respondAPIMessage(c, http.StatusBadRequest, "import batch has row errors")
 			return
 		}
 		if batch.Status == importsvc.BatchStatusApplied {
@@ -719,12 +719,12 @@ func respondImportError(c *gin.Context, log glog.Logger, err error) {
 	switch {
 	case errors.Is(err, importsvc.ErrInvalidInput):
 		log.Debug("import input rejected", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid import input"})
+		respondAPIMessage(c, http.StatusBadRequest, "invalid import input")
 	case errors.Is(err, importsvc.ErrNotFound):
 		log.Debug("import resource not found", zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "import resource not found"})
+		respondAPIMessage(c, http.StatusNotFound, "import resource not found")
 	default:
 		log.Debug("import request failed", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "import request failed"})
+		respondAPIMessage(c, http.StatusInternalServerError, "import request failed")
 	}
 }

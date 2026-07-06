@@ -55,7 +55,7 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: `pnpm run dev --host localhost --port ${frontendPort}`,
+      command: `corepack pnpm run dev --host localhost --port ${frontendPort}`,
       env: {
         VITE_API_BASE_URL: backendURL,
       },

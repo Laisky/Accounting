@@ -46,10 +46,12 @@ describe('HomeView', () => {
             updatedAt: '2026-07-01T00:00:00Z',
           },
         ]}
-        rateIndex={new Map([
-          ['USD', 1],
-          ['EUR', 0.9],
-        ])}
+        rateIndex={
+          new Map([
+            ['USD', 1],
+            ['EUR', 0.9],
+          ])
+        }
         summary={{ balanceCents: 20000, currency: 'USD', entryCount: 1 }}
       />,
     );

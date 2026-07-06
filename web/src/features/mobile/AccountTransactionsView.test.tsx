@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { type Account, type BookMember, type Category, type Entry } from '../../lib/api/ledger';
+import { type Account, type BookMember, type Category, type Entry } from '@/lib/api/ledger';
 import { AccountTransactionsView } from './AccountTransactionsView';
 import { TransactionSearchView } from './TransactionSearchView';
 import { accountEntries } from './account-transaction-utils';
@@ -166,19 +167,7 @@ describe('AccountTransactionsView', () => {
 describe('TransactionSearchView', () => {
   it('matches account-scoped transactions by parent category, amount, and member', () => {
     const onOpenEntry = vi.fn();
-    render(
-      <TransactionSearchView
-        accounts={[account, transferTarget]}
-        categories={categories}
-        entries={[entries[1]]}
-        error=""
-        isLoading={false}
-        members={members}
-        onClose={() => undefined}
-        onOpenEntry={onOpenEntry}
-        title="Search Checking"
-      />,
-    );
+    render(<ControlledTransactionSearchView onOpenEntry={onOpenEntry} query="" />);
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search transactions' }), { target: { value: 'housing' } });
     expect(screen.getByText('Landlord')).toBeInTheDocument();
@@ -193,3 +182,29 @@ describe('TransactionSearchView', () => {
     expect(onOpenEntry).toHaveBeenCalledWith('entry-rent');
   });
 });
+
+function ControlledTransactionSearchView({
+  onOpenEntry,
+  query: initialQuery,
+}: {
+  onOpenEntry: (entryId: string) => void;
+  query: string;
+}) {
+  const [query, setQuery] = useState(initialQuery);
+
+  return (
+    <TransactionSearchView
+      accounts={[account, transferTarget]}
+      categories={categories}
+      entries={[entries[1]!]}
+      error=""
+      isLoading={false}
+      members={members}
+      onClose={() => undefined}
+      onOpenEntry={onOpenEntry}
+      onQueryChange={setQuery}
+      query={query}
+      title="Search Checking"
+    />
+  );
+}
