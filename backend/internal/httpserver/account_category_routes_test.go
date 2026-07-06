@@ -235,8 +235,9 @@ func TestRegisterRoutesCategoriesListEnforcesMembership(t *testing.T) {
 	var response ledger.Page[ledger.Category]
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	require.NoError(t, err)
-	require.Len(t, response.Items, 2)
-	require.Equal(t, 2, response.Total)
+	require.Len(t, response.Items, 50)
+	require.GreaterOrEqual(t, response.Total, 60)
+	require.Equal(t, "Food & Dining", response.Items[0].Name)
 
 	req = httptest.NewRequest(http.MethodGet, "/api/books/book-household/categories", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-stranger"))
@@ -312,7 +313,7 @@ func TestRegisterRoutesCategoriesUpdateEnforcesManagerRoles(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-admin", "user-member")
 
 	body := `{"name":"Dining","archived":true,"rawSourceName":" raw dining "}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-groceries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-expense-food-groceries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
 	rec := httptest.NewRecorder()
@@ -323,7 +324,7 @@ func TestRegisterRoutesCategoriesUpdateEnforcesManagerRoles(t *testing.T) {
 	var response ledger.Category
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	require.NoError(t, err)
-	require.Equal(t, "cat-groceries", response.ID)
+	require.Equal(t, "cat-expense-food-groceries", response.ID)
 	require.Equal(t, "book-household", response.BookID)
 	require.Equal(t, "Dining", response.Name)
 	require.True(t, response.Archived)
@@ -337,7 +338,7 @@ func TestRegisterRoutesCategoriesUpdateEnforcesManagerRoles(t *testing.T) {
 	require.Contains(t, rec.Body.String(), `"archived":true`)
 
 	body = `{"name":"Member edit"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-groceries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-expense-food-groceries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
@@ -351,7 +352,7 @@ func TestRegisterRoutesCategoriesUpdateRejectsUnknownAndInvalidInput(t *testing.
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
 
 	body := `{"name":"Dining","bookId":"other"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-groceries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-expense-food-groceries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -360,7 +361,7 @@ func TestRegisterRoutesCategoriesUpdateRejectsUnknownAndInvalidInput(t *testing.
 	require.Contains(t, rec.Body.String(), "invalid request body")
 
 	body = `{}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-groceries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-expense-food-groceries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -368,7 +369,7 @@ func TestRegisterRoutesCategoriesUpdateRejectsUnknownAndInvalidInput(t *testing.
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"name":""}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-groceries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-expense-food-groceries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -376,7 +377,7 @@ func TestRegisterRoutesCategoriesUpdateRejectsUnknownAndInvalidInput(t *testing.
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"parentId":"missing-category"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-groceries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/categories/cat-expense-food-groceries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()

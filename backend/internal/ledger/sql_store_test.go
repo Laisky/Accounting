@@ -38,7 +38,7 @@ func TestSQLStorePersistsBookAcrossStoreInstances(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	_, _, err = store.CreateBook(context.Background(), book, member)
+	_, _, err = store.CreateBook(context.Background(), book, member, nil)
 	require.NoError(t, err)
 
 	reopened, err := NewSQLiteStore(db, SeedData{})

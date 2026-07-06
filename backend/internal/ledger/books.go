@@ -43,7 +43,7 @@ func (s *Service) ListBooks(ctx context.Context, request ListBooksRequest) (Page
 	return paginate(books, request.Page, request.PageSize), nil
 }
 
-// CreateBook receives actor intent, validates input, and creates a book owned by the actor.
+// CreateBook receives actor intent, validates input, and creates a book owned by the actor with default categories.
 func (s *Service) CreateBook(ctx context.Context, request CreateBookRequest) (BookListItem, error) {
 	if request.Actor.UserID == "" {
 		return BookListItem{}, errors.Wrap(ErrInvalidInput, "actor user id is required")
@@ -69,8 +69,9 @@ func (s *Service) CreateBook(ctx context.Context, request CreateBookRequest) (Bo
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
+	categories := defaultBookCategories(book.ID, now, func(_ string) string { return uuid.NewString() })
 
-	created, createdMember, err := s.store.CreateBook(ctx, book, member)
+	created, createdMember, err := s.store.CreateBook(ctx, book, member, categories)
 	if err != nil {
 		return BookListItem{}, errors.Wrap(err, "create book")
 	}

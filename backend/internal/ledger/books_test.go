@@ -62,6 +62,43 @@ func TestCreateBookControlsOwnerAndMembership(t *testing.T) {
 	require.Equal(t, RoleOwner, member.Role)
 }
 
+// TestCreateBookSeedsDefaultCategoryTree verifies new books are ready for normal personal bookkeeping.
+func TestCreateBookSeedsDefaultCategoryTree(t *testing.T) {
+	service := NewServiceWithStore(NewMemoryStore(SeedData{}))
+
+	book, err := service.CreateBook(context.Background(), CreateBookRequest{
+		Actor:             Actor{UserID: "owner"},
+		Name:              "Household",
+		ReportingCurrency: "USD",
+	})
+	require.NoError(t, err)
+
+	categories, err := service.ListCategories(context.Background(), ListCategoriesRequest{
+		Actor:    Actor{UserID: "owner"},
+		BookID:   book.ID,
+		Page:     1,
+		PageSize: 200,
+	})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, categories.Total, 60)
+
+	food := requireCategoryByName(t, categories.Items, "Food & Dining")
+	require.Empty(t, food.ParentID)
+	require.Equal(t, CategoryDirectionExpense, food.Direction)
+
+	groceries := requireCategoryByName(t, categories.Items, "Groceries")
+	require.Equal(t, food.ID, groceries.ParentID)
+	require.Equal(t, CategoryDirectionExpense, groceries.Direction)
+
+	workIncome := requireCategoryByName(t, categories.Items, "Work Income")
+	require.Empty(t, workIncome.ParentID)
+	require.Equal(t, CategoryDirectionIncome, workIncome.Direction)
+
+	salary := requireCategoryByName(t, categories.Items, "Salary")
+	require.Equal(t, workIncome.ID, salary.ParentID)
+	require.Equal(t, CategoryDirectionIncome, salary.Direction)
+}
+
 // TestCreateBookRejectsInvalidInput verifies malformed book input fails before persistence.
 func TestCreateBookRejectsInvalidInput(t *testing.T) {
 	service := NewServiceWithStore(NewMemoryStore(SeedData{}))
@@ -87,6 +124,17 @@ func TestCreateBookRejectsInvalidInput(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Empty(t, books.Items)
+}
+
+func requireCategoryByName(t *testing.T, categories []Category, name string) Category {
+	t.Helper()
+	for _, category := range categories {
+		if category.Name == name {
+			return category
+		}
+	}
+	require.Failf(t, "category not found", "name %q", name)
+	return Category{}
 }
 
 // TestGetBookEnforcesMembership verifies book details require explicit membership.

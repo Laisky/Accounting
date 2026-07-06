@@ -32,6 +32,18 @@ func TestFileStorePersistsLedgerMutations(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, books.Items, 1)
 	require.Equal(t, book.ID, books.Items[0].ID)
+
+	categories, err := NewServiceWithStore(reopened).ListCategories(context.Background(), ListCategoriesRequest{
+		Actor:    Actor{UserID: "user-1"},
+		BookID:   book.ID,
+		Page:     1,
+		PageSize: 200,
+	})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, categories.Total, 60)
+	food := requireCategoryByName(t, categories.Items, "Food & Dining")
+	groceries := requireCategoryByName(t, categories.Items, "Groceries")
+	require.Equal(t, food.ID, groceries.ParentID)
 }
 
 // TestFileStorePersistsEntryUUID verifies entry UUIDs survive reopening the JSON store.

@@ -14,7 +14,7 @@ type Store interface {
 	Books(ctx context.Context) ([]Book, error)
 	BookMemberships(ctx context.Context, userID string) ([]BookMember, error)
 	BookMembers(ctx context.Context, bookID string) ([]BookMember, error)
-	CreateBook(ctx context.Context, book Book, owner BookMember) (Book, BookMember, error)
+	CreateBook(ctx context.Context, book Book, owner BookMember, categories []Category) (Book, BookMember, error)
 	UpdateBook(ctx context.Context, book Book) (Book, error)
 	CreateBookMember(ctx context.Context, member BookMember) (BookMember, error)
 	Member(ctx context.Context, bookID string, userID string) (BookMember, error)
@@ -182,8 +182,8 @@ func (s *MemoryStore) BookMembers(_ context.Context, bookID string) ([]BookMembe
 	return members, nil
 }
 
-// CreateBook receives a book and owner membership and stores both when ids are unique.
-func (s *MemoryStore) CreateBook(_ context.Context, book Book, owner BookMember) (Book, BookMember, error) {
+// CreateBook receives a book, owner membership, and default categories and stores them when ids are unique.
+func (s *MemoryStore) CreateBook(_ context.Context, book Book, owner BookMember, categories []Category) (Book, BookMember, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -193,17 +193,34 @@ func (s *MemoryStore) CreateBook(_ context.Context, book Book, owner BookMember)
 	if book.ID != owner.BookID {
 		return Book{}, BookMember{}, errors.WithStack(errors.New("book id and owner membership book id differ"))
 	}
+	if _, ok := s.members[book.ID][owner.UserID]; ok {
+		return Book{}, BookMember{}, errors.WithStack(errors.New("book owner membership already exists"))
+	}
+	categoryIDs := make(map[string]struct{}, len(categories))
+	for _, category := range categories {
+		if category.BookID != book.ID {
+			return Book{}, BookMember{}, errors.WithStack(errors.New("default category book id differs"))
+		}
+		if _, ok := categoryIDs[category.ID]; ok {
+			return Book{}, BookMember{}, errors.WithStack(errors.New("default category id duplicated"))
+		}
+		categoryIDs[category.ID] = struct{}{}
+		for _, existing := range s.categories {
+			if existing.ID == category.ID {
+				return Book{}, BookMember{}, errors.WithStack(errors.New("category id already exists"))
+			}
+		}
+	}
 
 	book = cloneBook(book)
 	owner = cloneBookMember(owner)
+	categories = cloneCategories(categories)
 	s.books[book.ID] = book
 	if s.members[book.ID] == nil {
 		s.members[book.ID] = map[string]BookMember{}
 	}
-	if _, ok := s.members[book.ID][owner.UserID]; ok {
-		return Book{}, BookMember{}, errors.WithStack(errors.New("book owner membership already exists"))
-	}
 	s.members[book.ID][owner.UserID] = owner
+	s.categories = append(s.categories, categories...)
 
 	return cloneBook(book), cloneBookMember(owner), nil
 }

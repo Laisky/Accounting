@@ -4,6 +4,7 @@ import {
   Camera,
   Car,
   Calculator,
+  ChevronDown,
   Flame,
   Fuel,
   Gift,
@@ -25,6 +26,7 @@ import { type Account, type BookListItem, type Category, type CategoryCreateInpu
 import { formatMoney, supportedCurrencies } from '../../lib/money';
 import { CategoryManager } from './CategoryManager';
 import './record-entry.css';
+import './record-category-sheet.css';
 
 type RecordType = 'income' | 'expense' | 'transfer' | 'borrow';
 
@@ -106,9 +108,14 @@ export function RecordEntryView({
   const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
 
   const visibleCategories = useMemo(() => filterCategories(categories, recordType), [categories, recordType]);
-  const shortcuts = useMemo(() => buildCategoryShortcuts(visibleCategories, recentEntries), [recentEntries, visibleCategories]);
+  const parentCategoryIds = useMemo(() => categoryParentIds(categories), [categories]);
+  const selectableCategories = useMemo(
+    () => visibleCategories.filter((category) => !parentCategoryIds.has(category.id)),
+    [parentCategoryIds, visibleCategories],
+  );
+  const shortcuts = useMemo(() => buildCategoryShortcuts(selectableCategories, recentEntries), [recentEntries, selectableCategories]);
   const categoryPrefs = useMemo(() => buildCategoryPreferences(recentEntries), [recentEntries]);
-  const selectedCategory = visibleCategories.find((category) => category.id === selectedCategoryId) ?? shortcuts[0]?.category;
+  const selectedCategory = selectableCategories.find((category) => category.id === selectedCategoryId) ?? shortcuts[0]?.category;
   const selectedAccount = accounts.find((account) => account.id === accountId) ?? accounts[0];
   const destinationAccount = accounts.find((account) => account.id === destinationAccountId && account.id !== selectedAccount?.id);
   const amountCents = amountToCents(calculateExpression(amountExpression));
@@ -305,7 +312,7 @@ export function RecordEntryView({
       {isCategorySheetOpen ? (
         <CategorySheet
           canManageCategories={canManageCategories}
-          categories={visibleCategories}
+          categories={selectableCategories}
           defaultDirection={categoryCreateDirection}
           isBusy={isBusy}
           selectedCategoryId={selectedCategory?.id ?? ''}
@@ -388,8 +395,12 @@ function CategorySheet({
         <div className="categorySheetBody">
           {groups.length ? (
             groups.map((group) => (
-              <section className="categorySheetGroup" key={group.id} aria-label={group.title}>
-                <h3>{group.title}</h3>
+              <details className="categorySheetGroup" key={group.id} open>
+                <summary>
+                  <span>{categoryIcon(group.title)}</span>
+                  <b>{group.title}</b>
+                  <ChevronDown className="categorySheetChevron" size={18} aria-hidden="true" />
+                </summary>
                 <div className="categorySheetList">
                   {group.categories.map((category) => (
                     <button
@@ -403,7 +414,7 @@ function CategorySheet({
                     </button>
                   ))}
                 </div>
-              </section>
+              </details>
             ))
           ) : (
             <p className="categorySheetEmpty">{t('mobile.categories.empty')}</p>
@@ -524,6 +535,18 @@ function buildCategoryPreferences(entries: Entry[]): Map<string, { accountId?: s
   }
 
   return preferences;
+}
+
+// categoryParentIds receives all categories and returns ids currently used to group child categories.
+function categoryParentIds(categories: Category[]): Set<string> {
+  const ids = new Set<string>();
+  for (const category of categories) {
+    if (!category.archived && category.parentId) {
+      ids.add(category.parentId);
+    }
+  }
+
+  return ids;
 }
 
 // buildCategoryShortcuts receives categories and entries and returns usage-ranked category shortcuts.

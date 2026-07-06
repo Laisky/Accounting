@@ -85,6 +85,7 @@ The core product model is user-centered bookkeeping:
 - Each entry has a server-generated globally unique UUIDv7 identifier. Clients, imports, and persistence drivers must not accept caller-supplied non-UUID entry ids.
 - Entries must support income and expense as first-class directions. The model must also leave room for transfer, refund, reimbursement, borrow, lend, and repayment flows because imported bookkeeping data commonly contains those concepts.
 - Income and expense categories are separate trees. Top-level categories group subcategories such as dining, groceries, household goods, salary, bonus, interest, and reimbursements.
+- Newly created books are seeded with a broad editable default category tree so normal household bookkeeping can start without manual category setup.
 - Categories must be book-configurable and importable. Imports must preserve raw source category names when a normalized category mapping is uncertain.
 - Accounts are personal to a user by default. A book entry can reference an account owned by the entry creator without making that account visible to every book member unless the user explicitly shares or exposes it through an aggregate view.
 - Accounts can be grouped by user-defined groups such as cash, savings, credit cards, loans, investments, payment platforms, stored-value cards, and receivables.

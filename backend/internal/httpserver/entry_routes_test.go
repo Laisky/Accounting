@@ -138,7 +138,7 @@ func TestRegisterRoutesBookEntriesCreateRejectsInvalidAndPrivateAccount(t *testi
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusNotFound, rec.Code)
 
-	body = `{"type":"expense","accountId":"acct-shared-card","categoryId":"cat-salary","amountCents":1200,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z"}`
+	body = `{"type":"expense","accountId":"acct-shared-card","categoryId":"cat-income-work-salary","amountCents":1200,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z"}`
 	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))

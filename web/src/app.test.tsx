@@ -712,7 +712,8 @@ describe('App', () => {
     fireEvent.click(within(shortcuts).getByRole('button', { name: 'All' }));
 
     const sheet = await screen.findByRole('region', { name: 'Select category' });
-    expect(within(sheet).getByRole('region', { name: 'Food' })).toHaveTextContent('Dining');
+    expect(within(sheet).getByText('Food')).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: /Dining/ })).toBeInTheDocument();
     fireEvent.click(within(sheet).getByRole('button', { name: /Fuel/ }));
 
     expect(await screen.findByRole('region', { name: 'Selected category' })).toHaveTextContent('Fuel');

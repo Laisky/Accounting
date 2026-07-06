@@ -56,12 +56,12 @@ func (s *SnapshotStore) BookMembers(ctx context.Context, bookID string) ([]BookM
 	return s.memory.BookMembers(ctx, bookID)
 }
 
-// CreateBook receives a book and owner membership, stores them, and persists the snapshot.
-func (s *SnapshotStore) CreateBook(ctx context.Context, book Book, owner BookMember) (Book, BookMember, error) {
+// CreateBook receives a book, owner membership, and default categories, stores them, and persists the snapshot.
+func (s *SnapshotStore) CreateBook(ctx context.Context, book Book, owner BookMember, categories []Category) (Book, BookMember, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	created, member, err := s.memory.CreateBook(ctx, book, owner)
+	created, member, err := s.memory.CreateBook(ctx, book, owner, categories)
 	if err != nil {
 		return Book{}, BookMember{}, err
 	}

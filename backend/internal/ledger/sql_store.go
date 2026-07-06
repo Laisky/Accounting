@@ -103,18 +103,30 @@ func (s *SQLStore) BookMembers(ctx context.Context, bookID string) ([]BookMember
 	return members, nil
 }
 
-// CreateBook receives a book and owner membership and stores both in one SQL transaction.
-func (s *SQLStore) CreateBook(ctx context.Context, book Book, owner BookMember) (Book, BookMember, error) {
+// CreateBook receives a book, owner membership, and default categories and stores them in one SQL transaction.
+func (s *SQLStore) CreateBook(ctx context.Context, book Book, owner BookMember, categories []Category) (Book, BookMember, error) {
 	if book.ID != owner.BookID {
 		return Book{}, BookMember{}, errors.WithStack(errors.New("book id and owner membership book id differ"))
 	}
 	book = cloneBook(book)
 	owner = cloneBookMember(owner)
+	categories = cloneCategories(categories)
 	if err := s.records.WithTx(ctx, func(tx *persistence.RecordStore) error {
 		if err := tx.Insert(ctx, mustRecord(ledgerBooksNS, book.ID, "", book.OwnerUserID, "", book)); err != nil {
 			return errors.Wrap(err, "insert book")
 		}
-		return tx.Insert(ctx, memberRecord(owner))
+		if err := tx.Insert(ctx, memberRecord(owner)); err != nil {
+			return err
+		}
+		for _, category := range categories {
+			if category.BookID != book.ID {
+				return errors.WithStack(errors.New("default category book id differs"))
+			}
+			if err := tx.Insert(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", "", category)); err != nil {
+				return errors.Wrap(err, "insert default category")
+			}
+		}
+		return nil
 	}); err != nil {
 		return Book{}, BookMember{}, err
 	}
