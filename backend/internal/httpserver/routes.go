@@ -18,6 +18,7 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/config"
 	importsvc "github.com/Laisky/Accounting/backend/internal/imports"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
+	"github.com/Laisky/Accounting/backend/internal/telemetry"
 )
 
 // RuntimeConfigResponse contains only public frontend runtime settings.
@@ -99,7 +100,11 @@ func RegisterRoutesWithServices(router *gin.Engine, cfg config.Config, ledgerSer
 // registerRoutes binds API endpoints to the provided Gin router and fully constructed services.
 func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger.Service, authService *auth.Service, auditService *audit.Service, importService *importsvc.Service) {
 	api := router.Group("/api")
+	metrics := telemetry.NewMetrics()
+	api.Use(metricsMiddleware(metrics))
 	api.Use(AttachSession(cfg, authService))
+
+	registerTelemetryRoutes(api, metrics)
 
 	api.GET("/health", func(c *gin.Context) {
 		log := gmw.GetLogger(c)

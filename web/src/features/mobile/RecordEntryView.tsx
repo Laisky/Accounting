@@ -1,16 +1,16 @@
 import { Camera, ChevronDown, List, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  type Account,
-  type BookListItem,
-  type Category,
-  type CategoryCreateInput,
-  type CategoryUpdateInput,
-  type Entry,
-} from '@/lib/api/ledger';
+import { useNavigate } from 'react-router';
+import { useBook } from '@/contexts/BookContext';
+import { useNotice } from '@/contexts/NoticeContext';
+import { useAccountsQuery } from '@/hooks/useAccounts';
+import { useCategoriesQuery, useCreateCategoryMutation, useUpdateCategoryMutation } from '@/hooks/useCategories';
+import { useCreateEntryMutation, useRecentEntriesQuery } from '@/hooks/useEntries';
+import { type Category, type CategoryCreateInput, type CategoryUpdateInput } from '@/lib/api/ledger';
 import { formatMoney, supportedCurrencies } from '@/lib/money';
 import { CategoryManager } from './CategoryManager';
+import { categoryDirection } from './mobile-workspace-utils';
 import './record-entry.css';
 import './record-category-sheet.css';
 
@@ -47,22 +47,6 @@ export type RecordEntryInput = {
   member: string;
 };
 
-type RecordEntryViewProps = {
-  accounts: Account[];
-  books: BookListItem[];
-  canManageCategories: boolean;
-  categories: Category[];
-  isBusy: boolean;
-  onCreateCategory: (input: CategoryCreateInput) => Promise<void>;
-  onCreateEntry: (input: RecordEntryInput) => Promise<void>;
-  onUpdateCategory: (categoryId: string, input: CategoryUpdateInput) => Promise<void>;
-  rates: Map<string, number>;
-  recentEntries: Entry[];
-  selectedBookCurrency: string;
-  selectedBookId: string;
-  setSelectedBookId: (value: string) => void;
-};
-
 const recordTypes: Array<{ id: RecordType; entryType: string }> = [
   { id: 'income', entryType: 'income' },
   { id: 'expense', entryType: 'expense' },
@@ -72,23 +56,86 @@ const recordTypes: Array<{ id: RecordType; entryType: string }> = [
 
 const members = ['Family', 'Me'];
 
-// RecordEntryView receives ledger context and returns the mobile entry composer.
-export function RecordEntryView({
-  accounts,
-  books,
-  canManageCategories,
-  categories,
-  isBusy,
-  onCreateCategory,
-  onCreateEntry,
-  onUpdateCategory,
-  rates,
-  recentEntries,
-  selectedBookCurrency,
-  selectedBookId,
-  setSelectedBookId,
-}: RecordEntryViewProps) {
+// RecordEntryView owns the mobile entry composer, fetching ledger context through hooks and
+// posting entries/categories through invalidating mutations.
+export function RecordEntryView() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { books, selectedBook, selectedBookId, setSelectedBookId, bookCurrency, canManageCategories, rateIndex } =
+    useBook();
+  const { notifyError, notifyStatus } = useNotice();
+  const accounts = useAccountsQuery().data ?? [];
+  const categories = useCategoriesQuery(selectedBook?.id).data ?? [];
+  const recentEntries = useRecentEntriesQuery(selectedBook?.id).data?.entries ?? [];
+  const createEntryMutation = useCreateEntryMutation();
+  const createCategoryMutation = useCreateCategoryMutation();
+  const updateCategoryMutation = useUpdateCategoryMutation();
+  const rates = rateIndex;
+  const selectedBookCurrency = bookCurrency;
+  const isBusy = createEntryMutation.isPending || createCategoryMutation.isPending || updateCategoryMutation.isPending;
+
+  // onCreateEntry posts the composed draft, seeding a fallback category when one is not chosen.
+  async function onCreateEntry(input: RecordEntryInput) {
+    const account = accounts.find((item) => item.id === input.accountId) ?? accounts[0];
+    if (!selectedBook || !account) {
+      notifyError(t('mobile.error.createAccountBeforeRecording'));
+      return;
+    }
+    try {
+      const category = input.categoryId
+        ? categories.find((item) => item.id === input.categoryId)
+        : await createCategoryMutation.mutateAsync({
+            bookId: selectedBook.id,
+            input: { name: input.categoryName || 'General', direction: categoryDirection(input.type) },
+          });
+      await createEntryMutation.mutateAsync({
+        bookId: selectedBook.id,
+        input: {
+          type: input.type,
+          accountId: account.id,
+          destinationAccountId: input.destinationAccountId,
+          categoryId: category?.id,
+          amountCents: input.amountCents,
+          transactionCurrency: input.transactionCurrency,
+          bookReportingCurrency: selectedBook.reportingCurrency,
+          occurredAt: input.occurredAt,
+          note: input.note,
+        },
+      });
+      notifyStatus(t('common.status.entryPosted'));
+      navigate('/home');
+    } catch {
+      notifyError(t('mobile.error.entryFailed'));
+    }
+  }
+
+  // onCreateCategory adds a category to the selected book.
+  async function onCreateCategory(input: CategoryCreateInput) {
+    if (!selectedBook) {
+      notifyError(t('mobile.error.categoryCreateFailed'));
+      return;
+    }
+    try {
+      await createCategoryMutation.mutateAsync({ bookId: selectedBook.id, input });
+      notifyStatus(t('mobile.status.categoryCreated'));
+    } catch {
+      notifyError(t('mobile.error.categoryCreateFailed'));
+    }
+  }
+
+  // onUpdateCategory patches a category in the selected book.
+  async function onUpdateCategory(categoryId: string, input: CategoryUpdateInput) {
+    if (!selectedBook) {
+      notifyError(t('mobile.error.categoryUpdateFailed'));
+      return;
+    }
+    try {
+      await updateCategoryMutation.mutateAsync({ bookId: selectedBook.id, categoryId, input });
+      notifyStatus(t('mobile.status.categoryUpdated'));
+    } catch {
+      notifyError(t('mobile.error.categoryUpdateFailed'));
+    }
+  }
   const [recordType, setRecordType] = useState<RecordType>('expense');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [accountId, setAccountId] = useState('');

@@ -88,7 +88,7 @@ export function AccountTransactionsView({
       className="tabPanel accountTransactionsPanel"
       aria-label={t('mobile.accountDetail.label', { name: account.name })}
     >
-      <section className="accountBalanceHero" aria-label={t('mobile.accountDetail.balanceChart')}>
+      <section className="accountBalanceHero" aria-label={t('mobile.accountDetail.summary')}>
         <div className="accountBalanceHeroText">
           <span>{t('mobile.accountDetail.balance')}</span>
           <strong>{formatMoney(currentBalanceCents, account.currency)}</strong>
@@ -274,9 +274,10 @@ function InteractiveBalanceChart({
     [openingBalanceCents, points, t],
   );
   const pointCount = series.length;
-  const [activeIndex, setActiveIndex] = useState(pointCount - 1);
-  const [isScrubbing, setIsScrubbing] = useState(false);
-  const active = Math.min(Math.max(activeIndex, 0), pointCount - 1);
+  // scrubIndex is null while resting so `active` always tracks the latest point, even as entries load in.
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const [isActive, setIsActive] = useState(false);
+  const active = Math.min(Math.max(scrubIndex ?? pointCount - 1, 0), pointCount - 1);
   const activePoint = series[active] ?? series[pointCount - 1]!;
 
   const values = series.map((point) => point.cents);
@@ -284,8 +285,7 @@ function InteractiveBalanceChart({
   const max = Math.max(...values);
   const span = max - min;
   const xFor = (index: number) => (pointCount <= 1 ? 50 : (index / (pointCount - 1)) * 100);
-  const yFor = (value: number) =>
-    span === 0 ? 50 : CHART_TOP + ((max - value) / span) * (CHART_BOTTOM - CHART_TOP);
+  const yFor = (value: number) => (span === 0 ? 50 : CHART_TOP + ((max - value) / span) * (CHART_BOTTOM - CHART_TOP));
   const linePath =
     pointCount >= 2
       ? series
@@ -295,10 +295,17 @@ function InteractiveBalanceChart({
   const areaPath = linePath ? `${linePath} L ${xFor(pointCount - 1).toFixed(2)} 100 L ${xFor(0).toFixed(2)} 100 Z` : '';
   const activeX = xFor(active);
   const tooltipLeft = Math.min(84, Math.max(16, activeX));
-  const valueText = t('mobile.accountDetail.chartPoint', {
-    date: activePoint.label,
-    amount: formatMoney(activePoint.cents, currency),
-  });
+  const valueText =
+    activePoint.deltaCents != null && activePoint.deltaCents !== 0
+      ? t('mobile.accountDetail.chartPointChange', {
+          date: activePoint.label,
+          amount: formatMoney(activePoint.cents, currency),
+          change: formatSignedMoney(activePoint.deltaCents, currency),
+        })
+      : t('mobile.accountDetail.chartPoint', {
+          date: activePoint.label,
+          amount: formatMoney(activePoint.cents, currency),
+        });
 
   // indexFromClientX receives a pointer x coordinate and returns the nearest data point index.
   function indexFromClientX(clientX: number): number {
@@ -311,27 +318,45 @@ function InteractiveBalanceChart({
     return Math.round(Math.min(1, Math.max(0, ratio)) * (pointCount - 1));
   }
 
-  // handlePointerDown starts scrubbing and captures the pointer so drags continue outside the track.
+  // startScrub activates the scrubber at the point nearest the pointer x coordinate.
+  function startScrub(clientX: number) {
+    setIsActive(true);
+    setScrubIndex(indexFromClientX(clientX));
+  }
+
+  // endScrub clears the scrubber and returns the chart to its latest-balance resting state.
+  function endScrub() {
+    setIsActive(false);
+    setScrubIndex(null);
+  }
+
+  // handlePointerDown captures the pointer and starts scrubbing at the contact position.
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    setIsScrubbing(true);
-    setActiveIndex(indexFromClientX(event.clientX));
+    startScrub(event.clientX);
   }
 
-  // handlePointerMove tracks the active point under the pointer while hovering or dragging.
+  // handlePointerMove scrubs the active point while hovering (mouse) or dragging (touch).
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    setIsScrubbing(true);
-    setActiveIndex(indexFromClientX(event.clientX));
+    startScrub(event.clientX);
   }
 
-  // handlePointerLeave hides the scrubber for mouse users and resets to the latest balance.
+  // handlePointerLeave resets when the mouse leaves; touch/pen reset on pointer up or cancel instead.
   function handlePointerLeave(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.pointerType !== 'mouse') {
       return;
     }
 
-    setIsScrubbing(false);
-    setActiveIndex(pointCount - 1);
+    endScrub();
+  }
+
+  // handlePointerEnd resets touch/pen input on release or cancel (e.g. when a vertical page scroll takes over).
+  function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === 'mouse') {
+      return;
+    }
+
+    endScrub();
   }
 
   // handleKeyDown moves the active point with arrow, Home, and End keys.
@@ -357,8 +382,8 @@ function InteractiveBalanceChart({
     }
 
     event.preventDefault();
-    setIsScrubbing(true);
-    setActiveIndex(next);
+    setIsActive(true);
+    setScrubIndex(next);
   }
 
   return (
@@ -374,7 +399,7 @@ function InteractiveBalanceChart({
         {linePath ? <path className="accountBalanceLine" d={linePath} vectorEffect="non-scaling-stroke" /> : null}
       </svg>
 
-      {isScrubbing ? (
+      {isActive ? (
         <span className="accountBalanceCrosshair" style={{ left: `${activeX}%` }} aria-hidden="true" />
       ) : null}
       <span
@@ -382,7 +407,7 @@ function InteractiveBalanceChart({
         style={{ left: `${activeX}%`, top: `${yFor(activePoint.cents)}%` }}
         aria-hidden="true"
       />
-      {isScrubbing ? (
+      {isActive ? (
         <div className="accountBalanceTooltip" style={{ left: `${tooltipLeft}%` }} aria-hidden="true">
           <span className="accountBalanceTooltipDate">{activePoint.label}</span>
           <strong>{formatMoney(activePoint.cents, currency)}</strong>
@@ -406,14 +431,13 @@ function InteractiveBalanceChart({
         aria-valuenow={active}
         aria-valuetext={valueText}
         onKeyDown={handleKeyDown}
-        onFocus={() => setIsScrubbing(true)}
-        onBlur={() => {
-          setIsScrubbing(false);
-          setActiveIndex(pointCount - 1);
-        }}
+        onFocus={() => setIsActive(true)}
+        onBlur={endScrub}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
       />
     </div>
   );

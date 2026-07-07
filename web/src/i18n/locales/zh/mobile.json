@@ -16,6 +16,7 @@
       "balanceAfter": "余额 {{amount}}",
       "balanceChart": "账户余额图",
       "chartPoint": "{{date}}：{{amount}}",
+      "chartPointChange": "{{date}}：{{amount}}（{{change}}）",
       "empty": "此账户暂无交易。",
       "entryMeta": "{{time}} / {{member}}",
       "error": "无法加载账户交易。",
@@ -26,6 +27,7 @@
       "opening": "初始余额",
       "searchAccount": "搜索此账户",
       "searchTitle": "搜索 {{name}}",
+      "summary": "账户余额概览",
       "title": "账户交易",
       "totalIn": "总流入 {{amount}}",
       "totalOut": "总流出 {{amount}}"
@@ -76,6 +78,7 @@
     },
     "brand": "Accounting",
     "budget": {
+      "meter": "已支出 {{spent}}／{{total}}（{{percent}}%）",
       "remaining": "剩余",
       "spent": "已花 {{amount}}",
       "title": "每月支出预算",
@@ -145,10 +148,14 @@
       "totpConfirmFailed": "TOTP setup could not be confirmed.",
       "totpDisableFailed": "TOTP could not be disabled.",
       "totpSetupFailed": "TOTP setup could not be started.",
-      "totpStatusFailed": "TOTP status could not be loaded."
+      "totpStatusFailed": "TOTP status could not be loaded.",
+      "entryRestoreFailed": "无法恢复记录。"
     },
     "home": {
-      "title": "首页"
+      "title": "首页",
+      "emptyTitle": "还没有交易",
+      "emptyBody": "记录第一笔账目，即可在此查看收支与余额。",
+      "recordCta": "记一笔"
     },
     "me": {
       "accountUid": "账户 UID",
@@ -280,7 +287,8 @@
       "profileCurrencyUpdated": "主币种已更新。",
       "totpDisabled": "TOTP disabled.",
       "totpEnabled": "TOTP enabled.",
-      "totpSetupStarted": "TOTP setup started."
+      "totpSetupStarted": "TOTP setup started.",
+      "entryRestored": "记录已恢复。"
     },
     "transactions": {
       "accountFallback": "账户",
@@ -305,7 +313,16 @@
       "tags": "Tags",
       "tagsFor": "Tags for {{title}}",
       "timeFor": "Time for {{title}}",
-      "title": "交易"
+      "title": "交易",
+      "deleteConfirmTitle": "删除这条记录？",
+      "deleteConfirmBody": "“{{title}}”将被删除。你可以在数秒内撤销。"
+    },
+    "shortcuts": {
+      "title": "键盘快捷键",
+      "newEntry": "新建记录",
+      "search": "搜索交易",
+      "help": "显示帮助",
+      "close": "关闭对话框"
     }
   }
 }

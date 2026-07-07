@@ -32,8 +32,14 @@ export const queryKeys = {
     list: (bookId: string, page: PageQuery = {}) => ['books', bookId, 'categories', page] as const,
   },
   entries: {
+    // all is the single canonical full-ledger query for a book. Reports, search,
+    // account-detail, and entry-detail all read from this one cache entry and filter
+    // client-side, so a book never triggers more than one full-ledger download.
+    all: (bookId: string) => ['books', bookId, 'entries', 'all'] as const,
     detail: (bookId: string, entryId: string, revision = 0) => ['books', bookId, 'entries', entryId, revision] as const,
     list: (bookId: string, filters: EntryQuery = {}) => ['books', bookId, 'entries', filters] as const,
+    // recent is the light first-page query that feeds the home and record views.
+    recent: (bookId: string, pageSize = 20) => ['books', bookId, 'entries', 'recent', pageSize] as const,
   },
   exchangeRates: {
     list: () => ['exchangeRates', 'list'] as const,
@@ -43,6 +49,10 @@ export const queryKeys = {
   },
   ledger: {
     summary: () => ['ledger', 'summary'] as const,
+  },
+  reports: {
+    bookData: (bookId: string, revision = 0) => ['reports', 'bookData', bookId, revision] as const,
+    foundation: (revision = 0) => ['reports', 'foundation', revision] as const,
   },
   runtimeConfig: {
     public: () => ['runtimeConfig', 'public'] as const,

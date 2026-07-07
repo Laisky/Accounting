@@ -1,6 +1,19 @@
 import { ChevronDown, CreditCard, Eye, Globe2, Landmark, PiggyBank, TrendingUp } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
+import { useBook } from '@/contexts/BookContext';
+import { useNotice } from '@/contexts/NoticeContext';
+import {
+  useAccountGroupsQuery,
+  useAccountsQuery,
+  useCreateAccountGroupMutation,
+  useCreateAccountMutation,
+  useUpdateAccountGroupMutation,
+} from '@/hooks/useAccounts';
+import { useBookMembersQuery } from '@/hooks/useBookMembers';
+import { useCreateBookMutation, useUpdateBookMutation } from '@/hooks/useBooks';
+import { usePrepareStarterAccount } from '@/hooks/usePrepareStarterAccount';
 import { type Account, type AccountGroup, type BookListItem, type BookMember } from '@/lib/api/ledger';
 import { convertCurrencyAmountCents, formatMoney, supportedCurrencies } from '@/lib/money';
 import './accounts.css';
@@ -12,25 +25,6 @@ export type AccountCreateInput = {
   openingBalanceCents: number;
 };
 
-type AccountsViewProps = {
-  accounts: Account[];
-  books: BookListItem[];
-  bookCurrencyCode: string;
-  displayCurrencyCode: string;
-  groups: AccountGroup[];
-  isBusy: boolean;
-  members: BookMember[];
-  onCreateAccount: (input: AccountCreateInput) => Promise<void>;
-  onOpenAccount: (accountId: string) => void;
-  onPrepareAccount: () => void;
-  onUpdateAccountGroupName: (groupId: string, name: string) => Promise<void>;
-  onUpdateBookName: (name: string) => Promise<void>;
-  onUpdateBookCurrency: (currency: string) => void;
-  rateIndex: Map<string, number>;
-  selectedBookId: string;
-  setSelectedBookId: (value: string) => void;
-};
-
 type AccountSection = {
   id: string;
   label: string;
@@ -40,33 +34,113 @@ type AccountSection = {
   accounts: Account[];
 };
 
-// AccountsView receives account data and returns the account management tab.
-export function AccountsView({
-  accounts,
-  books,
-  bookCurrencyCode,
-  displayCurrencyCode,
-  groups,
-  isBusy,
-  members,
-  onCreateAccount,
-  onOpenAccount,
-  onPrepareAccount,
-  onUpdateAccountGroupName,
-  onUpdateBookName,
-  onUpdateBookCurrency,
-  rateIndex,
-  selectedBookId,
-  setSelectedBookId,
-}: AccountsViewProps) {
+// AccountsView owns the account management tab, fetching book and account data through hooks
+// and running create/update mutations that invalidate the shared Query cache.
+export function AccountsView() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { books, selectedBook, selectedBookId, setSelectedBookId, bookCurrency, displayCurrency, rateIndex } =
+    useBook();
+  const { notifyError, notifyStatus } = useNotice();
+  const accountsQuery = useAccountsQuery();
+  const accounts = useMemo(
+    () =>
+      (accountsQuery.data ?? []).filter((account) => !selectedBook || account.sharedBookIds?.includes(selectedBook.id)),
+    [accountsQuery.data, selectedBook],
+  );
+  const groups = useAccountGroupsQuery().data ?? [];
+  const members = useBookMembersQuery(selectedBook?.id).data ?? [];
+  const createBook = useCreateBookMutation();
+  const createGroup = useCreateAccountGroupMutation();
+  const createAccountMutation = useCreateAccountMutation();
+  const updateGroup = useUpdateAccountGroupMutation();
+  const updateBookMutation = useUpdateBookMutation();
+  const starter = usePrepareStarterAccount();
+  const bookCurrencyCode = bookCurrency;
+  const displayCurrencyCode = displayCurrency;
+  const isBusy =
+    createBook.isPending ||
+    createGroup.isPending ||
+    createAccountMutation.isPending ||
+    updateGroup.isPending ||
+    updateBookMutation.isPending ||
+    starter.isPending;
+
   const [accountName, setAccountName] = useState('');
   const [accountType, setAccountType] = useState('cash');
-  const [accountCurrency, setAccountCurrency] = useState(bookCurrencyCode);
+  const [accountCurrency, setAccountCurrency] = useState(bookCurrency);
   const [openingBalance, setOpeningBalance] = useState('');
   const [expandedSectionIds, setExpandedSectionIds] = useState<ReadonlySet<string>>(() => new Set(['cash']));
-  const selectedBook = books.find((book) => book.id === selectedBookId) ?? books[0];
   const primaryGroup = groups[0];
+
+  // onOpenAccount navigates to an account's transaction detail route.
+  function onOpenAccount(accountId: string) {
+    navigate(`/accounts/${encodeURIComponent(accountId)}/transactions`);
+  }
+
+  // onPrepareAccount bootstraps a starter book, group, and cash account for an empty ledger.
+  function onPrepareAccount() {
+    void starter.prepare();
+  }
+
+  // onCreateAccount creates the account, seeding a book and group when the ledger is empty.
+  async function onCreateAccount(input: AccountCreateInput) {
+    try {
+      const book =
+        selectedBook ??
+        (await createBook.mutateAsync({ name: 'Household', reportingCurrency: displayCurrency || input.currency }));
+      const group = groups[0] ?? (await createGroup.mutateAsync('Everyday'));
+      await createAccountMutation.mutateAsync({
+        groupId: group.id,
+        name: input.name,
+        type: input.type,
+        currency: input.currency,
+        sharedBookIds: [book.id],
+        openingBalanceCents: input.openingBalanceCents,
+      });
+      setSelectedBookId(book.id);
+      notifyStatus(t('mobile.status.accountCreated'));
+    } catch (error) {
+      notifyError(t('mobile.error.accountCreateFailed'));
+      throw error;
+    }
+  }
+
+  // onUpdateAccountGroupName renames the primary account group.
+  async function onUpdateAccountGroupName(groupId: string, name: string) {
+    try {
+      await updateGroup.mutateAsync({ groupId, input: { name } });
+      notifyStatus(t('mobile.status.accountGroupUpdated'));
+    } catch {
+      notifyError(t('mobile.error.accountGroupUpdateFailed'));
+    }
+  }
+
+  // onUpdateBookName renames the selected book.
+  async function onUpdateBookName(name: string) {
+    if (!selectedBook) {
+      return;
+    }
+    try {
+      await updateBookMutation.mutateAsync({ bookId: selectedBook.id, input: { name } });
+      notifyStatus(t('mobile.status.bookUpdated'));
+    } catch {
+      notifyError(t('mobile.error.bookUpdateFailed'));
+    }
+  }
+
+  // onUpdateBookCurrency changes the selected book's reporting currency.
+  async function onUpdateBookCurrency(currency: string) {
+    if (!selectedBook) {
+      return;
+    }
+    try {
+      await updateBookMutation.mutateAsync({ bookId: selectedBook.id, input: { reportingCurrency: currency } });
+      notifyStatus(t('mobile.status.baseCurrencyUpdated'));
+    } catch {
+      notifyError(t('mobile.error.baseCurrencyFailed'));
+    }
+  }
   const sections = useMemo(
     () => buildAccountSections(accounts, expandedSectionIds, t, displayCurrencyCode, rateIndex),
     [accounts, displayCurrencyCode, expandedSectionIds, rateIndex, t],

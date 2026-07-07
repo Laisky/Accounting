@@ -30,6 +30,8 @@
       "accountReady": "Compte prêt.",
       "entryPosted": "Écriture enregistrée."
     },
-    "total": "Total"
+    "total": "Total",
+    "undo": "Annuler",
+    "cancel": "Annuler"
   }
 }

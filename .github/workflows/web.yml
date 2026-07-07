@@ -41,6 +41,9 @@ jobs:
       - name: Lint CSS
         run: pnpm --dir web run lint:css
 
+      - name: Check color tokens
+        run: pnpm --dir web run check:tokens
+
       - name: Detect dead code
         run: pnpm --dir web run lint:dead
 
@@ -50,8 +53,8 @@ jobs:
       - name: Check generated API types
         run: pnpm --dir web run check:api
 
-      - name: Test
-        run: pnpm --dir web run test
+      - name: Test with coverage
+        run: pnpm --dir web run test:coverage
 
       - name: Build
         run: pnpm --dir web run build

@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { Account, BookListItem, BookMember, Category, Entry, ExchangeRate } from '@/lib/api/ledger';
+import type { Account, BookMember, Category, Entry } from '@/lib/api/ledger';
 import { convertEntryAmountCents } from '@/lib/money';
 import type { DonutSegment, RankedItem, TrendBucket, TrendData } from './ReportVisuals';
 import { reportColors } from './reportColors';
@@ -13,15 +13,6 @@ type ReportFlowSection = {
   flow: ReportFlow;
   items: RankedItem[];
   segments: DonutSegment[];
-};
-
-export type ReportData = {
-  books: BookListItem[];
-  members: BookMember[];
-  accounts: Account[];
-  categories: Category[];
-  entries: Entry[];
-  rates: ExchangeRate[];
 };
 
 export const reportTabs: Array<{ id: ReportTab }> = [

@@ -4,9 +4,9 @@
   min-height: 100svh;
   min-height: var(--app-viewport-height, 100svh);
   background:
-    radial-gradient(circle at 18% 0%, oklch(95% 0.03 45), transparent 31rem),
-    linear-gradient(180deg, oklch(98% 0.006 170), oklch(93% 0.018 175));
-  color: oklch(20% 0.035 235);
+    radial-gradient(circle at 18% 0%, var(--tone-95-0p03-45), transparent 31rem),
+    linear-gradient(180deg, var(--tone-98-0p006-170), var(--tone-93-0p018-175));
+  color: var(--tone-20-0p035-235);
   display: grid;
   place-items: center;
   padding: clamp(16px, 3vw, 36px);
@@ -14,33 +14,33 @@
 
 .mobileShellThemeDark {
   background:
-    radial-gradient(circle at 18% 0%, oklch(34% 0.05 42), transparent 31rem),
-    linear-gradient(180deg, oklch(18% 0.018 238), oklch(13% 0.018 248));
-  color: oklch(88% 0.012 225);
+    radial-gradient(circle at 18% 0%, var(--tone-34-0p05-42), transparent 31rem),
+    linear-gradient(180deg, var(--tone-18-0p018-238), var(--tone-13-0p018-248));
+  color: var(--tone-88-0p012-225);
 }
 
 .mobileShellThemeDark .phoneFrame {
-  border-color: oklch(31% 0.018 235);
-  background: oklch(18% 0.014 235);
-  box-shadow: 0 26px 90px oklch(5% 0.018 250 / 45%);
+  border-color: var(--tone-31-0p018-235);
+  background: var(--tone-18-0p014-235);
+  box-shadow: 0 26px 90px var(--tone-5-0p018-250-a45);
 }
 
 .mobileShellThemeDark .mobileHeader,
 .mobileShellThemeDark .workspaceMenu {
-  background: oklch(20% 0.014 235);
-  color: oklch(90% 0.012 230);
+  background: var(--tone-20-0p014-235);
+  color: var(--tone-90-0p012-230);
 }
 
 .mobileShellThemeDark .bookButton,
 .mobileShellThemeDark .headerActions button,
 .mobileShellThemeDark .accountHeader h1 {
-  color: oklch(91% 0.012 230);
+  color: var(--tone-91-0p012-230);
 }
 
 .mobileShellThemeDark .mobileHeader p,
 .mobileShellThemeDark .workspaceMenuLabel,
 .mobileShellThemeDark .workspaceMenuLanguage .languageSelectorLabel {
-  color: oklch(72% 0.018 230);
+  color: var(--tone-72-0p018-230);
 }
 
 .mobileShellThemeDark .mobileContent,
@@ -48,23 +48,23 @@
 .mobileShellThemeDark .entryDetailHero,
 .mobileShellThemeDark .entryDetailCard,
 .mobileShellThemeDark .entryDetailNote {
-  background: oklch(18% 0.014 235);
+  background: var(--tone-18-0p014-235);
 }
 
 .mobileShellThemeDark .budgetCard,
 .mobileShellThemeDark .entryDetailHero,
 .mobileShellThemeDark .entryDetailCard,
 .mobileShellThemeDark .entryDetailNote {
-  border-color: oklch(31% 0.018 235);
-  box-shadow: 0 10px 28px oklch(5% 0.018 250 / 28%);
+  border-color: var(--tone-31-0p018-235);
+  box-shadow: 0 10px 28px var(--tone-5-0p018-250-a28);
 }
 
 .mobileShellThemeDark .workspaceMenuAction,
 .mobileShellThemeDark .themeChoiceGroup button,
 .mobileShellThemeDark .workspaceMenuLanguage select {
-  border-color: oklch(35% 0.018 235);
-  background: oklch(24% 0.016 235);
-  color: oklch(90% 0.012 230);
+  border-color: var(--tone-35-0p018-235);
+  background: var(--tone-24-0p016-235);
+  color: var(--tone-90-0p012-230);
 }
 
 .phoneFrame {
@@ -80,10 +80,10 @@
   height: min(920px, 100%);
   min-height: 0;
   overflow: hidden;
-  border: 1px solid oklch(84% 0.018 188);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 34px;
-  background: oklch(98.5% 0.004 180);
-  box-shadow: 0 26px 90px oklch(40% 0.08 210 / 18%);
+  background: var(--tone-98p5-0p004-180);
+  box-shadow: 0 26px 90px var(--tone-40-0p08-210-a18);
 }
 
 .mobileHeader {
@@ -93,12 +93,12 @@
   gap: 18px;
   align-items: center;
   padding: 28px 22px 16px;
-  background: oklch(99% 0.002 180);
+  background: var(--tone-99-0p002-180);
 }
 
 .mobileHeader p {
   margin-top: 4px;
-  color: oklch(63% 0.024 230);
+  color: var(--tone-63-0p024-230);
   font-size: 0.82rem;
   font-weight: 780;
 }
@@ -122,7 +122,7 @@
   max-width: 100%;
   padding: 0;
   background: transparent;
-  color: oklch(16% 0.035 235);
+  color: var(--tone-16-0p035-235);
   font-size: 1.04rem;
   font-weight: 930;
 }
@@ -159,7 +159,7 @@
   width: 30px;
   height: 30px;
   background: transparent;
-  color: oklch(13% 0.03 235);
+  color: var(--tone-13-0p03-235);
 }
 
 .workspaceMenuRoot {
@@ -176,10 +176,10 @@
   width: min(280px, calc(100vw - 32px));
   gap: 10px;
   padding: 12px;
-  border: 1px solid oklch(87% 0.012 185);
+  border: 1px solid var(--tone-87-0p012-185);
   border-radius: 10px;
-  background: oklch(100% 0 0);
-  box-shadow: 0 18px 42px oklch(48% 0.05 230 / 18%);
+  background: var(--tone-100-0-0);
+  box-shadow: 0 18px 42px var(--tone-48-0p05-230-a18);
 }
 
 .workspaceMenu button,
@@ -194,10 +194,10 @@
   height: auto;
   min-height: 42px;
   justify-content: stretch;
-  border: 1px solid oklch(88% 0.012 185);
+  border: 1px solid var(--tone-88-0p012-185);
   border-radius: 8px;
-  background: oklch(98% 0.004 180);
-  color: oklch(20% 0.035 235);
+  background: var(--tone-98-0p004-180);
+  color: var(--tone-20-0p035-235);
   text-align: left;
 }
 
@@ -221,7 +221,7 @@
 
 .workspaceMenuLabel,
 .workspaceMenuLanguage .languageSelectorLabel {
-  color: oklch(56% 0.026 230);
+  color: var(--tone-56-0p026-230);
   font-size: 0.68rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -236,10 +236,10 @@
   width: 100%;
   min-height: 40px;
   padding: 0 10px;
-  border: 1px solid oklch(88% 0.012 185);
+  border: 1px solid var(--tone-88-0p012-185);
   border-radius: 8px;
-  background: oklch(98% 0.004 180);
-  color: oklch(20% 0.035 235);
+  background: var(--tone-98-0p004-180);
+  color: var(--tone-20-0p035-235);
   font-weight: 820;
 }
 
@@ -260,21 +260,21 @@
 }
 
 .themeChoiceGroup button[aria-pressed='true'] {
-  border-color: oklch(67% 0.18 31);
-  background: oklch(96% 0.034 43);
-  color: oklch(39% 0.13 35);
+  border-color: var(--tone-67-0p18-31);
+  background: var(--tone-96-0p034-43);
+  color: var(--tone-39-0p13-35);
 }
 
 .accountHeader {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) auto;
   min-height: 72px;
-  border-bottom: 1px solid oklch(91% 0.006 185);
+  border-bottom: 1px solid var(--tone-91-0p006-185);
 }
 
 .accountHeader h1 {
   margin: 0;
-  color: oklch(20% 0.034 235);
+  color: var(--tone-20-0p034-235);
   font-size: 1.12rem;
   font-weight: 900;
   line-height: 1;
@@ -283,18 +283,34 @@
 
 .mobileNotice {
   grid-area: notice;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0 16px 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: oklch(94% 0.045 155);
-  color: oklch(33% 0.1 160);
+  background: var(--tone-94-0p045-155);
+  color: var(--tone-33-0p1-160);
   font-size: 0.84rem;
   font-weight: 840;
 }
 
+.mobileNoticeUndo {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--tone-33-0p1-160);
+  color: var(--tone-94-0p045-155);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
 .mobileNoticeError {
-  background: oklch(95% 0.035 25);
-  color: oklch(45% 0.17 28);
+  background: var(--tone-95-0p035-25);
+  color: var(--tone-45-0p17-28);
 }
 
 .mobileContent {
@@ -317,14 +333,49 @@
 }
 
 .panelIntro p {
-  color: oklch(59% 0.03 230);
+  color: var(--tone-59-0p03-230);
   font-size: 0.82rem;
   font-weight: 860;
 }
 
 .panelIntro h1 {
   margin: 0;
-  color: oklch(19% 0.038 235);
+  color: var(--tone-19-0p038-235);
   font-size: 1.6rem;
   line-height: 1.08;
+}
+
+/* shortcutList presents keyboard shortcuts inside the shell help sheet. */
+.shortcutList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.shortcutList > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shortcutList dt {
+  margin: 0;
+  min-width: 44px;
+}
+
+.shortcutList kbd {
+  display: inline-block;
+  min-width: 28px;
+  padding: 2px 8px;
+  text-align: center;
+  border: 1px solid var(--border, var(--tone-88-0p012-185));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface-sunken, var(--tone-98-0p014-110));
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.shortcutList dd {
+  margin: 0;
+  color: var(--ink, var(--tone-20-0p035-235));
 }

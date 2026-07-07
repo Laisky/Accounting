@@ -17,7 +17,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: oklch(99% 0.004 180 / 66%);
+  background: var(--tone-99-0p004-180-a66);
   backdrop-filter: blur(2px);
 }
 
@@ -30,16 +30,16 @@
   max-width: 80%;
   padding: 18px 24px;
   border-radius: 16px;
-  background: oklch(100% 0 0);
-  box-shadow: 0 18px 44px oklch(30% 0.05 235 / 22%);
-  color: oklch(28% 0.04 235);
+  background: var(--tone-100-0-0);
+  box-shadow: 0 18px 44px var(--tone-30-0p05-235-a22);
+  color: var(--tone-28-0p04-235);
   font-size: 0.9rem;
   font-weight: 840;
   text-align: center;
 }
 
 .loadingOverlayCard .spinner {
-  color: oklch(67% 0.18 31);
+  color: var(--tone-67-0p18-31);
 }
 
 @media (prefers-reduced-motion: reduce) {

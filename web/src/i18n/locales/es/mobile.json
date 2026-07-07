@@ -16,6 +16,7 @@
       "balanceAfter": "Saldo {{amount}}",
       "balanceChart": "Gráfico de saldo de cuenta",
       "chartPoint": "{{date}}: {{amount}}",
+      "chartPointChange": "{{date}}: {{amount}} ({{change}})",
       "empty": "Todavía no hay transacciones en esta cuenta.",
       "entryMeta": "{{time}} / {{member}}",
       "error": "No se pudieron cargar las transacciones de la cuenta.",
@@ -26,6 +27,7 @@
       "opening": "Saldo inicial",
       "searchAccount": "Buscar en esta cuenta",
       "searchTitle": "Buscar {{name}}",
+      "summary": "Resumen del saldo de cuenta",
       "title": "Transacciones de cuenta",
       "totalIn": "Entradas totales {{amount}}",
       "totalOut": "Salidas totales {{amount}}"
@@ -76,6 +78,7 @@
     },
     "brand": "Accounting",
     "budget": {
+      "meter": "Gastado {{spent}} de {{total}} ({{percent}} %)",
       "remaining": "Restante",
       "spent": "Gastado {{amount}}",
       "title": "Presupuesto de gasto mensual",
@@ -145,10 +148,14 @@
       "totpConfirmFailed": "TOTP setup could not be confirmed.",
       "totpDisableFailed": "TOTP could not be disabled.",
       "totpSetupFailed": "TOTP setup could not be started.",
-      "totpStatusFailed": "TOTP status could not be loaded."
+      "totpStatusFailed": "TOTP status could not be loaded.",
+      "entryRestoreFailed": "No se pudo restaurar el registro."
     },
     "home": {
-      "title": "Inicio"
+      "title": "Inicio",
+      "emptyTitle": "Aún no hay transacciones",
+      "emptyBody": "Registra tu primer movimiento para ver tus gastos y saldos aquí.",
+      "recordCta": "Registrar"
     },
     "me": {
       "accountUid": "UID de cuenta",
@@ -280,7 +287,8 @@
       "profileCurrencyUpdated": "Moneda principal actualizada.",
       "totpDisabled": "TOTP disabled.",
       "totpEnabled": "TOTP enabled.",
-      "totpSetupStarted": "TOTP setup started."
+      "totpSetupStarted": "TOTP setup started.",
+      "entryRestored": "Registro restaurado."
     },
     "transactions": {
       "accountFallback": "Cuenta",
@@ -305,7 +313,16 @@
       "tags": "Tags",
       "tagsFor": "Tags for {{title}}",
       "timeFor": "Time for {{title}}",
-      "title": "Transacciones"
+      "title": "Transacciones",
+      "deleteConfirmTitle": "¿Eliminar este registro?",
+      "deleteConfirmBody": "«{{title}}» se eliminará. Puedes deshacer durante unos segundos."
+    },
+    "shortcuts": {
+      "title": "Atajos de teclado",
+      "newEntry": "Nuevo registro",
+      "search": "Buscar transacciones",
+      "help": "Mostrar esta ayuda",
+      "close": "Cerrar diálogos"
     }
   }
 }

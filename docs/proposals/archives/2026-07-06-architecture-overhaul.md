@@ -1,3 +1,78 @@
+# Architecture Overhaul — Implementation Result (archived)
+
+- Status: ARCHIVED / implemented. Archived 2026-07-07.
+- Outcome: Phases 0–4 and 6 complete; Phase 5 core delivered; Phase 7 partial. All hard
+  quantitative exit criteria met. Full local acceptance green: `make test` (backend + CLI
+  `-race`, 84 web unit tests), `make e2e` (all specs incl. axe a11y). `make lint` is green
+  except `check:api`, whose `git diff --exit-code` flags the regenerated OpenAPI types as
+  pending until they are committed alongside the spec (deterministic — regeneration adds only
+  the `ClientTelemetry` schema); it passes in CI once committed.
+
+## Quantitative exit criteria (section 10)
+
+| Metric | Target | Result |
+| --- | --- | --- |
+| `MobileWorkspace.tsx` line count | < 300 | deleted; shell is `features/shell/MobileShell.tsx` (222 lines) |
+| Widest props interface | ≤ 12 | 12 (`MobileWorkspaceHeader`, `MeView`) |
+| Direct frontend `fetch(` calls | ≤ 2 | 2 (`lib/apiClient.ts`, `lib/telemetry.ts`) |
+| Hand-written API response DTOs | 0 | 0 (generated from `docs/api/openapi.yaml`) |
+| Manual routing path parsers | 0 | 0 (`useShellChrome` derives chrome from `useMatch`) |
+| Server data in feature `useState` | 0 | 0 (Query hooks + contexts own server state) |
+| Feature CSS `oklch(` literals | 0 outside tokens | 0 (312 primitive tokens in `styles/palette.css`) |
+| ErrorBoundary layers | ≥ 2 | 2 (`main.tsx` app + `MobileShell` route) |
+| GitHub Actions workflows | ≥ 3 | 4 (go, web, e2e, contract) |
+| Frontend client telemetry | enabled + sanitized | error + Web Vitals, strict server allowlist |
+| Dead-code gate | passes | `knip` green |
+| Relative `../../` source imports | 0 | 0 |
+| Authenticated shell bundle | ≥ 25% lower | 330 kB vs 461 kB pre-split (~28% lower) |
+| Axe serious+ findings | 0 | 0 (5 views × light/dark in `e2e/a11y.spec.ts`) |
+| Web unit coverage | toward 80/70 | 78.9% stmts / 70.3% branches (CI threshold 74/64) |
+
+## Phase status
+
+- Phase 0 (engineering floor / CI) — complete (pre-existing).
+- Phase 1 (OpenAPI contract + generated types + apiClient + contract tests) — complete
+  (pre-existing); extended with the telemetry schema.
+- Phase 2 (declarative routing) — complete; router-derived chrome replaced the last manual
+  path parsing.
+- Phase 3 (state decomposition) — complete. Per-domain Query hooks (books/accounts/entries/
+  categories/members/user) with invalidating mutations; Session/Book/Notice/Theme contexts;
+  `MobileShell` layout route + `<Outlet/>`; every view fetches through hooks; monolith and its
+  48-prop content dispatcher deleted; one shared `entries.all` query removed the duplicate
+  full-ledger loads.
+- Phase 4 (design system) — foundation complete. `styles/palette.css` (312 value-exact
+  primitive tokens, generated + `check:tokens` gate), semantic + dark tokens in `tokens.css`,
+  `data-theme` mechanism, `@layer` order, six tested UI primitives (`components/ui`), stylelint
+  color-literal ban.
+- Phase 5 (launch UX floor) — core delivered: destructive-action confirmation + 10s undo,
+  keyboard bookkeeping (`n` / `/` / `?` / Esc) + shortcut sheet, PWA manifest + static-only
+  service worker, Home empty-state CTA, WCAG axe scans green. Desktop density was already done.
+- Phase 6 (observability) — complete: X-Request-ID middleware, `POST /api/telemetry/client`
+  with a strict allowlist (unknown-field rejection proves no sensitive data is accepted) +
+  OpenAPI entry + tests, two `AppErrorBoundary` layers, `lib/telemetry.ts` (window error +
+  unhandledrejection + sampled Web Vitals), backend OTel `MeterProvider` with HTTP RED and
+  domain counters, alert-drill test.
+- Phase 7 (test architecture) — partial: `app.test.tsx` split retained (< 400 lines each),
+  coverage thresholds enforced, and `e2e/a11y.spec.ts` (axe, light/dark) added with a shared
+  `e2e/helpers.ts`.
+
+## Accepted deviations (remaining work)
+
+- Phase 4: full `@layer` migration of feature/base CSS, adoption of the primitives into every
+  legacy form/dialog, and the `acct-`/`rec-`/… class-prefix rename are incremental. Legacy
+  feature CSS still themes via the `.mobileShellThemeDark` shell class; `data-theme` is the
+  canonical signal for the token layer. These overlap the separate
+  `docs/proposals/2026-07-06-ui-ux-overhaul.md` (W1) and are best finished there.
+- Phase 5: first-run onboarding flow (P5.2) and empty-state CTAs beyond Home (P5.1) are not yet
+  built.
+- Phase 7: MSW v2 handlers (P7.1/P7.2 — the hand-built fetch harness still backs the app tests),
+  the full domain split of `e2e/accounting.spec.ts` (P7.4, only a11y extracted), and Playwright
+  visual-regression baselines (P7.6, must be generated in CI's pinned browser image) remain.
+- Lighthouse performance/PWA scoring is not measured locally (requires a running production
+  build + CI harness).
+
+---
+
 # Architecture Overhaul Implementation Handbook
 
 - Status: Delivery handbook for implementation planning

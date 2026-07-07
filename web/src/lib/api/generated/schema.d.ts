@@ -1700,6 +1700,45 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/telemetry/client': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ingest sanitized client telemetry (errors and Web Vitals). */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['ClientTelemetry'];
+        };
+      };
+      responses: {
+        /** @description Telemetry accepted. */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        default: components['responses']['Error'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1716,6 +1755,23 @@ export interface components {
     };
     StatusResponse: {
       status: string;
+    };
+    ClientTelemetry: {
+      /** @enum {string} */
+      kind: 'error' | 'vitals';
+      eventId?: string;
+      requestId?: string;
+      routePattern?: string;
+      componentStackHash?: string;
+      errorName?: string;
+      errorMessageHash?: string;
+      metricName?: string;
+      metricValue?: number;
+      rating?: string;
+      navigationType?: string;
+      userAgentFamily?: string;
+      /** Format: int64 */
+      timestamp?: number;
     };
     AuthUser: {
       id: string;

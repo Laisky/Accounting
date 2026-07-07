@@ -610,3 +610,21 @@ ImportApplyResponse:
         properties:
           rowNumber: { type: integer }
           reason: { type: string }
+
+ClientTelemetry:
+  type: object
+  required: [kind]
+  properties:
+    kind: { type: string, enum: [error, vitals] }
+    eventId: { type: string }
+    requestId: { type: string }
+    routePattern: { type: string }
+    componentStackHash: { type: string }
+    errorName: { type: string }
+    errorMessageHash: { type: string }
+    metricName: { type: string }
+    metricValue: { type: number }
+    rating: { type: string }
+    navigationType: { type: string }
+    userAgentFamily: { type: string }
+    timestamp: { type: integer, format: int64 }

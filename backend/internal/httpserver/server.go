@@ -3,7 +3,9 @@ package httpserver
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -43,6 +45,7 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	}
 	middlewares := []gin.HandlerFunc{
 		gin.Recovery(),
+		requestIDMiddleware,
 	}
 	if cfg.Telemetry.Enabled {
 		middlewares = append(middlewares, otelgin.Middleware(cfg.Telemetry.ServiceName))
@@ -279,6 +282,43 @@ func newAuthService(cfg config.Config, store auth.Store) (*auth.Service, error) 
 	}
 
 	return service, nil
+}
+
+// requestIDMiddleware ensures every response carries an X-Request-ID. It reuses a safe
+// inbound id (so a proxy/edge trace id survives) or generates a fresh one, and stashes it
+// on the context for logging and telemetry correlation.
+func requestIDMiddleware(c *gin.Context) {
+	id := strings.TrimSpace(c.GetHeader("X-Request-ID"))
+	if !isValidRequestID(id) {
+		id = newRequestID()
+	}
+	c.Writer.Header().Set("X-Request-ID", id)
+	c.Set("requestID", id)
+	c.Next()
+}
+
+// newRequestID returns a random 128-bit hex request id.
+func newRequestID() string {
+	var buf [16]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return "req-unknown"
+	}
+	return hex.EncodeToString(buf[:])
+}
+
+// isValidRequestID accepts only short, opaque, header-safe ids.
+func isValidRequestID(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	for _, r := range id {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // securityHeaders adds baseline browser security headers to each response.

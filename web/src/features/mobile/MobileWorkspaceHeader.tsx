@@ -14,19 +14,17 @@ import {
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { useBook } from '@/contexts/BookContext';
+import { useThemeContext } from '@/contexts/ThemeContext';
+import { useShellChrome } from '@/features/shell/useShellChrome';
 import { type BookListItem } from '@/lib/api/ledger';
-import { formatShortDate, type MobileTab, type ThemeMode } from './mobile-workspace-utils';
+import { formatShortDate, type ThemeMode } from './mobile-workspace-utils';
 
 type MobileWorkspaceHeaderProps = {
-  accountDetailId: string | null;
   accountName?: string;
-  activeTab: MobileTab;
-  books: BookListItem[];
   canEditContext: boolean;
   editTargetLabel: string;
-  entryDetailId: string | null;
   entryTitle: string;
-  isSearchOpen: boolean;
   isWorkspaceMenuOpen: boolean;
   onBackAccount: () => void;
   onBackEntry: () => void;
@@ -34,24 +32,15 @@ type MobileWorkspaceHeaderProps = {
   onOpenAccounts: () => void;
   onOpenSearch: () => void;
   onPrepareAccount: () => void;
-  onSelectBook: (bookId: string) => void;
-  onThemeModeChange: (mode: ThemeMode) => void;
   onToggleWorkspaceMenu: () => void;
-  selectedBook?: BookListItem;
-  themeMode: ThemeMode;
 };
 
-// MobileWorkspaceHeader receives shell route state and returns the contextual top bar.
+// MobileWorkspaceHeader reads route chrome, book, and theme from context and returns the contextual top bar.
 export function MobileWorkspaceHeader({
-  accountDetailId,
   accountName,
-  activeTab,
-  books,
   canEditContext,
   editTargetLabel,
-  entryDetailId,
   entryTitle,
-  isSearchOpen,
   isWorkspaceMenuOpen,
   onBackAccount,
   onBackEntry,
@@ -59,20 +48,19 @@ export function MobileWorkspaceHeader({
   onOpenAccounts,
   onOpenSearch,
   onPrepareAccount,
-  onSelectBook,
-  onThemeModeChange,
   onToggleWorkspaceMenu,
-  selectedBook,
-  themeMode,
 }: MobileWorkspaceHeaderProps) {
   const { t } = useTranslation();
+  const { accountDetailId, activeTab, entryDetailId, isSearchOpen } = useShellChrome();
+  const { books, selectedBook, setSelectedBookId } = useBook();
+  const { setThemeMode, themeMode } = useThemeContext();
   const workspaceMenu = (
     <WorkspaceMenu
       canEditContext={canEditContext}
       editTargetLabel={editTargetLabel}
       isOpen={isWorkspaceMenuOpen}
       onEditContext={onEditContext}
-      onThemeModeChange={onThemeModeChange}
+      onThemeModeChange={setThemeMode}
       onToggle={onToggleWorkspaceMenu}
       themeMode={themeMode}
     />
@@ -142,7 +130,7 @@ export function MobileWorkspaceHeader({
   return (
     <header className="mobileHeader">
       <div>
-        <BookSwitcher books={books} onSelectBook={onSelectBook} selectedBook={selectedBook} />
+        <BookSwitcher books={books} onSelectBook={setSelectedBookId} selectedBook={selectedBook} />
         <p>{formatShortDate(new Date())}</p>
       </div>
       <div className="headerActions" aria-label={t('mobile.a11y.workspaceTools')}>

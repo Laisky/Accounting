@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { lazy, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { AuthWorkspace } from './features/auth/AuthWorkspace';
 import { LandingPage } from './features/landing/LandingPage';
-import { type MobileWorkspaceRouteState } from './features/mobile/MobileWorkspace';
-import { isReportTab, reportTabPath } from './features/reports/reportWorkspaceModel';
-import { MobileShellLayout } from './features/shell/MobileShellLayout';
+import { reportTabPath } from './features/reports/reportWorkspaceModel';
+import { MobileShell } from './features/shell/MobileShell';
 import { RequireAuth } from './features/shell/RequireAuth';
 import { useRuntimeConfigQuery } from './hooks/useRuntimeConfig';
 import { useSessionQuery } from './hooks/useSession';
@@ -15,6 +14,19 @@ import { emptyRuntimeConfig, type RuntimeConfig } from './lib/api/runtimeConfig'
 // authPaths enumerates every unauthenticated screen. AuthWorkspace derives its mode
 // and step from the current one; anything else lands the visitor back on /login.
 const authPaths = ['/login', '/login/totp', '/register', '/register/verify', '/recover', '/recover/confirm'];
+
+// Route bodies are code-split so the authenticated shell bundle stays small.
+const AccountsView = lazy(async () => ({ default: (await import('./features/mobile/AccountsView')).AccountsView }));
+const RecordEntryView = lazy(async () => ({
+  default: (await import('./features/mobile/RecordEntryView')).RecordEntryView,
+}));
+const HomeRoute = lazy(() => import('./features/shell/routes/HomeRoute'));
+const AccountTransactionsRoute = lazy(() => import('./features/shell/routes/AccountTransactionsRoute'));
+const EntryDetailRoute = lazy(() => import('./features/shell/routes/EntryDetailRoute'));
+const SearchRoute = lazy(() => import('./features/shell/routes/SearchRoute'));
+const MeRoute = lazy(() => import('./features/shell/routes/MeRoute'));
+const ImportsRoute = lazy(() => import('./features/shell/routes/ImportsRoute'));
+const ReportsRoute = lazy(() => import('./features/shell/routes/ReportsRoute'));
 
 // App resolves the session then gates between the auth and authenticated route trees.
 export function App() {
@@ -55,8 +67,6 @@ export function App() {
     );
   }
 
-  const workspaceProps = { actor: activeActor, runtimeConfig, onLogout: handleLogout, skipAuthReturn };
-
   return (
     <Routes>
       <Route
@@ -76,18 +86,29 @@ export function App() {
           }
         />
       ))}
-      <Route path="/home" element={<WorkspaceRoute {...workspaceProps} activeTab="home" />} />
-      <Route path="/accounts" element={<WorkspaceRoute {...workspaceProps} activeTab="accounts" />} />
-      <Route path="/accounts/:accountId/transactions" element={<AccountTransactionsRoute {...workspaceProps} />} />
-      <Route path="/record" element={<WorkspaceRoute {...workspaceProps} activeTab="record" />} />
-      <Route path="/reports" element={<Navigate to="/reports/category" replace />} />
-      <Route path="/reports/:dimension" element={<ReportWorkspaceRoute {...workspaceProps} />} />
-      <Route path="/imports" element={<WorkspaceRoute {...workspaceProps} activeTab="imports" />} />
-      <Route path="/me" element={<WorkspaceRoute {...workspaceProps} activeTab="me" />} />
-      <Route path="/me/profile" element={<WorkspaceRoute {...workspaceProps} activeTab="me" meSection="profile" />} />
-      <Route path="/me/security" element={<WorkspaceRoute {...workspaceProps} activeTab="me" meSection="security" />} />
-      <Route path="/search" element={<SearchWorkspaceRoute {...workspaceProps} />} />
-      <Route path="/entries/:entryId" element={<EntryDetailRoute {...workspaceProps} />} />
+      <Route
+        element={
+          <ProtectedShell
+            actor={activeActor}
+            onLogout={handleLogout}
+            runtimeConfig={runtimeConfig}
+            skipAuthReturn={skipAuthReturn}
+          />
+        }
+      >
+        <Route path="/home" element={<HomeRoute />} />
+        <Route path="/accounts" element={<AccountsView />} />
+        <Route path="/accounts/:accountId/transactions" element={<AccountTransactionsRoute />} />
+        <Route path="/record" element={<RecordEntryView />} />
+        <Route path="/reports" element={<Navigate to={reportTabPath('category')} replace />} />
+        <Route path="/reports/:dimension" element={<ReportsRoute />} />
+        <Route path="/imports" element={<ImportsRoute />} />
+        <Route path="/me" element={<MeRoute />} />
+        <Route path="/me/profile" element={<MeRoute />} />
+        <Route path="/me/security" element={<MeRoute />} />
+        <Route path="/search" element={<SearchRoute />} />
+        <Route path="/entries/:entryId" element={<EntryDetailRoute />} />
+      </Route>
       <Route
         path="*"
         element={
@@ -104,123 +125,18 @@ export function App() {
   );
 }
 
-type WorkspaceRouteProps = {
+type ProtectedShellProps = {
   actor: AuthActor | null;
-  runtimeConfig: RuntimeConfig | null;
   onLogout: () => Promise<void>;
+  runtimeConfig: RuntimeConfig | null;
   skipAuthReturn: boolean;
 };
 
-type StaticWorkspaceRouteProps = WorkspaceRouteProps & {
-  activeTab: MobileWorkspaceRouteState['activeTab'];
-  meSection?: MobileWorkspaceRouteState['meSection'];
-};
-
-function WorkspaceRoute({ activeTab, meSection = 'index', ...props }: StaticWorkspaceRouteProps) {
-  return (
-    <ProtectedMobileShell
-      {...props}
-      routeState={{
-        accountDetailId: null,
-        activeTab,
-        entryDetailId: null,
-        meSection,
-        reportTab: 'category',
-        searchQuery: null,
-      }}
-    />
-  );
-}
-
-function AccountTransactionsRoute(props: WorkspaceRouteProps) {
-  const { accountId } = useParams();
-
-  return (
-    <ProtectedMobileShell
-      {...props}
-      routeState={{
-        accountDetailId: accountId ?? null,
-        activeTab: 'accounts',
-        entryDetailId: null,
-        meSection: 'index',
-        reportTab: 'category',
-        searchQuery: null,
-      }}
-    />
-  );
-}
-
-function EntryDetailRoute(props: WorkspaceRouteProps) {
-  const { entryId } = useParams();
-
-  return (
-    <ProtectedMobileShell
-      {...props}
-      routeState={{
-        accountDetailId: null,
-        activeTab: 'home',
-        entryDetailId: entryId ?? null,
-        meSection: 'index',
-        reportTab: 'category',
-        searchQuery: null,
-      }}
-    />
-  );
-}
-
-function ReportWorkspaceRoute(props: WorkspaceRouteProps) {
-  const { dimension } = useParams();
-  if (!isReportTab(dimension)) {
-    return <Navigate to={reportTabPath('category')} replace />;
-  }
-
-  return (
-    <ProtectedMobileShell
-      {...props}
-      routeState={{
-        accountDetailId: null,
-        activeTab: 'reports',
-        entryDetailId: null,
-        meSection: 'index',
-        reportTab: dimension,
-        searchQuery: null,
-      }}
-    />
-  );
-}
-
-function SearchWorkspaceRoute(props: WorkspaceRouteProps) {
-  const [searchParams] = useSearchParams();
-
-  return (
-    <ProtectedMobileShell
-      {...props}
-      routeState={{
-        accountDetailId: null,
-        activeTab: 'home',
-        entryDetailId: null,
-        meSection: 'index',
-        reportTab: 'category',
-        searchQuery: searchParams.get('query') ?? '',
-      }}
-    />
-  );
-}
-
-function ProtectedMobileShell({
-  actor,
-  onLogout,
-  routeState,
-  runtimeConfig,
-  skipAuthReturn,
-}: WorkspaceRouteProps & {
-  routeState: MobileWorkspaceRouteState;
-}) {
+// ProtectedShell gates the authenticated layout route and mounts the mobile workspace shell.
+function ProtectedShell({ actor, onLogout, runtimeConfig, skipAuthReturn }: ProtectedShellProps) {
   return (
     <RequireAuth actor={actor} skipAuthReturn={skipAuthReturn}>
-      {actor ? (
-        <MobileShellLayout actor={actor} onLogout={onLogout} routeState={routeState} runtimeConfig={runtimeConfig} />
-      ) : null}
+      {actor ? <MobileShell actor={actor} onLogout={onLogout} runtimeConfig={runtimeConfig} /> : null}
     </RequireAuth>
   );
 }

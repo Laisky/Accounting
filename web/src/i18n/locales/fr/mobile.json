@@ -16,6 +16,7 @@
       "balanceAfter": "Solde {{amount}}",
       "balanceChart": "Graphique du solde du compte",
       "chartPoint": "{{date}} : {{amount}}",
+      "chartPointChange": "{{date}} : {{amount}} ({{change}})",
       "empty": "Aucune transaction dans ce compte.",
       "entryMeta": "{{time}} / {{member}}",
       "error": "Impossible de charger les transactions du compte.",
@@ -26,6 +27,7 @@
       "opening": "Solde d'ouverture",
       "searchAccount": "Rechercher dans ce compte",
       "searchTitle": "Rechercher {{name}}",
+      "summary": "Résumé du solde du compte",
       "title": "Transactions du compte",
       "totalIn": "Total entrées {{amount}}",
       "totalOut": "Total sorties {{amount}}"
@@ -76,6 +78,7 @@
     },
     "brand": "Accounting",
     "budget": {
+      "meter": "Dépensé {{spent}} sur {{total}} ({{percent}} %)",
       "remaining": "Restant",
       "spent": "Dépensé {{amount}}",
       "title": "Budget de dépenses mensuel",
@@ -145,10 +148,14 @@
       "totpConfirmFailed": "TOTP setup could not be confirmed.",
       "totpDisableFailed": "TOTP could not be disabled.",
       "totpSetupFailed": "TOTP setup could not be started.",
-      "totpStatusFailed": "TOTP status could not be loaded."
+      "totpStatusFailed": "TOTP status could not be loaded.",
+      "entryRestoreFailed": "Impossible de restaurer l'écriture."
     },
     "home": {
-      "title": "Accueil"
+      "title": "Accueil",
+      "emptyTitle": "Aucune transaction",
+      "emptyBody": "Enregistrez votre première écriture pour voir vos dépenses et soldes ici.",
+      "recordCta": "Enregistrer"
     },
     "me": {
       "accountUid": "UID du compte",
@@ -280,7 +287,8 @@
       "profileCurrencyUpdated": "Devise principale mise à jour.",
       "totpDisabled": "TOTP disabled.",
       "totpEnabled": "TOTP enabled.",
-      "totpSetupStarted": "TOTP setup started."
+      "totpSetupStarted": "TOTP setup started.",
+      "entryRestored": "Écriture restaurée."
     },
     "transactions": {
       "accountFallback": "Compte",
@@ -305,7 +313,16 @@
       "tags": "Tags",
       "tagsFor": "Tags for {{title}}",
       "timeFor": "Time for {{title}}",
-      "title": "Transactions"
+      "title": "Transactions",
+      "deleteConfirmTitle": "Supprimer cette écriture ?",
+      "deleteConfirmBody": "« {{title}} » sera supprimé. Vous pouvez annuler pendant quelques secondes."
+    },
+    "shortcuts": {
+      "title": "Raccourcis clavier",
+      "newEntry": "Nouvelle écriture",
+      "search": "Rechercher des transactions",
+      "help": "Afficher l'aide",
+      "close": "Fermer les dialogues"
     }
   }
 }

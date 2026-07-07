@@ -30,6 +30,8 @@
       "accountReady": "账户已就绪。",
       "entryPosted": "记录已提交。"
     },
-    "total": "合计"
+    "total": "合计",
+    "undo": "撤销",
+    "cancel": "取消"
   }
 }

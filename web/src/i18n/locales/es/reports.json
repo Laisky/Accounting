@@ -75,7 +75,9 @@
       "filteredTotal": "total filtrado",
       "heading": "Tendencia de ingresos, gastos y saldo",
       "income": "Ingreso",
+      "point": "{{period}} — Ingreso {{income}}, Gasto {{expense}}, Saldo {{balance}}",
       "range": "Rango de {{low}} a {{high}}",
+      "scrubber": "Explorar la tendencia de flujo por periodo",
       "summary": "Resumen de tendencia"
     }
   }
