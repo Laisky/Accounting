@@ -1,12 +1,12 @@
 .recordEntryPanel {
-  --record-bg: oklch(98.5% 0.004 180);
-  --record-surface: oklch(100% 0 0);
-  --record-ink: oklch(20% 0.035 235);
-  --record-muted: oklch(58% 0.025 230);
-  --record-border: oklch(90% 0.01 190);
-  --record-accent: oklch(75% 0.14 178);
-  --record-keypad: oklch(34% 0.03 258);
-  --record-keypad-line: oklch(42% 0.027 260);
+  --record-bg: var(--tone-98p5-0p004-180);
+  --record-surface: var(--tone-100-0-0);
+  --record-ink: var(--tone-20-0p035-235);
+  --record-muted: var(--tone-58-0p025-230);
+  --record-border: var(--tone-90-0p01-190);
+  --record-accent: var(--tone-75-0p14-178);
+  --record-keypad: var(--tone-34-0p03-258);
+  --record-keypad-line: var(--tone-42-0p027-260);
 
   height: 100%;
   min-height: 0;
@@ -28,8 +28,8 @@
 .recordHero {
   min-height: 58px;
   background:
-    linear-gradient(180deg, oklch(20% 0.05 240 / 20%), oklch(20% 0.04 240 / 55%)),
-    linear-gradient(135deg, oklch(63% 0.11 37), oklch(43% 0.08 215) 62%, oklch(78% 0.13 80));
+    linear-gradient(180deg, var(--tone-20-0p05-240-a20), var(--tone-20-0p04-240-a55)),
+    linear-gradient(135deg, var(--tone-63-0p11-37), var(--tone-43-0p08-215) 62%, var(--tone-78-0p13-80));
 }
 
 .recordTypeTabs {
@@ -39,7 +39,7 @@
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   margin-top: -44px;
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
 }
 
 .recordTypeTabs::-webkit-scrollbar {
@@ -53,7 +53,7 @@
   min-height: 44px;
   padding: 0 12px;
   background: transparent;
-  color: oklch(100% 0 0 / 76%);
+  color: var(--tone-100-0-0-a76);
   cursor: pointer;
   font-size: 0.92rem;
   font-weight: 820;
@@ -67,12 +67,12 @@
 .recordFieldChips input:focus-visible,
 .calculatorDisplay button:focus-visible,
 .calculatorGrid button:focus-visible {
-  outline: 2px solid oklch(86% 0.11 178);
+  outline: 2px solid var(--tone-86-0p11-178);
   outline-offset: -2px;
 }
 
 .recordTypeTabs .recordTypeActive {
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
 }
 
 .recordTypeActive::after {
@@ -82,7 +82,7 @@
   left: 34%;
   height: 3px;
   border-radius: 999px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
   content: '';
 }
 
@@ -96,7 +96,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   background: var(--record-surface);
-  box-shadow: 0 16px 34px oklch(48% 0.05 230 / 14%);
+  box-shadow: 0 16px 34px var(--tone-48-0p05-230-a14);
 }
 
 .selectedCategoryCard span,
@@ -111,7 +111,7 @@
   width: 36px;
   height: 36px;
   background: var(--record-accent);
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
 }
 
 .selectedCategoryCard strong {
@@ -144,7 +144,7 @@
   min-width: 0;
   padding: 2px;
   background: transparent;
-  color: oklch(55% 0.025 235);
+  color: var(--tone-55-0p025-235);
   cursor: pointer;
   font-weight: 820;
 }
@@ -156,8 +156,8 @@
 .categoryShortcutGrid button span {
   width: 32px;
   height: 32px;
-  background: oklch(92% 0.006 240);
-  color: oklch(65% 0.02 235);
+  background: var(--tone-92-0p006-240);
+  color: var(--tone-65-0p02-235);
 }
 
 .categoryShortcutGrid button b {
@@ -169,17 +169,17 @@
 }
 
 .categoryShortcutGrid .categoryShortcutActive {
-  color: oklch(30% 0.07 180);
+  color: var(--tone-30-0p07-180);
 }
 
 .categoryShortcutGrid .categoryShortcutActive span {
   background: var(--record-accent);
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
 }
 
 .categoryShortcutGrid .categoryAllShortcut span {
-  background: oklch(88% 0.01 235);
-  color: oklch(45% 0.025 235);
+  background: var(--tone-88-0p01-235);
+  color: var(--tone-45-0p025-235);
 }
 
 .noteLine {
@@ -200,7 +200,7 @@
 }
 
 .noteLine input::placeholder {
-  color: oklch(64% 0.024 235);
+  color: var(--tone-64-0p024-235);
 }
 
 .recordFieldChips {
@@ -228,9 +228,9 @@
   padding: 6px 8px;
   overflow: hidden;
   border-radius: 8px;
-  border: 1px solid oklch(94% 0.006 185);
+  border: 1px solid var(--tone-94-0p006-185);
   background: var(--record-surface);
-  box-shadow: 0 7px 18px oklch(55% 0.035 225 / 10%);
+  box-shadow: 0 7px 18px var(--tone-55-0p035-225-a10);
 }
 
 .recordFieldChips span {
@@ -262,7 +262,7 @@
   margin-top: auto;
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--record-keypad);
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
 }
 
 .calculatorDisplay {
@@ -276,7 +276,7 @@
 
 .calculatorDisplay output {
   min-width: 0;
-  color: oklch(86% 0.018 260);
+  color: var(--tone-86-0p018-260);
   font-size: 0.9rem;
   font-weight: 820;
   text-align: right;
@@ -287,8 +287,8 @@
   min-height: 28px;
   padding: 0 12px;
   border-radius: 999px;
-  background: oklch(100% 0 0 / 12%);
-  color: oklch(100% 0 0);
+  background: var(--tone-100-0-0-a12);
+  color: var(--tone-100-0-0);
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 860;
@@ -311,7 +311,7 @@
   border-top: 1px solid var(--record-keypad-line);
   border-left: 1px solid var(--record-keypad-line);
   background: transparent;
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
   cursor: pointer;
   font-size: 1.12rem;
   font-weight: 820;
@@ -322,12 +322,12 @@
 }
 
 .calculatorGrid .calculatorToggleKey {
-  color: oklch(82% 0.14 178);
+  color: var(--tone-82-0p14-178);
 }
 
 .calculatorGrid .saveKey {
   grid-column: span 2;
-  background: oklch(70% 0.19 32);
+  background: var(--tone-70-0p19-32);
   font-size: 1.02rem;
 }
 
@@ -345,7 +345,7 @@
 
 .sectionTitle h2 {
   margin: 0;
-  color: oklch(21% 0.034 235);
+  color: var(--tone-21-0p034-235);
   font-size: 1.04rem;
   font-weight: 900;
 }
@@ -363,8 +363,8 @@
   gap: 12px;
   padding: 12px;
   border-radius: 12px;
-  background: oklch(100% 0 0);
-  box-shadow: 0 10px 24px oklch(60% 0.03 220 / 10%);
+  background: var(--tone-100-0-0);
+  box-shadow: 0 10px 24px var(--tone-60-0p03-220-a10);
 }
 
 .recordRecentSummary {
@@ -381,19 +381,19 @@
 }
 
 .recordRecentSummary strong {
-  color: oklch(23% 0.034 235);
+  color: var(--tone-23-0p034-235);
   font-size: 1rem;
   overflow-wrap: anywhere;
 }
 
 .recordRecentSummary small {
-  color: oklch(61% 0.026 230);
+  color: var(--tone-61-0p026-230);
   font-size: 0.78rem;
   font-weight: 760;
 }
 
 .recordRecentSummary b {
-  color: oklch(20% 0.035 235);
+  color: var(--tone-20-0p035-235);
   font-size: 0.98rem;
   font-weight: 880;
   white-space: nowrap;
@@ -411,7 +411,7 @@
 }
 
 .recordRecentActions span {
-  color: oklch(58% 0.025 230);
+  color: var(--tone-58-0p025-230);
   font-size: 0.72rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -420,10 +420,10 @@
 .recordRecentActions input {
   min-height: 38px;
   padding: 0 10px;
-  border: 1px solid oklch(86% 0.015 185);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 8px;
-  background: oklch(100% 0 0);
-  color: oklch(20% 0.035 235);
+  background: var(--tone-100-0-0);
+  color: var(--tone-20-0p035-235);
   font-weight: 760;
 }
 
@@ -479,13 +479,13 @@
 }
 
 .mobileShellThemeDark .recordEntryPanel {
-  --record-bg: oklch(18% 0.014 235);
-  --record-surface: oklch(22% 0.015 235);
-  --record-ink: oklch(91% 0.012 230);
-  --record-muted: oklch(72% 0.018 230);
-  --record-border: oklch(33% 0.018 235);
-  --record-keypad: oklch(24% 0.022 258);
-  --record-keypad-line: oklch(32% 0.024 258);
+  --record-bg: var(--tone-18-0p014-235);
+  --record-surface: var(--tone-22-0p015-235);
+  --record-ink: var(--tone-91-0p012-230);
+  --record-muted: var(--tone-72-0p018-230);
+  --record-border: var(--tone-33-0p018-235);
+  --record-keypad: var(--tone-24-0p022-258);
+  --record-keypad-line: var(--tone-32-0p024-258);
 }
 
 .mobileShellThemeDark .selectedCategoryCard,
@@ -497,18 +497,18 @@
 }
 
 .mobileShellThemeDark .categoryShortcutGrid button span {
-  background: oklch(30% 0.018 235);
-  color: oklch(78% 0.018 230);
+  background: var(--tone-30-0p018-235);
+  color: var(--tone-78-0p018-230);
 }
 
 .mobileShellThemeDark .categoryShortcutGrid .categoryShortcutActive span {
   background: var(--record-accent);
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
 }
 
 .mobileShellThemeDark .categoryShortcutGrid .categoryAllShortcut span {
-  background: oklch(31% 0.018 235);
-  color: oklch(82% 0.018 230);
+  background: var(--tone-31-0p018-235);
+  color: var(--tone-82-0p018-230);
 }
 
 /*
@@ -539,8 +539,8 @@
     flex-direction: column;
     overflow: hidden;
     border-radius: 16px;
-    background: oklch(98.5% 0.004 180);
-    box-shadow: 0 12px 30px oklch(60% 0.03 220 / 12%);
+    background: var(--tone-98p5-0p004-180);
+    box-shadow: 0 12px 30px var(--tone-60-0p03-220-a12);
   }
 
   .recordAside {
@@ -591,7 +591,7 @@
   /* Round the aside cards so they read as panels, not full-bleed phone sections. */
   .categoryManager {
     border-radius: 16px;
-    box-shadow: 0 10px 24px oklch(60% 0.03 220 / 10%);
+    box-shadow: 0 10px 24px var(--tone-60-0p03-220-a10);
   }
 
   /* Align money figures by digit width. */

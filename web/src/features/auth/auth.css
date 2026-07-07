@@ -21,9 +21,9 @@
   display: grid;
   gap: 18px;
   padding: 24px;
-  border: 1px solid oklch(80% 0.045 104);
+  border: 1px solid var(--tone-80-0p045-104);
   border-radius: 8px;
-  background: oklch(98% 0.014 110);
+  background: var(--tone-98-0p014-110);
 }
 
 .authTabs {
@@ -31,9 +31,9 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   padding: 4px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(94% 0.018 112);
+  background: var(--tone-94-0p018-112);
 }
 
 .authTabs button,
@@ -45,7 +45,7 @@
   min-height: 40px;
   border-radius: 6px;
   background: transparent;
-  color: oklch(35% 0.04 238);
+  color: var(--tone-35-0p04-238);
   cursor: pointer;
   font-weight: 850;
   text-decoration: none;
@@ -57,8 +57,8 @@
 }
 
 .authTabs .authTabActive {
-  background: oklch(99% 0.01 108);
-  color: oklch(24% 0.095 164);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-24-0p095-164);
 }
 
 .authForm {
@@ -72,7 +72,7 @@
 }
 
 .authForm label span {
-  color: oklch(42% 0.047 238);
+  color: var(--tone-42-0p047-238);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -83,15 +83,15 @@
   width: 100%;
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid oklch(76% 0.055 104);
+  border: 1px solid var(--tone-76-0p055-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
-  color: oklch(20% 0.04 242);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-20-0p04-242);
 }
 
 .authForm input:focus {
-  border-color: oklch(57% 0.11 164);
-  outline: 3px solid oklch(88% 0.055 164);
+  border-color: var(--tone-57-0p11-164);
+  outline: 3px solid var(--tone-88-0p055-164);
 }
 
 .turnstileBox {
@@ -99,14 +99,14 @@
   place-items: center;
   min-height: 70px;
   padding: 8px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
+  background: var(--tone-99-0p01-108);
 }
 
 .secondaryAuthButton {
-  border: 1px solid oklch(76% 0.055 104);
-  background: oklch(99% 0.01 108);
+  border: 1px solid var(--tone-76-0p055-104);
+  background: var(--tone-99-0p01-108);
 }
 
 .secondaryAuthButton[aria-disabled='true'] {

@@ -27,10 +27,10 @@
 .reportControls select {
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid oklch(76% 0.055 104);
+  border: 1px solid var(--tone-76-0p055-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
-  color: oklch(20% 0.04 242);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-20-0p04-242);
   font-weight: 820;
 }
 
@@ -40,9 +40,9 @@
   gap: 10px;
   align-items: center;
   padding: 8px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(94% 0.018 112);
+  background: var(--tone-94-0p018-112);
 }
 
 .reportFilterPanel {
@@ -50,9 +50,9 @@
   grid-template-columns: 1fr;
   gap: 8px;
   padding: 10px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(97% 0.012 110);
+  background: var(--tone-97-0p012-110);
 }
 
 .reportFilterPanel span {
@@ -61,15 +61,15 @@
   min-width: 0;
   padding: 8px 10px;
   border-radius: 6px;
-  background: oklch(99% 0.01 108);
-  color: oklch(23% 0.04 242);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-23-0p04-242);
   font-size: 0.86rem;
   font-weight: 830;
   overflow-wrap: anywhere;
 }
 
 .reportFilterPanel strong {
-  color: oklch(48% 0.04 238);
+  color: var(--tone-48-0p04-238);
   font-size: 0.72rem;
   text-transform: uppercase;
 }
@@ -95,14 +95,14 @@
   min-height: 36px;
   border-radius: 6px;
   background: transparent;
-  color: oklch(35% 0.04 238);
+  color: var(--tone-35-0p04-238);
   font-weight: 880;
   text-transform: capitalize;
 }
 
 .reportSegmented .reportSegmentActive {
-  background: oklch(99% 0.01 108);
-  color: oklch(28% 0.115 164);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-28-0p115-164);
 }
 
 .periodStepper {
@@ -118,12 +118,12 @@
   justify-content: center;
   min-height: 36px;
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
-  color: oklch(31% 0.1 164);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-31-0p1-164);
 }
 
 .periodStepper strong {
-  color: oklch(21% 0.04 242);
+  color: var(--tone-21-0p04-242);
   font-size: 1.02rem;
   text-align: center;
 }
@@ -133,7 +133,7 @@
   gap: 18px;
   min-height: 52px;
   overflow-x: auto;
-  border-bottom: 1px solid oklch(82% 0.035 104);
+  border-bottom: 1px solid var(--tone-82-0p035-104);
   scrollbar-width: thin;
 }
 
@@ -142,14 +142,14 @@
   flex: 0 0 auto;
   padding: 0 2px;
   background: transparent;
-  color: oklch(42% 0.047 238);
+  color: var(--tone-42-0p047-238);
   font-size: 0.98rem;
   font-weight: 880;
   white-space: nowrap;
 }
 
 .reportTabs .reportTabActive {
-  color: oklch(27% 0.12 164);
+  color: var(--tone-27-0p12-164);
 }
 
 .reportTabs .reportTabActive::after {
@@ -159,7 +159,7 @@
   left: 0;
   height: 3px;
   border-radius: 999px;
-  background: oklch(65% 0.135 43);
+  background: var(--tone-65-0p135-43);
   content: '';
 }
 
@@ -167,9 +167,9 @@
   display: grid;
   gap: 20px;
   padding: clamp(18px, 3vw, 30px);
-  border: 1px solid oklch(80% 0.045 104);
+  border: 1px solid var(--tone-80-0p045-104);
   border-radius: 8px;
-  background: oklch(98% 0.014 110);
+  background: var(--tone-98-0p014-110);
 }
 
 .categorySplitPanel {
@@ -187,9 +187,9 @@
 .reportPanelHeader > span {
   flex: 0 0 auto;
   padding: 7px 10px;
-  border: 1px solid oklch(76% 0.075 164);
+  border: 1px solid var(--tone-76-0p075-164);
   border-radius: 8px;
-  color: oklch(31% 0.1 164);
+  color: var(--tone-31-0p1-164);
   font-size: 0.78rem;
   font-weight: 850;
 }
@@ -215,7 +215,7 @@
 }
 
 .donutFigure text {
-  fill: oklch(50% 0.035 238);
+  fill: var(--tone-50-0p035-238);
   font-size: 0.72rem;
   font-weight: 760;
   transform: rotate(90deg);
@@ -223,7 +223,7 @@
 }
 
 .donutFigure .donutAmount {
-  fill: oklch(19% 0.04 242);
+  fill: var(--tone-19-0p04-242);
   font-size: 1.1rem;
   font-weight: 920;
 }
@@ -233,7 +233,7 @@
   flex-wrap: wrap;
   gap: 8px 12px;
   justify-content: center;
-  color: oklch(43% 0.04 238);
+  color: var(--tone-43-0p04-238);
   font-size: 0.8rem;
   font-weight: 780;
 }
@@ -250,9 +250,50 @@
   border-radius: 999px;
 }
 
+.donutSegment {
+  cursor: pointer;
+  transition:
+    stroke-width 140ms ease,
+    opacity 140ms ease;
+}
+
+.donutPercent {
+  fill: var(--tone-43-0p04-238);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.donutFigure figcaption .donutLegend {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 780;
+  cursor: pointer;
+  transition: opacity 140ms ease;
+}
+
+.donutFigure figcaption .donutLegend:hover {
+  background: var(--tone-95-0p012-238);
+}
+
+.donutFigure figcaption .donutLegend:focus-visible {
+  outline: 2px solid var(--tone-57-0p13-250);
+  outline-offset: 1px;
+}
+
+.donutFigure figcaption .donutLegendDim {
+  opacity: 0.4;
+}
+
 .rankedList {
   display: grid;
-  gap: 12px;
+  gap: 6px;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -263,7 +304,24 @@
   grid-template-columns: 44px minmax(0, 1fr);
   gap: 14px;
   align-items: center;
-  min-height: 72px;
+  min-height: 68px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  transition:
+    background 140ms ease,
+    opacity 140ms ease;
+}
+
+.rankRowActive {
+  background: var(--tone-95-0p014-238);
+}
+
+.rankRowDim {
+  opacity: 0.5;
+}
+
+.rankRowActive .rankBar {
+  height: 6px;
 }
 
 .rankIcon {
@@ -273,7 +331,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  color: oklch(99% 0.01 108);
+  color: var(--tone-99-0p01-108);
   font-weight: 930;
 }
 
@@ -292,7 +350,7 @@
 
 .rankMain strong,
 .rankMain b {
-  color: oklch(18% 0.04 242);
+  color: var(--tone-18-0p04-242);
   font-size: 1.08rem;
   overflow-wrap: anywhere;
 }
@@ -305,7 +363,7 @@
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
-  background: oklch(90% 0.018 112);
+  background: var(--tone-90-0p018-112);
 }
 
 .rankBar span {
@@ -317,7 +375,7 @@
 .rankMain small {
   display: flex;
   justify-content: space-between;
-  color: oklch(56% 0.035 238);
+  color: var(--tone-56-0p035-238);
   font-size: 0.84rem;
   font-weight: 780;
 }
@@ -335,7 +393,7 @@
   padding: 0 14px;
   border-radius: 8px;
   background: transparent;
-  color: oklch(43% 0.04 238);
+  color: var(--tone-43-0p04-238);
   font-weight: 850;
 }
 
@@ -352,7 +410,7 @@
   gap: 10px;
   justify-items: center;
   padding: 34px 18px;
-  color: oklch(43% 0.04 238);
+  color: var(--tone-43-0p04-238);
   text-align: center;
   font-weight: 820;
 }
@@ -372,35 +430,35 @@
   gap: 7px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid oklch(83% 0.034 108);
+  border: 1px solid var(--tone-83-0p034-108);
   border-radius: 8px;
-  background: oklch(99% 0.008 110);
+  background: var(--tone-99-0p008-110);
 }
 
 .trendMetric span {
-  color: oklch(43% 0.04 238);
+  color: var(--tone-43-0p04-238);
   font-size: 0.78rem;
   font-weight: 820;
   text-transform: uppercase;
 }
 
 .trendMetric strong {
-  color: oklch(18% 0.04 242);
+  color: var(--tone-18-0p04-242);
   font-size: clamp(1.32rem, 4vw, 2rem);
   line-height: 1;
   overflow-wrap: anywhere;
 }
 
 .trendMetric-income {
-  border-color: oklch(78% 0.095 156);
+  border-color: var(--tone-78-0p095-156);
 }
 
 .trendMetric-expense {
-  border-color: oklch(79% 0.09 36);
+  border-color: var(--tone-79-0p09-36);
 }
 
 .trendMetric-balance {
-  border-color: oklch(76% 0.072 250);
+  border-color: var(--tone-76-0p072-250);
 }
 
 .trendChart {
@@ -409,20 +467,135 @@
   margin: 0;
 }
 
+.trendChartPlot {
+  position: relative;
+}
+
 .trendChart svg {
+  display: block;
   width: 100%;
   min-height: 220px;
   overflow: visible;
 }
 
+.trendChartTrack {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+
+.trendChartTrack:focus-visible {
+  outline: 2px solid var(--tone-57-0p13-250);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.trendCrosshair {
+  stroke: var(--tone-60-0p03-238);
+  stroke-dasharray: 4 6;
+  stroke-width: 1.25;
+}
+
+.trendDot {
+  stroke: var(--tone-100-0-0);
+  stroke-width: 2;
+}
+
+.trendDot-income {
+  fill: var(--tone-63-0p145-156);
+}
+
+.trendDot-expense {
+  fill: var(--tone-67-0p145-36);
+}
+
+.trendDot-balance {
+  fill: var(--tone-57-0p13-250);
+}
+
+.trendTooltip {
+  position: absolute;
+  top: 4px;
+  z-index: 1;
+  display: grid;
+  gap: 3px;
+  min-width: 132px;
+  padding: 8px 12px;
+  border: 1px solid var(--tone-90-0p014-238);
+  border-radius: 10px;
+  background: var(--tone-100-0-0-a97);
+  box-shadow: 0 8px 22px var(--tone-38-0p05-240-a26);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.trendTooltipPeriod {
+  color: var(--tone-30-0p04-242);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.trendTooltipRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.trendTooltipRow em {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--tone-45-0p035-238);
+  font-style: normal;
+  font-weight: 760;
+}
+
+.trendTooltipRow::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  content: '';
+}
+
+.trendTooltipRow-income::before {
+  background: var(--tone-63-0p145-156);
+}
+
+.trendTooltipRow-expense::before {
+  background: var(--tone-67-0p145-36);
+}
+
+.trendTooltipRow-balance::before {
+  background: var(--tone-57-0p13-250);
+}
+
+.trendTooltipRow b {
+  color: var(--tone-20-0p04-242);
+  font-weight: 880;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trendDot {
+    transition: none;
+  }
+}
+
 .trendGridLine {
-  stroke: oklch(88% 0.018 112);
+  stroke: var(--tone-88-0p018-112);
   stroke-dasharray: 4 8;
   stroke-width: 1;
 }
 
 .trendZeroLine {
-  stroke: oklch(74% 0.028 238);
+  stroke: var(--tone-74-0p028-238);
   stroke-width: 1.25;
 }
 
@@ -434,19 +607,19 @@
 }
 
 .trendLine-income {
-  stroke: oklch(63% 0.145 156);
+  stroke: var(--tone-63-0p145-156);
 }
 
 .trendLine-expense {
-  stroke: oklch(67% 0.145 36);
+  stroke: var(--tone-67-0p145-36);
 }
 
 .trendLine-balance {
-  stroke: oklch(57% 0.13 250);
+  stroke: var(--tone-57-0p13-250);
 }
 
 .trendAxisLabel {
-  fill: oklch(48% 0.04 238);
+  fill: var(--tone-48-0p04-238);
   font-size: 0.76rem;
   font-weight: 780;
 }
@@ -456,7 +629,7 @@
   flex-wrap: wrap;
   gap: 8px 14px;
   align-items: center;
-  color: oklch(43% 0.04 238);
+  color: var(--tone-43-0p04-238);
   font-size: 0.82rem;
   font-weight: 780;
 }
@@ -465,6 +638,28 @@
   display: inline-flex;
   gap: 6px;
   align-items: center;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.trendLegend:hover {
+  background: var(--tone-94-0p012-238);
+}
+
+.trendLegend:focus-visible {
+  outline: 2px solid var(--tone-57-0p13-250);
+  outline-offset: 1px;
+}
+
+.trendLegendOff {
+  color: var(--tone-64-0p02-238);
+  text-decoration: line-through;
 }
 
 .trendLegend::before {
@@ -474,16 +669,20 @@
   content: '';
 }
 
+.trendLegendOff::before {
+  opacity: 0.4;
+}
+
 .trendLegend-income::before {
-  background: oklch(63% 0.145 156);
+  background: var(--tone-63-0p145-156);
 }
 
 .trendLegend-expense::before {
-  background: oklch(67% 0.145 36);
+  background: var(--tone-67-0p145-36);
 }
 
 .trendLegend-balance::before {
-  background: oklch(57% 0.13 250);
+  background: var(--tone-57-0p13-250);
 }
 
 /*

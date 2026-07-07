@@ -86,9 +86,11 @@ describe('App', () => {
 
     expect(await screen.findByRole('region', { name: 'Bill detail for Lunch' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Expense' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Bill facts' })).toHaveTextContent('Payment account');
-    expect(screen.getByRole('region', { name: 'Bill facts' })).toHaveTextContent('Cash');
-    expect(screen.getByRole('region', { name: 'Bill facts' })).toHaveTextContent('Person');
+    const billFacts = screen.getByRole('region', { name: 'Bill facts' });
+    expect(billFacts).toHaveTextContent('Payment account');
+    expect(billFacts).toHaveTextContent('Cash');
+    // Book members load lazily on entry detail, so the creator name resolves asynchronously.
+    await waitFor(() => expect(billFacts).toHaveTextContent('Person'));
     expect(screen.getByRole('region', { name: 'Source' })).toHaveTextContent('Manual entry');
     expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
 

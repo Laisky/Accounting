@@ -1,28 +1,121 @@
 /*
- * tokens.css — shared responsive layout design tokens for the accounting shell.
- * Imported once (before styles.css) in main.tsx so the custom properties exist app-wide.
+ * tokens.css — semantic design tokens for the accounting shell.
+ * Imported (after palette.css, before styles.css) in main.tsx so the custom properties
+ * exist app-wide. palette.css holds the primitive color scale (raw oklch values); this
+ * file maps those primitives to semantic roles plus the spacing/radius/shadow/type scales.
+ *
  * Custom properties may only be referenced inside property VALUES via var(); the literal
  * breakpoint numbers (768/1024/1280) still have to be written directly in @media/@container.
+ *
+ * Theme: ThemeProvider writes data-theme="light|dark" on <html>. Semantic color tokens
+ * resolve to dark values under :root[data-theme="dark"]. (Legacy feature CSS still themes
+ * through the .mobileShellThemeDark shell class; migrating it onto these tokens is ongoing.)
  */
-:root {
-  /* Centered desktop canvas max-width. */
-  --content-max: 1280px;
+@layer tokens {
+  :root {
+    /* --- Layout --- */
+    --content-max: 1280px;
+    --sidebar-width: 248px;
+    --rail-width: 76px;
+    --shell-gutter: clamp(16px, 2.4vw, 32px);
+    --panel-gap: clamp(16px, 2vw, 24px);
+    --app-viewport-height: 100svh;
+    --app-viewport-width: 100svw;
 
-  /* Labeled sidebar width at >=1024px. */
-  --sidebar-width: 248px;
+    /* --- Semantic surfaces --- */
+    --surface: var(--tone-99-0p01-108);
+    --surface-raised: var(--tone-100-0-0);
+    --surface-sunken: var(--tone-98-0p014-110);
+    --surface-overlay: var(--tone-100-0-0-a76);
+    --surface-inverse: var(--tone-20-0p035-235);
 
-  /* Vertical icon rail width at 768-1023px. */
-  --rail-width: 76px;
+    /* --- Semantic ink --- */
+    --ink: var(--tone-20-0p035-235);
+    --ink-muted: var(--tone-58-0p025-230);
+    --ink-subtle: var(--tone-64-0p024-230);
+    --ink-on-accent: var(--tone-100-0-0);
 
-  /* Outer gutter for the desktop shell chrome. */
-  --shell-gutter: clamp(16px, 2.4vw, 32px);
+    /* --- Borders --- */
+    --border: var(--tone-88-0p012-185);
+    --border-strong: var(--tone-86-0p015-185);
+    --border-subtle: var(--tone-91-0p006-185);
 
-  /* Gap between stacked/side-by-side desktop panels. */
-  --panel-gap: clamp(16px, 2vw, 24px);
+    /* --- Accent --- */
+    --accent: var(--tone-57-0p13-250);
+    --accent-strong: var(--tone-43-0p04-238);
+    --accent-ink: var(--tone-100-0-0);
 
-  /* Visible browser viewport height. JS upgrades this to visualViewport.height on mobile. */
-  --app-viewport-height: 100svh;
-  --app-viewport-width: 100svw;
+    /* --- Status --- */
+    --positive: var(--tone-46-0p11-152);
+    --negative: var(--tone-45-0p17-28);
+    --warning: var(--tone-67-0p145-36);
+
+    /* --- Focus ring --- */
+    --focus: var(--tone-57-0p13-250);
+    --focus-ring: 0 0 0 3px var(--tone-60-0p03-220-a10);
+
+    /* --- Spacing scale (4px base) --- */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+
+    /* --- Radius scale --- */
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-pill: 999px;
+
+    /* --- Elevation --- */
+    --shadow-sm: 0 1px 2px var(--tone-5-0p018-250-a28);
+    --shadow-md: 0 6px 20px var(--tone-5-0p018-250-a28);
+    --shadow-lg: 0 18px 48px var(--tone-5-0p018-250-a45);
+
+    /* --- Type scale --- */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.375rem;
+    --font-size-2xl: 1.75rem;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* --- Interaction --- */
+    --tap-target: 44px;
+  }
+
+  /* Dark theme swaps the semantic color roles; the primitive scale and non-color scales stay. */
+  :root[data-theme='dark'] {
+    --surface: var(--tone-18-0p014-235);
+    --surface-raised: var(--tone-20-0p034-235);
+    --surface-sunken: var(--tone-16-0p035-235);
+    --surface-overlay: var(--tone-20-0p04-240-a55);
+    --surface-inverse: var(--tone-99-0p01-108);
+
+    --ink: var(--tone-93-0p006-185);
+    --ink-muted: var(--tone-72-0p018-230);
+    --ink-subtle: var(--tone-64-0p024-230);
+    --ink-on-accent: var(--tone-100-0-0);
+
+    --border: var(--tone-31-0p018-235);
+    --border-strong: var(--tone-35-0p018-235);
+    --border-subtle: var(--tone-24-0p016-235);
+
+    --accent: var(--tone-69-0p14-255);
+    --accent-strong: var(--tone-57-0p13-250);
+
+    --focus: var(--tone-69-0p14-255);
+  }
 }
 
 /* tabularNums aligns money/number columns by giving digits equal advance width. */

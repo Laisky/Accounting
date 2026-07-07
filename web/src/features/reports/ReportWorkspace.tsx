@@ -1,16 +1,13 @@
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import {
-  fetchAccounts,
-  fetchAllEntries,
-  fetchBookMembers,
-  fetchBooks,
-  fetchCategories,
-  fetchExchangeRates,
-} from '@/lib/api/ledger';
+import { useAccountsQuery, useExchangeRatesQuery } from '@/hooks/useAccounts';
+import { useBookMembersQuery } from '@/hooks/useBookMembers';
+import { useBooksQuery } from '@/hooks/useBooks';
+import { useCategoriesQuery } from '@/hooks/useCategories';
+import { useAllEntriesQuery } from '@/hooks/useEntries';
 import { buildRateIndex, convertEntryAmountCents, formatMoney } from '@/lib/money';
 import { ReportBreakdownPanel, TrendPanel } from './ReportVisuals';
 
@@ -33,7 +30,6 @@ import {
   startOfMonth,
   startOfYear,
   type FlowFilter,
-  type ReportData,
   type ReportTab,
   type SectionReportTab,
   type TimeMode,
@@ -42,40 +38,42 @@ import './reports.css';
 type ReportWorkspaceProps = {
   activeTab: ReportTab;
   baseCurrency?: string;
-  refreshKey?: number;
 };
 
 // ReportWorkspace renders interactive reporting over real ledger entries.
-export function ReportWorkspace({ activeTab, baseCurrency, refreshKey = 0 }: ReportWorkspaceProps) {
+export function ReportWorkspace({ activeTab, baseCurrency }: ReportWorkspaceProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [data, setData] = useState<ReportData>({
-    books: [],
-    members: [],
-    accounts: [],
-    categories: [],
-    entries: [],
-    rates: [],
-  });
   const [selectedBookId, setSelectedBookId] = useState('');
   const [flowFilter, setFlowFilter] = useState<FlowFilter>('all');
   const [timeMode, setTimeMode] = useState<TimeMode>('month');
   const [cursorDate, setCursorDate] = useState(() => startOfMonth(new Date()));
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const selectedBook = data.books.find((book) => book.id === selectedBookId) ?? data.books[0];
+  const booksQuery = useBooksQuery();
+  const accountsQuery = useAccountsQuery();
+  const ratesQuery = useExchangeRatesQuery();
+  const books = useMemo(() => booksQuery.data ?? [], [booksQuery.data]);
+  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
+  const rates = useMemo(() => ratesQuery.data ?? [], [ratesQuery.data]);
+  const effectiveBookId = selectedBookId || books[0]?.id || '';
+  const categoriesQuery = useCategoriesQuery(effectiveBookId);
+  const entriesQuery = useAllEntriesQuery(effectiveBookId);
+  const membersQuery = useBookMembersQuery(effectiveBookId);
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data]);
+  const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
+  const selectedBook = books.find((book) => book.id === effectiveBookId) ?? books[0];
   const reportCurrency = baseCurrency ?? selectedBook?.reportingCurrency ?? 'USD';
   const filteredEntries = useMemo(
-    () => filterEntries(data.entries, flowFilter, timeMode, cursorDate),
-    [cursorDate, data.entries, flowFilter, timeMode],
+    () => filterEntries(entries, flowFilter, timeMode, cursorDate),
+    [cursorDate, entries, flowFilter, timeMode],
   );
-  const rateIndex = useMemo(() => buildRateIndex(data.rates), [data.rates]);
+  const rateIndex = useMemo(() => buildRateIndex(rates), [rates]);
   const rankedItems = useMemo(
-    () => buildRankedItems(t, filteredEntries, activeTab, data.categories, data.accounts, reportCurrency, rateIndex),
-    [activeTab, data.accounts, data.categories, filteredEntries, rateIndex, reportCurrency, t],
+    () => buildRankedItems(t, filteredEntries, activeTab, categories, accounts, reportCurrency, rateIndex),
+    [activeTab, accounts, categories, filteredEntries, rateIndex, reportCurrency, t],
   );
   const visibleItems = isExpanded ? rankedItems : rankedItems.slice(0, 5);
   const totalCents = rankedItems.reduce((sum, item) => sum + item.amountCents, 0);
@@ -88,39 +86,39 @@ export function ReportWorkspace({ activeTab, baseCurrency, refreshKey = 0 }: Rep
     () =>
       buildDimensionFlowSections(
         t,
-        data.entries,
+        entries,
         'category',
-        data.categories,
-        data.accounts,
+        categories,
+        accounts,
         timeMode,
         cursorDate,
         reportCurrency,
         rateIndex,
       ),
-    [cursorDate, data.accounts, data.categories, data.entries, rateIndex, reportCurrency, t, timeMode],
+    [accounts, categories, cursorDate, entries, rateIndex, reportCurrency, t, timeMode],
   );
   const subcategorySections = useMemo(
     () =>
       buildDimensionFlowSections(
         t,
-        data.entries,
+        entries,
         'subcategory',
-        data.categories,
-        data.accounts,
+        categories,
+        accounts,
         timeMode,
         cursorDate,
         reportCurrency,
         rateIndex,
       ),
-    [cursorDate, data.accounts, data.categories, data.entries, rateIndex, reportCurrency, t, timeMode],
+    [accounts, categories, cursorDate, entries, rateIndex, reportCurrency, t, timeMode],
   );
   const memberSections = useMemo(
-    () => buildMemberFlowSections(t, data.entries, data.members, timeMode, cursorDate, reportCurrency, rateIndex),
-    [cursorDate, data.entries, data.members, rateIndex, reportCurrency, t, timeMode],
+    () => buildMemberFlowSections(t, entries, members, timeMode, cursorDate, reportCurrency, rateIndex),
+    [cursorDate, entries, members, rateIndex, reportCurrency, t, timeMode],
   );
   const trendRows = useMemo(
-    () => buildTrendData(data.entries, timeMode, cursorDate, reportCurrency, rateIndex),
-    [cursorDate, data.entries, rateIndex, reportCurrency, timeMode],
+    () => buildTrendData(entries, timeMode, cursorDate, reportCurrency, rateIndex),
+    [cursorDate, entries, rateIndex, reportCurrency, timeMode],
   );
   const memberSingleFlow: Extract<FlowFilter, 'expense' | 'income'> = flowFilter === 'income' ? 'income' : 'expense';
   const memberSingleSection = memberSections.find((section) => section.flow === memberSingleFlow) ?? memberSections[0];
@@ -137,65 +135,13 @@ export function ReportWorkspace({ activeTab, baseCurrency, refreshKey = 0 }: Rep
   const shouldShowFlowSections = flowFilter === 'all' && isSectionReportTab(activeTab);
   const activeTabPanelId = `report-panel-${activeTab}`;
   const activeTabButtonId = `report-tab-${activeTab}`;
-
-  useEffect(() => {
-    let isActive = true;
-    setIsLoading(true);
-    setError('');
-    Promise.all([fetchBooks(), fetchAccounts(), fetchExchangeRates()])
-      .then(([books, accounts, rates]) => {
-        if (!isActive) {
-          return;
-        }
-        setData((current) => ({ ...current, books, accounts, rates }));
-        setSelectedBookId((current) => current || books[0]?.id || '');
-      })
-      .catch(() => {
-        if (isActive) {
-          setError(t('reports.error.loadFailed'));
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [refreshKey, t]);
-
-  useEffect(() => {
-    if (!selectedBookId) {
-      setData((current) => ({ ...current, members: [], categories: [], entries: [] }));
-      return;
-    }
-
-    let isActive = true;
-    setIsLoading(true);
-    setError('');
-    Promise.all([fetchCategories(selectedBookId), fetchAllEntries(selectedBookId), fetchBookMembers(selectedBookId)])
-      .then(([categories, entries, members]) => {
-        if (isActive) {
-          setData((current) => ({ ...current, members, categories, entries }));
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setError(t('reports.error.dataFailed'));
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [refreshKey, selectedBookId, t]);
+  const isLoading = booksQuery.isLoading || (Boolean(effectiveBookId) && entriesQuery.isLoading);
+  const error =
+    booksQuery.isError || accountsQuery.isError
+      ? t('reports.error.loadFailed')
+      : entriesQuery.isError || categoriesQuery.isError || membersQuery.isError
+        ? t('reports.error.dataFailed')
+        : '';
 
   // handleTimeStep receives a direction and moves the report cursor by month or year.
   function handleTimeStep(direction: -1 | 1) {
@@ -257,10 +203,10 @@ export function ReportWorkspace({ activeTab, baseCurrency, refreshKey = 0 }: Rep
               setSelectedBookId(event.target.value);
               setIsExpanded(false);
             }}
-            disabled={!data.books.length}
+            disabled={!books.length}
           >
-            {data.books.length ? (
-              data.books.map((book) => (
+            {books.length ? (
+              books.map((book) => (
                 <option key={book.id} value={book.id}>
                   {book.name}
                 </option>

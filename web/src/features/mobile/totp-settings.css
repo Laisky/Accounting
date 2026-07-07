@@ -15,10 +15,10 @@
   min-height: 76px;
   resize: vertical;
   padding: 11px 12px;
-  border: 1px solid oklch(88% 0.012 235);
+  border: 1px solid var(--tone-88-0p012-235);
   border-radius: 10px;
-  background: oklch(98.6% 0.004 185);
-  color: oklch(28% 0.03 235);
+  background: var(--tone-98p6-0p004-185);
+  color: var(--tone-28-0p03-235);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.76rem;
   line-height: 1.5;
@@ -35,10 +35,10 @@
   width: 100%;
   min-height: 42px;
   padding: 0 12px;
-  border: 1px solid oklch(87% 0.014 235);
+  border: 1px solid var(--tone-87-0p014-235);
   border-radius: 9px;
-  background: oklch(100% 0 0);
-  color: oklch(20% 0.035 235);
+  background: var(--tone-100-0-0);
+  color: var(--tone-20-0p035-235);
   font-size: 1.02rem;
   font-weight: 760;
   letter-spacing: 0.12em;
@@ -46,7 +46,7 @@
 
 .totpForm .mobileField input:focus-visible,
 .totpForm textarea:focus-visible {
-  outline: 2px solid var(--me-accent, oklch(56% 0.11 258));
+  outline: 2px solid var(--me-accent, var(--tone-56-0p11-258));
   outline-offset: 1px;
 }
 
@@ -58,11 +58,11 @@
 }
 
 .mobileInlineError {
-  color: oklch(47% 0.16 28);
+  color: var(--tone-47-0p16-28);
 }
 
 .mobileInlineStatus {
-  color: oklch(45% 0.11 150);
+  color: var(--tone-45-0p11-150);
 }
 
 /*

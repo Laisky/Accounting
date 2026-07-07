@@ -30,6 +30,8 @@
       "accountReady": "Account ready.",
       "entryPosted": "Entry posted."
     },
-    "total": "Total"
+    "total": "Total",
+    "undo": "Undo",
+    "cancel": "Cancel"
   }
 }

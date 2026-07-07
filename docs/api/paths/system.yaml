@@ -559,3 +559,16 @@
             },
         }
       default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/telemetry/client:
+  post:
+    tags: [system]
+    security: []
+    summary: Ingest sanitized client telemetry (errors and Web Vitals).
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../openapi.yaml#/components/schemas/ClientTelemetry" }
+    responses:
+      "204": { description: Telemetry accepted. }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }

@@ -1,0 +1,222 @@
+/*
+ * ui.css — styles for the shared UI primitives (components/ui). Uses only semantic tokens
+ * from tokens.css and lives in @layer components so feature CSS can still override it.
+ */
+@layer components {
+  /* --- Button --- */
+  .ui-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: var(--tap-target);
+    padding: 0 var(--space-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .ui-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .ui-button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .ui-button-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .ui-button-secondary {
+    background: var(--surface-raised);
+    border-color: var(--border-strong);
+    color: var(--ink);
+  }
+
+  .ui-button-ghost {
+    background: transparent;
+    color: var(--accent);
+  }
+
+  .ui-button-danger {
+    background: var(--negative);
+    color: var(--ink-on-accent);
+  }
+
+  .ui-button-block {
+    width: 100%;
+  }
+
+  .ui-button-sm {
+    min-height: 2rem;
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-xs);
+  }
+
+  /* --- Card --- */
+  .ui-card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* --- EmptyState --- */
+  .ui-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-3);
+    padding: var(--space-8) var(--space-4);
+    color: var(--ink-muted);
+  }
+
+  .ui-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius-pill);
+    background: var(--surface-sunken);
+    color: var(--ink-subtle);
+  }
+
+  .ui-empty-title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--ink);
+  }
+
+  .ui-empty-body {
+    margin: 0;
+    max-width: 32ch;
+    font-size: var(--font-size-sm);
+  }
+
+  /* --- FormField --- */
+  .ui-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .ui-field-label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--ink);
+  }
+
+  .ui-field-hint {
+    font-size: var(--font-size-xs);
+    color: var(--ink-subtle);
+  }
+
+  .ui-field-error {
+    font-size: var(--font-size-xs);
+    color: var(--negative);
+  }
+
+  /* --- Notice --- */
+  .ui-notice {
+    display: flex;
+    gap: var(--space-2);
+    align-items: flex-start;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--surface-sunken);
+    color: var(--ink);
+    font-size: var(--font-size-sm);
+  }
+
+  .ui-notice-error {
+    border-color: var(--negative);
+    color: var(--negative);
+  }
+
+  .ui-notice-success {
+    border-color: var(--positive);
+    color: var(--positive);
+  }
+
+  .ui-notice-warning {
+    border-color: var(--warning);
+    color: var(--warning);
+  }
+
+  /* --- Sheet --- */
+  .ui-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: var(--surface-overlay);
+    padding: 0;
+    z-index: 60;
+  }
+
+  .ui-sheet {
+    width: min(100%, 40rem);
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--surface-raised);
+    color: var(--ink);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--space-5);
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+    box-shadow: var(--shadow-lg);
+  }
+
+  .ui-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .ui-sheet-title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  /* --- ConfirmDialog --- */
+  .ui-confirm-body {
+    margin: 0 0 var(--space-5);
+    color: var(--ink-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  .ui-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 768px) {
+    .ui-sheet-backdrop {
+      align-items: center;
+    }
+
+    .ui-sheet {
+      border-radius: var(--radius-xl);
+      max-height: 86vh;
+    }
+  }
+}

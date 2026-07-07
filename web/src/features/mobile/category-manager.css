@@ -2,7 +2,7 @@
   display: grid;
   gap: 10px;
   padding: 18px 16px 22px;
-  background: oklch(98.5% 0.004 180);
+  background: var(--tone-98p5-0p004-180);
 }
 
 .categoryCreateForm,
@@ -12,8 +12,8 @@
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  background: oklch(100% 0 0);
-  box-shadow: 0 10px 24px oklch(60% 0.03 220 / 10%);
+  background: var(--tone-100-0-0);
+  box-shadow: 0 10px 24px var(--tone-60-0p03-220-a10);
 }
 
 .categoryCreateForm label,
@@ -24,7 +24,7 @@
 
 .categoryCreateForm span,
 .categoryEditList span {
-  color: oklch(58% 0.025 230);
+  color: var(--tone-58-0p025-230);
   font-size: 0.68rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -37,10 +37,10 @@
   min-width: 0;
   min-height: 38px;
   padding: 0 10px;
-  border: 1px solid oklch(86% 0.015 185);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 8px;
-  background: oklch(99% 0.002 180);
-  color: oklch(20% 0.035 235);
+  background: var(--tone-99-0p002-180);
+  color: var(--tone-20-0p035-235);
   font-weight: 780;
 }
 
@@ -48,8 +48,8 @@
   grid-column: 1 / -1;
   min-height: 40px;
   border-radius: 8px;
-  background: oklch(24% 0.035 235);
-  color: oklch(99% 0.002 180);
+  background: var(--tone-24-0p035-235);
+  color: var(--tone-99-0p002-180);
   cursor: pointer;
   font-weight: 900;
 }

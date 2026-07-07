@@ -4,9 +4,9 @@
   display: grid;
   gap: 13px;
   padding: 16px;
-  border: 1px solid var(--me-line, oklch(92.5% 0.006 185));
+  border: 1px solid var(--me-line, var(--tone-92p5-0p006-185));
   border-radius: 14px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .settingsPanel > header {
@@ -14,7 +14,7 @@
   grid-template-columns: 40px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  color: oklch(22% 0.034 235);
+  color: var(--tone-22-0p034-235);
 }
 
 .settingsPanelIcon {
@@ -24,8 +24,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 11px;
-  background: var(--me-accent-soft, oklch(95% 0.03 258));
-  color: var(--me-accent, oklch(56% 0.11 258));
+  background: var(--me-accent-soft, var(--tone-95-0p03-258));
+  color: var(--me-accent, var(--tone-56-0p11-258));
 }
 
 .settingsPanel > header > div {
@@ -42,20 +42,20 @@
 }
 
 .settingsPanelTitle strong {
-  color: oklch(22% 0.034 235);
+  color: var(--tone-22-0p034-235);
   font-size: 1rem;
   font-weight: 840;
 }
 
 .settingsPanel > header > div > span {
-  color: oklch(58% 0.028 230);
+  color: var(--tone-58-0p028-230);
   font-size: 0.84rem;
   font-weight: 720;
 }
 
 .settingsPanelHint {
   margin: -2px 0 0;
-  color: oklch(54% 0.026 235);
+  color: var(--tone-54-0p026-235);
   font-size: 0.84rem;
   font-weight: 620;
   line-height: 1.45;
@@ -63,12 +63,12 @@
 
 /* State-coloured status line (authenticator on/off). */
 .settingsPanel .totpStatusLine.isOn {
-  color: var(--me-positive-ink, oklch(46% 0.11 152));
+  color: var(--me-positive-ink, var(--tone-46-0p11-152));
   font-weight: 780;
 }
 
 .settingsPanel .totpStatusLine.isOff {
-  color: oklch(52% 0.018 250);
+  color: var(--tone-52-0p018-250);
   font-weight: 760;
 }
 
@@ -88,9 +88,9 @@
 
 .passkeyList li {
   padding: 13px;
-  border: 1px solid oklch(93% 0.008 185);
+  border: 1px solid var(--tone-93-0p008-185);
   border-radius: 11px;
-  background: oklch(98.6% 0.004 185);
+  background: var(--tone-98p6-0p004-185);
 }
 
 .passkeyForm .mobileField input,
@@ -98,10 +98,10 @@
   width: 100%;
   min-height: 40px;
   padding: 0 12px;
-  border: 1px solid oklch(87% 0.014 235);
+  border: 1px solid var(--tone-87-0p014-235);
   border-radius: 9px;
-  background: oklch(100% 0 0);
-  color: oklch(20% 0.035 235);
+  background: var(--tone-100-0-0);
+  color: var(--tone-20-0p035-235);
   font-weight: 720;
 }
 
@@ -110,7 +110,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
-  color: oklch(58% 0.026 230);
+  color: var(--tone-58-0p026-230);
   font-size: 0.82rem;
   font-weight: 680;
 }
@@ -133,9 +133,9 @@
 
 .passkeyEmpty {
   padding: 10px 12px;
-  border: 1px dashed oklch(88% 0.012 235);
+  border: 1px dashed var(--tone-88-0p012-235);
   border-radius: 10px;
-  color: oklch(56% 0.025 230);
+  color: var(--tone-56-0p025-230);
   font-size: 0.88rem;
   font-weight: 640;
   text-align: center;
@@ -143,7 +143,7 @@
 
 .passkeyForm .mobileField input:focus-visible,
 .passkeyList .mobileField input:focus-visible {
-  outline: 2px solid var(--me-accent, oklch(56% 0.11 258));
+  outline: 2px solid var(--me-accent, var(--tone-56-0p11-258));
   outline-offset: 1px;
 }
 

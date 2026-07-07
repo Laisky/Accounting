@@ -9,9 +9,9 @@
   padding: 20px;
   border-radius: 12px;
   background:
-    radial-gradient(circle at 86% 0%, oklch(90% 0.13 78 / 64%), transparent 9rem),
-    linear-gradient(135deg, oklch(66% 0.2 31), oklch(79% 0.17 74));
-  color: oklch(99% 0.004 90);
+    radial-gradient(circle at 86% 0%, var(--tone-90-0p13-78-a64), transparent 9rem),
+    linear-gradient(135deg, var(--tone-66-0p2-31), var(--tone-79-0p17-74));
+  color: var(--tone-99-0p004-90);
 }
 
 .accountBalanceHeroText {
@@ -21,13 +21,13 @@
 
 .accountBalanceHeroText span,
 .accountBalanceHero footer span {
-  color: oklch(98% 0.012 90 / 78%);
+  color: var(--tone-98-0p012-90-a78);
   font-size: 0.86rem;
   font-weight: 820;
 }
 
 .accountBalanceHeroText strong {
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
   font-size: 2rem;
   font-weight: 920;
   line-height: 1;
@@ -50,7 +50,7 @@
 
 .accountBalanceLine {
   fill: none;
-  stroke: oklch(99% 0.008 90 / 92%);
+  stroke: var(--tone-99-0p008-90-a92);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.4;
@@ -61,7 +61,7 @@
   top: 0;
   bottom: 0;
   width: 0;
-  border-left: 1px dashed oklch(100% 0 0 / 58%);
+  border-left: 1px dashed var(--tone-100-0-0-a58);
   transform: translateX(-0.5px);
   pointer-events: none;
 }
@@ -70,10 +70,10 @@
   position: absolute;
   width: 13px;
   height: 13px;
-  border: 2.5px solid oklch(66% 0.2 31);
+  border: 2.5px solid var(--tone-66-0p2-31);
   border-radius: 999px;
-  background: oklch(100% 0 0);
-  box-shadow: 0 2px 8px oklch(30% 0.08 40 / 45%);
+  background: var(--tone-100-0-0);
+  box-shadow: 0 2px 8px var(--tone-30-0p08-40-a45);
   transform: translate(-50%, -50%);
   pointer-events: none;
   transition:
@@ -90,28 +90,28 @@
   justify-items: center;
   padding: 6px 12px;
   border-radius: 10px;
-  background: oklch(100% 0 0 / 96%);
-  box-shadow: 0 6px 18px oklch(30% 0.08 40 / 32%);
+  background: var(--tone-100-0-0-a96);
+  box-shadow: 0 6px 18px var(--tone-30-0p08-40-a32);
   transform: translateX(-50%);
   pointer-events: none;
   white-space: nowrap;
 }
 
 .accountBalanceTooltipDate {
-  color: oklch(52% 0.02 250);
+  color: var(--tone-52-0p02-250);
   font-size: 0.72rem;
   font-weight: 780;
 }
 
 .accountBalanceTooltip strong {
-  color: oklch(30% 0.05 250);
+  color: var(--tone-30-0p05-250);
   font-size: 1.02rem;
   font-weight: 920;
   font-variant-numeric: tabular-nums;
 }
 
 .accountBalanceTooltip em {
-  color: oklch(52% 0.17 31);
+  color: var(--tone-52-0p17-31);
   font-size: 0.76rem;
   font-style: normal;
   font-weight: 820;
@@ -119,7 +119,7 @@
 }
 
 .accountBalanceTooltipUp {
-  color: oklch(46% 0.13 158);
+  color: var(--tone-46-0p13-158);
 }
 
 .accountBalanceChartTrack {
@@ -134,7 +134,7 @@
 }
 
 .accountBalanceChartTrack:focus-visible {
-  outline: 2px solid oklch(100% 0 0 / 85%);
+  outline: 2px solid var(--tone-100-0-0-a85);
   outline-offset: 3px;
   border-radius: 8px;
 }
@@ -159,7 +159,7 @@
 .accountMonth {
   overflow: hidden;
   border-radius: 12px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .accountMonthHeader {
@@ -171,13 +171,13 @@
   min-height: 74px;
   padding: 12px 14px;
   background: transparent;
-  color: oklch(22% 0.034 235);
+  color: var(--tone-22-0p034-235);
   cursor: pointer;
   text-align: left;
 }
 
 .accountMonthHeader:focus-visible {
-  outline: 2px solid oklch(69% 0.14 255);
+  outline: 2px solid var(--tone-69-0p14-255);
   outline-offset: -3px;
 }
 
@@ -194,14 +194,14 @@
 
 .accountMonthHeader small,
 .accountMonthHeader em {
-  color: oklch(61% 0.026 230);
+  color: var(--tone-61-0p026-230);
   font-size: 0.8rem;
   font-style: normal;
   font-weight: 760;
 }
 
 .accountMonthHeader b {
-  color: oklch(20% 0.035 235);
+  color: var(--tone-20-0p035-235);
   font-size: 1.02rem;
   font-weight: 900;
   text-align: right;
@@ -209,7 +209,7 @@
 }
 
 .accountMonthHeader svg {
-  color: oklch(62% 0.024 230);
+  color: var(--tone-62-0p024-230);
 }
 
 .accountMonthOpen .accountMonthHeader svg {
@@ -229,7 +229,7 @@
   gap: 12px;
   align-items: center;
   min-height: 72px;
-  border-top: 1px solid oklch(93% 0.006 185);
+  border-top: 1px solid var(--tone-93-0p006-185);
 }
 
 .accountTransactionButton {
@@ -246,7 +246,7 @@
 }
 
 .accountTransactionButton:focus-visible {
-  outline: 2px solid oklch(69% 0.14 255);
+  outline: 2px solid var(--tone-69-0p14-255);
   outline-offset: -3px;
 }
 
@@ -257,13 +257,13 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: oklch(94% 0.045 35);
-  color: oklch(57% 0.18 31);
+  background: var(--tone-94-0p045-35);
+  color: var(--tone-57-0p18-31);
 }
 
 .accountTransactionIconIncome {
-  background: oklch(94% 0.05 158);
-  color: oklch(41% 0.13 158);
+  background: var(--tone-94-0p05-158);
+  color: var(--tone-41-0p13-158);
 }
 
 .accountTransactionList div {
@@ -273,13 +273,13 @@
 }
 
 .accountTransactionList strong {
-  color: oklch(20% 0.035 235);
+  color: var(--tone-20-0p035-235);
   font-size: 0.98rem;
   overflow-wrap: anywhere;
 }
 
 .accountTransactionList small {
-  color: oklch(62% 0.024 230);
+  color: var(--tone-62-0p024-230);
   font-size: 0.8rem;
   font-weight: 760;
 }
@@ -287,7 +287,7 @@
 .accountTransactionList b {
   display: grid;
   gap: 2px;
-  color: oklch(49% 0.17 31);
+  color: var(--tone-49-0p17-31);
   font-size: 0.96rem;
   font-weight: 900;
   text-align: right;
@@ -299,7 +299,7 @@
 }
 
 .accountTransactionIncome {
-  color: oklch(38% 0.12 158);
+  color: var(--tone-38-0p12-158);
 }
 
 @media (min-width: 1024px) {

@@ -15,7 +15,7 @@
 }
 
 .entryDetailForm span {
-  color: oklch(56% 0.026 230);
+  color: var(--tone-56-0p026-230);
   font-size: 0.68rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -27,10 +27,10 @@
   min-width: 0;
   min-height: 38px;
   padding: 0 10px;
-  border: 1px solid oklch(87% 0.012 185);
+  border: 1px solid var(--tone-87-0p012-185);
   border-radius: 8px;
-  background: oklch(99% 0.002 180);
-  color: oklch(22% 0.034 235);
+  background: var(--tone-99-0p002-180);
+  color: var(--tone-22-0p034-235);
   font-weight: 780;
 }
 

@@ -1,0 +1,8 @@
+/*
+ * layers.css — declares the cascade-layer order for the whole app. Imported first in
+ * main.tsx so later @layer blocks slot into a known precedence:
+ *   tokens  < base < components < features
+ * Token files (palette.css, tokens.css) live in @layer tokens. Base/component/feature
+ * stylesheets are migrated into their layers incrementally alongside the CSS overhaul.
+ */
+@layer tokens, base, components, features;

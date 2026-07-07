@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Navigate, Route, Routes, useParams } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -145,13 +146,22 @@ vi.mock('@/lib/api/ledger', async (importOriginal) => {
 });
 
 function renderReport(path = '/reports/category') {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      mutations: { retry: false },
+      queries: { retry: false },
+    },
+  });
+
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/reports" element={<Navigate to={reportTabPath('category')} replace />} />
-        <Route path="/reports/:dimension" element={<RoutedReportWorkspace />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/reports" element={<Navigate to={reportTabPath('category')} replace />} />
+          <Route path="/reports/:dimension" element={<RoutedReportWorkspace />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -204,7 +214,7 @@ describe('ReportWorkspace', () => {
     expect(within(panel).getByRole('heading', { name: 'Member expense' })).toBeInTheDocument();
     expect(within(panel).getByRole('heading', { name: 'Member income' })).toBeInTheDocument();
     expect(within(panel).getByRole('heading', { name: 'Member balance' })).toBeInTheDocument();
-    expect(panel).toHaveTextContent('Family shared');
+    expect(await within(panel).findAllByText('Family shared')).not.toHaveLength(0);
     expect(panel).toHaveTextContent('Person');
     expect(panel).toHaveTextContent('Roommate');
     expect(panel).toHaveTextContent('$241.00');
@@ -226,5 +236,52 @@ describe('ReportWorkspace', () => {
     expect(summary).toHaveTextContent('Balance');
     expect(summary).toHaveTextContent('$1,509.00');
     expect(within(panel).getByRole('img', { name: /Cashflow trend chart/ })).toBeInTheDocument();
+  });
+
+  it('scrubs the trend chart and toggles series from the legend', async () => {
+    const { container } = renderReport('/reports/trend');
+
+    const panel = await screen.findByRole('tabpanel', { name: 'Trend' });
+    await within(panel).findByRole('img', { name: /Cashflow trend chart/ });
+
+    const slider = within(panel).getByRole('slider', { name: 'Explore cashflow trend by period' });
+    // The scrubber announces every series at the active period.
+    expect(slider).toHaveAttribute('aria-valuetext', expect.stringContaining('Income'));
+    expect(slider).toHaveAttribute('aria-valuetext', expect.stringContaining('Balance'));
+
+    // Legend buttons toggle each line's visibility.
+    const incomeToggle = within(panel).getByRole('button', { name: 'Income' });
+    expect(incomeToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(container.querySelectorAll('.trendLine-income')).toHaveLength(1);
+
+    fireEvent.click(incomeToggle);
+    expect(incomeToggle).toHaveAttribute('aria-pressed', 'false');
+    expect(container.querySelectorAll('.trendLine-income')).toHaveLength(0);
+  });
+
+  it('cross-highlights the donut center and ranked list on focus', async () => {
+    renderReport();
+
+    const tabpanel = await screen.findByRole('tabpanel', { name: 'Category' });
+    // Wait for the async ledger fetch to populate the category sections.
+    await within(tabpanel).findAllByText('Dining');
+    const section = within(tabpanel).getByRole('heading', { name: 'Category expense' }).closest('section');
+    expect(section).not.toBeNull();
+    const scoped = within(section as HTMLElement);
+    const centerLabel = () => (section as HTMLElement).querySelector('.donutFigure text');
+
+    expect(centerLabel()).toHaveTextContent('Total');
+    expect((section as HTMLElement).querySelector('.rankRowActive')).toBeNull();
+
+    const legend = scoped.getByRole('button', { name: /Dining/ });
+    fireEvent.focus(legend);
+    expect(centerLabel()).toHaveTextContent('Dining');
+    const activeRow = (section as HTMLElement).querySelector('.rankRowActive');
+    expect(activeRow).not.toBeNull();
+    expect(activeRow).toHaveTextContent('Dining');
+
+    fireEvent.blur(legend);
+    expect(centerLabel()).toHaveTextContent('Total');
+    expect((section as HTMLElement).querySelector('.rankRowActive')).toBeNull();
   });
 });

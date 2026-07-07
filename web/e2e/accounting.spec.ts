@@ -435,6 +435,9 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Transactions' }).getByText('Team lunch')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Transactions' }).getByText('-$30.00', { exact: true })).toBeVisible();
   await nav.getByRole('button', { name: 'Record' }).click();
+  // Wait for the lazily-loaded record tab to commit before opening search so the
+  // search overlay records the record view (not the prior tab) as its return target.
+  await expect(page.getByRole('region', { name: 'Record entry' })).toBeVisible();
   await page.getByRole('button', { name: 'Search transactions' }).click();
   await expect(page.getByRole('region', { name: 'Search transactions' })).toBeVisible();
   await page.getByRole('textbox', { name: 'Search transactions' }).fill('Team lunch');

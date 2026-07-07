@@ -11,9 +11,9 @@
   padding: 24px 24px 20px;
   border-radius: 12px;
   background:
-    radial-gradient(circle at 95% 45%, oklch(84% 0.18 85) 0 3rem, transparent 3.1rem),
-    linear-gradient(135deg, oklch(69% 0.21 32), oklch(82% 0.18 74));
-  color: oklch(99% 0.004 90);
+    radial-gradient(circle at 95% 45%, var(--tone-84-0p18-85) 0 3rem, transparent 3.1rem),
+    linear-gradient(135deg, var(--tone-69-0p21-32), var(--tone-82-0p18-74));
+  color: var(--tone-99-0p004-90);
 }
 
 .accountHero::after {
@@ -23,8 +23,8 @@
   width: 165px;
   height: 135px;
   border-radius: 28px;
-  background: linear-gradient(135deg, oklch(97% 0.04 82 / 72%), oklch(83% 0.18 82 / 72%)), oklch(88% 0.16 77);
-  box-shadow: -30px -20px 0 oklch(99% 0.025 88 / 36%);
+  background: linear-gradient(135deg, var(--tone-97-0p04-82-a72), var(--tone-83-0p18-82-a72)), var(--tone-88-0p16-77);
+  box-shadow: -30px -20px 0 var(--tone-99-0p025-88-a36);
   content: '';
   transform: rotate(-24deg);
 }
@@ -41,7 +41,7 @@
 }
 
 .accountHero span {
-  color: oklch(98% 0.01 90 / 78%);
+  color: var(--tone-98-0p01-90-a78);
   font-size: 0.9rem;
   font-weight: 820;
 }
@@ -50,7 +50,7 @@
   display: inline-flex;
   gap: 10px;
   align-items: center;
-  color: oklch(100% 0 0);
+  color: var(--tone-100-0-0);
   font-size: 2.18rem;
   font-weight: 900;
   line-height: 1;
@@ -68,7 +68,7 @@
 .accountHero i {
   width: 1px;
   height: 13px;
-  background: oklch(100% 0 0 / 38%);
+  background: var(--tone-100-0-0-a38);
 }
 
 .accountControls {
@@ -77,7 +77,7 @@
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .accountControls label {
@@ -90,7 +90,7 @@
 }
 
 .accountControls span {
-  color: oklch(58% 0.025 230);
+  color: var(--tone-58-0p025-230);
   font-size: 0.72rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -101,10 +101,10 @@
   min-width: 0;
   min-height: 36px;
   padding: 0 10px;
-  border: 1px solid oklch(88% 0.012 185);
+  border: 1px solid var(--tone-88-0p012-185);
   border-radius: 8px;
-  background: oklch(99% 0.002 180);
-  color: oklch(22% 0.034 235);
+  background: var(--tone-99-0p002-180);
+  color: var(--tone-22-0p034-235);
   font-weight: 780;
 }
 
@@ -112,8 +112,8 @@
   grid-column: 1 / -1;
   min-height: 40px;
   border-radius: 8px;
-  background: oklch(24% 0.035 235);
-  color: oklch(99% 0.002 180);
+  background: var(--tone-24-0p035-235);
+  color: var(--tone-99-0p002-180);
   cursor: pointer;
   font-weight: 900;
 }
@@ -129,7 +129,7 @@
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .accountCreateForm label {
@@ -142,7 +142,7 @@
 }
 
 .accountCreateForm span {
-  color: oklch(58% 0.025 230);
+  color: var(--tone-58-0p025-230);
   font-size: 0.72rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -153,10 +153,10 @@
   min-width: 0;
   min-height: 36px;
   padding: 0 10px;
-  border: 1px solid oklch(88% 0.012 185);
+  border: 1px solid var(--tone-88-0p012-185);
   border-radius: 8px;
-  background: oklch(99% 0.002 180);
-  color: oklch(22% 0.034 235);
+  background: var(--tone-99-0p002-180);
+  color: var(--tone-22-0p034-235);
   font-weight: 780;
 }
 
@@ -164,8 +164,8 @@
   grid-column: 1 / -1;
   min-height: 40px;
   border-radius: 8px;
-  background: oklch(24% 0.035 235);
-  color: oklch(99% 0.002 180);
+  background: var(--tone-24-0p035-235);
+  color: var(--tone-99-0p002-180);
   cursor: pointer;
   font-weight: 900;
 }
@@ -183,7 +183,7 @@
 .accountSection {
   overflow: hidden;
   border-radius: 12px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .accountSectionHeader,
@@ -193,7 +193,7 @@
   gap: 8px;
   align-items: center;
   min-height: 58px;
-  color: oklch(22% 0.034 235);
+  color: var(--tone-22-0p034-235);
 }
 
 .accountSectionHeader {
@@ -213,7 +213,7 @@
 }
 
 .accountSectionToggle:focus-visible {
-  outline: 2px solid oklch(69% 0.14 255);
+  outline: 2px solid var(--tone-69-0p14-255);
   outline-offset: -3px;
 }
 
@@ -223,7 +223,7 @@
 }
 
 .accountSection small {
-  color: oklch(64% 0.024 230);
+  color: var(--tone-64-0p024-230);
   font-size: 0.86rem;
   font-weight: 760;
 }
@@ -233,7 +233,7 @@
 }
 
 .accountSectionHeader strong {
-  color: oklch(28% 0.028 235);
+  color: var(--tone-28-0p028-235);
   font-size: 1rem;
   font-weight: 850;
   white-space: nowrap;
@@ -256,7 +256,7 @@
   gap: 14px;
   align-items: center;
   min-height: 76px;
-  border-top: 1px solid oklch(93% 0.006 185);
+  border-top: 1px solid var(--tone-93-0p006-185);
 }
 
 .accountRowButton {
@@ -273,7 +273,7 @@
 }
 
 .accountRowButton:focus-visible {
-  outline: 2px solid oklch(69% 0.14 255);
+  outline: 2px solid var(--tone-69-0p14-255);
   outline-offset: -3px;
 }
 
@@ -284,8 +284,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: oklch(69% 0.14 255);
-  color: oklch(100% 0 0);
+  background: var(--tone-69-0p14-255);
+  color: var(--tone-100-0-0);
 }
 
 .accountSection li div {
@@ -296,21 +296,21 @@
 
 .accountSection li strong,
 .profileBadge strong {
-  color: oklch(20% 0.035 235);
+  color: var(--tone-20-0p035-235);
   font-size: 1rem;
   overflow-wrap: anywhere;
 }
 
 .accountSection li span,
 .profileBadge span {
-  color: oklch(61% 0.026 230);
+  color: var(--tone-61-0p026-230);
   font-size: 0.84rem;
   font-weight: 760;
   text-transform: capitalize;
 }
 
 .accountSection li b {
-  color: oklch(20% 0.035 235);
+  color: var(--tone-20-0p035-235);
   font-size: 1rem;
   font-weight: 860;
   white-space: nowrap;
@@ -320,26 +320,26 @@
   display: block;
   min-height: auto;
   padding: 18px 0;
-  color: oklch(64% 0.024 230);
+  color: var(--tone-64-0p024-230);
   font-size: 0.88rem;
   font-weight: 760;
 }
 
 .mobilePrimaryButton {
-  background: oklch(67% 0.18 31);
-  color: oklch(99% 0.002 180);
+  background: var(--tone-67-0p18-31);
+  color: var(--tone-99-0p002-180);
 }
 
 .mobileSecondaryButton {
-  border: 1px solid oklch(86% 0.015 185);
-  background: oklch(100% 0 0);
-  color: oklch(23% 0.034 235);
+  border: 1px solid var(--tone-86-0p015-185);
+  background: var(--tone-100-0-0);
+  color: var(--tone-23-0p034-235);
 }
 
 .mobileDangerButton {
-  border: 1px solid oklch(88% 0.055 25);
-  background: oklch(98% 0.015 25);
-  color: oklch(45% 0.15 28);
+  border: 1px solid var(--tone-88-0p055-25);
+  background: var(--tone-98-0p015-25);
+  color: var(--tone-45-0p15-28);
 }
 
 .profileBadge {
@@ -349,7 +349,7 @@
   align-items: center;
   padding: 16px;
   border-radius: 8px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .accountUidRow {
@@ -359,7 +359,7 @@
   gap: 12px;
   padding: 12px 16px;
   border-radius: 8px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .accountUidText {
@@ -369,7 +369,7 @@
 }
 
 .accountUidText span {
-  color: oklch(61% 0.026 230);
+  color: var(--tone-61-0p026-230);
   font-size: 0.74rem;
   font-weight: 820;
   text-transform: uppercase;
@@ -377,7 +377,7 @@
 }
 
 .accountUidText code {
-  color: oklch(20% 0.035 235);
+  color: var(--tone-20-0p035-235);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.9rem;
   font-weight: 760;
@@ -390,10 +390,10 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  border: 1px solid oklch(86% 0.015 185);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 999px;
-  background: oklch(100% 0 0);
-  color: oklch(40% 0.08 235);
+  background: var(--tone-100-0-0);
+  color: var(--tone-40-0p08-235);
   font-size: 0.8rem;
   font-weight: 820;
   cursor: pointer;
@@ -410,13 +410,13 @@
   gap: 12px;
   min-height: 46px;
   align-items: center;
-  border-bottom: 1px solid oklch(92% 0.006 185);
-  color: oklch(25% 0.035 235);
+  border-bottom: 1px solid var(--tone-92-0p006-185);
+  color: var(--tone-25-0p035-235);
   font-weight: 820;
 }
 
 .activityMiniList time {
-  color: oklch(60% 0.025 230);
+  color: var(--tone-60-0p025-230);
   font-size: 0.78rem;
   white-space: nowrap;
 }

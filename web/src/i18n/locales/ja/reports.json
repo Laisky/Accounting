@@ -75,7 +75,9 @@
       "filteredTotal": "フィルター後の合計",
       "heading": "収入、支出、残高のトレンド",
       "income": "収入",
+      "point": "{{period}} — 収入 {{income}}、支出 {{expense}}、残高 {{balance}}",
       "range": "範囲 {{low}} から {{high}}",
+      "scrubber": "期間別にキャッシュフローの推移を確認",
       "summary": "トレンドサマリー"
     }
   }

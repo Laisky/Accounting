@@ -75,7 +75,9 @@
       "filteredTotal": "filtered total",
       "heading": "Income, expense, and balance trend",
       "income": "Income",
+      "point": "{{period}} — Income {{income}}, Expense {{expense}}, Balance {{balance}}",
       "range": "Range {{low}} to {{high}}",
+      "scrubber": "Explore cashflow trend by period",
       "summary": "Trend summary"
     }
   }

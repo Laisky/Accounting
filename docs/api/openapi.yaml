@@ -85,6 +85,7 @@ components:
     ErrorResponse: { $ref: "./schemas.yaml#/ErrorResponse" }
     AcceptedResponse: { $ref: "./schemas.yaml#/AcceptedResponse" }
     StatusResponse: { $ref: "./schemas.yaml#/StatusResponse" }
+    ClientTelemetry: { $ref: "./schemas.yaml#/ClientTelemetry" }
     AuthUser: { $ref: "./schemas.yaml#/AuthUser" }
     AuthActor: { $ref: "./schemas.yaml#/AuthActor" }
     AuthSession: { $ref: "./schemas.yaml#/AuthSession" }
@@ -194,3 +195,4 @@ paths:
     {
       $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1imports~1{batchID}~1apply",
     }
+  /telemetry/client: { $ref: "./paths/system.yaml#/~1telemetry~1client" }

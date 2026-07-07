@@ -30,6 +30,8 @@
       "accountReady": "Cuenta lista.",
       "entryPosted": "Movimiento registrado."
     },
-    "total": "Total"
+    "total": "Total",
+    "undo": "Deshacer",
+    "cancel": "Cancelar"
   }
 }

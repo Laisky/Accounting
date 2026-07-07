@@ -546,3 +546,19 @@ pnpm --dir web run test:e2e
 - Extend the initial Wacai CSV and `.xlsx` preview parser with mapping UX, commit enrichment, rollback behavior, durable raw-file retention, and broader format coverage.
 - Add import/export formats for bank statements after the Wacai migration path is defined.
 - Add a deployment document once Docker and CI exist.
+
+## Observability (2026-07, implemented)
+
+- Every response carries `X-Request-ID` (`httpserver.requestIDMiddleware`, reused from a safe
+  inbound header or freshly generated); `apiError` surfaces it and the web `apiClient`/error
+  boundary expose an event id.
+- `POST /api/telemetry/client` ingests sanitized client telemetry. It decodes with
+  `DisallowUnknownFields` against a strict 12-field allowlist (kind/eventId/requestId/routePattern/
+  componentStackHash/errorName/errorMessageHash/metricName/metricValue/rating/navigationType/
+  userAgentFamily/timestamp), rate-limits per IP, and logs error-kind events at error level so
+  they reach the existing alertpusher. Documented in `docs/api` and covered by tests.
+- Backend OTel metrics: `telemetry.NewMetrics()` + `metricsMiddleware` emit HTTP RED metrics and
+  domain counters (entry writes, import preview/apply, login outcomes, client errors, Web Vitals);
+  `telemetry.Init` configures an OTLP `MeterProvider` alongside tracing when telemetry is enabled.
+- CI gate `pnpm --dir web run check:tokens` enforces zero raw color literals outside token files;
+  `test:coverage` enforces web coverage thresholds.

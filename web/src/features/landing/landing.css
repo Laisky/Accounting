@@ -1,17 +1,18 @@
 .landingShell {
-  --landing-ink: oklch(18% 0.036 238);
-  --landing-muted: oklch(39% 0.045 238);
-  --landing-paper: oklch(97% 0.019 95);
-  --landing-panel: oklch(99% 0.013 96);
-  --landing-line: oklch(79% 0.045 94);
-  --landing-teal: oklch(34% 0.11 166);
-  --landing-clay: oklch(48% 0.13 35);
-  --landing-gold: oklch(75% 0.135 78);
+  --landing-ink: var(--tone-18-0p036-238);
+  --landing-muted: var(--tone-39-0p045-238);
+  --landing-paper: var(--tone-97-0p019-95);
+  --landing-panel: var(--tone-99-0p013-96);
+  --landing-line: var(--tone-79-0p045-94);
+  --landing-teal: var(--tone-34-0p11-166);
+  --landing-clay: var(--tone-48-0p13-35);
+  --landing-gold: var(--tone-75-0p135-78);
 
   min-height: 100vh;
   color: var(--landing-ink);
   background:
-    linear-gradient(180deg, oklch(99% 0.012 100), var(--landing-paper) 42%, oklch(94% 0.024 105)), var(--landing-paper);
+    linear-gradient(180deg, var(--tone-99-0p012-100), var(--landing-paper) 42%, var(--tone-94-0p024-105)),
+    var(--landing-paper);
 }
 
 .landingHeader {
@@ -115,7 +116,7 @@
   padding: 0 14px;
   border: 1px solid var(--landing-ink);
   background: var(--landing-ink);
-  color: oklch(98% 0.012 100);
+  color: var(--tone-98-0p012-100);
   white-space: nowrap;
 }
 
@@ -162,7 +163,7 @@
   gap: 9px;
   padding: 0 18px;
   background: var(--landing-teal);
-  color: oklch(98% 0.012 100);
+  color: var(--tone-98-0p012-100);
 }
 
 .landingSecondaryAction {
@@ -188,9 +189,9 @@
 .ledgerWindow {
   position: relative;
   overflow: hidden;
-  border: 1px solid oklch(35% 0.06 238);
+  border: 1px solid var(--tone-35-0p06-238);
   border-radius: 8px;
-  background: oklch(21% 0.04 238);
+  background: var(--tone-21-0p04-238);
   box-shadow: 0 26px 80px color-mix(in oklch, var(--landing-ink), transparent 76%);
 }
 
@@ -201,14 +202,14 @@
   justify-content: space-between;
   min-height: 52px;
   padding: 0 16px;
-  border-bottom: 1px solid oklch(33% 0.045 238);
-  color: oklch(91% 0.018 96);
+  border-bottom: 1px solid var(--tone-33-0p045-238);
+  color: var(--tone-91-0p018-96);
   font-size: 0.82rem;
   font-weight: 850;
 }
 
 .ledgerWindowBar strong {
-  color: oklch(87% 0.105 153);
+  color: var(--tone-87-0p105-153);
   font-size: 0.75rem;
   text-transform: uppercase;
 }
@@ -223,7 +224,7 @@
 .ledgerEntryPreview,
 .ledgerAuditPreview {
   border-radius: 8px;
-  background: oklch(96% 0.018 102);
+  background: var(--tone-96-0p018-102);
 }
 
 .ledgerBalancePreview {

@@ -5,18 +5,18 @@
  * whitespace + shared card surfaces + section headers.
  */
 .meScreen {
-  --me-ink: oklch(21% 0.035 235);
-  --me-ink-soft: oklch(44% 0.03 232);
-  --me-ink-muted: oklch(60% 0.024 230);
-  --me-surface: oklch(100% 0 0);
-  --me-surface-sunken: oklch(98.6% 0.004 185);
-  --me-line: oklch(92.5% 0.006 185);
-  --me-accent: oklch(56% 0.11 258);
-  --me-accent-soft: oklch(95% 0.03 258);
-  --me-positive-ink: oklch(46% 0.11 152);
-  --me-positive-bg: oklch(95% 0.042 158);
-  --me-neutral-ink: oklch(52% 0.018 250);
-  --me-neutral-bg: oklch(95.5% 0.006 240);
+  --me-ink: var(--tone-21-0p035-235);
+  --me-ink-soft: var(--tone-44-0p03-232);
+  --me-ink-muted: var(--tone-60-0p024-230);
+  --me-surface: var(--tone-100-0-0);
+  --me-surface-sunken: var(--tone-98p6-0p004-185);
+  --me-line: var(--tone-92p5-0p006-185);
+  --me-accent: var(--tone-56-0p11-258);
+  --me-accent-soft: var(--tone-95-0p03-258);
+  --me-positive-ink: var(--tone-46-0p11-152);
+  --me-positive-bg: var(--tone-95-0p042-158);
+  --me-neutral-ink: var(--tone-52-0p018-250);
+  --me-neutral-bg: var(--tone-95p5-0p006-240);
   --me-radius: 14px;
   --me-row-min: 52px;
 
@@ -74,7 +74,7 @@
 
 .meBackButton:hover {
   background: var(--me-surface-sunken);
-  border-color: oklch(89% 0.01 240);
+  border-color: var(--tone-89-0p01-240);
 }
 
 /* ── Identity banner — the one distinct card ── */
@@ -85,10 +85,10 @@
   padding: 18px;
   border-radius: 18px;
   background:
-    radial-gradient(circle at 12% -10%, oklch(96% 0.03 258), transparent 62%),
-    linear-gradient(150deg, oklch(99.5% 0.003 230), oklch(97.5% 0.01 250));
-  border: 1px solid oklch(91% 0.012 250);
-  box-shadow: 0 14px 34px oklch(55% 0.06 255 / 12%);
+    radial-gradient(circle at 12% -10%, var(--tone-96-0p03-258), transparent 62%),
+    linear-gradient(150deg, var(--tone-99p5-0p003-230), var(--tone-97p5-0p01-250));
+  border: 1px solid var(--tone-91-0p012-250);
+  box-shadow: 0 14px 34px var(--tone-55-0p06-255-a12);
 }
 
 .meAvatar {
@@ -98,9 +98,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: linear-gradient(140deg, oklch(64% 0.13 262), oklch(60% 0.15 292));
-  color: oklch(99% 0.005 250);
-  box-shadow: inset 0 1px 1px oklch(100% 0 0 / 40%);
+  background: linear-gradient(140deg, var(--tone-64-0p13-262), var(--tone-60-0p15-292));
+  color: var(--tone-99-0p005-250);
+  box-shadow: inset 0 1px 1px var(--tone-100-0-0-a40);
 }
 
 .meIdentityMain {
@@ -126,8 +126,8 @@
   gap: 12px;
   padding: 11px 13px;
   border-radius: 11px;
-  background: oklch(100% 0 0 / 70%);
-  border: 1px solid oklch(93% 0.008 250);
+  background: var(--tone-100-0-0-a70);
+  border: 1px solid var(--tone-93-0p008-250);
 }
 
 .meUidText {
@@ -159,9 +159,9 @@
   align-items: center;
   gap: 6px;
   padding: 0 13px;
-  border: 1px solid oklch(88% 0.02 258);
+  border: 1px solid var(--tone-88-0p02-258);
   border-radius: 999px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
   color: var(--me-accent);
   font-size: 0.8rem;
   font-weight: 840;
@@ -173,7 +173,7 @@
 
 .meCopyButton:hover {
   background: var(--me-accent-soft);
-  border-color: oklch(80% 0.05 258);
+  border-color: var(--tone-80-0p05-258);
 }
 
 /* ── Status pills ── */
@@ -261,7 +261,7 @@
 
 .meNavRow:hover {
   background: var(--me-surface-sunken);
-  border-color: oklch(89% 0.01 240);
+  border-color: var(--tone-89-0p01-240);
 }
 
 .meNavIcon {
@@ -295,7 +295,7 @@
 }
 
 .meNavChevron {
-  color: oklch(72% 0.02 250);
+  color: var(--tone-72-0p02-250);
 }
 
 /* ── Recent activity ── */
@@ -392,7 +392,7 @@
 .mePreferenceRow select {
   min-height: 38px;
   padding: 0 30px 0 12px;
-  border: 1px solid oklch(88% 0.012 250);
+  border: 1px solid var(--tone-88-0p012-250);
   border-radius: 9px;
   background: var(--me-surface-sunken);
   color: var(--me-ink);
@@ -437,7 +437,7 @@
   grid-column: 3;
   min-height: 38px;
   padding: 0 30px 0 12px;
-  border: 1px solid oklch(88% 0.012 250);
+  border: 1px solid var(--tone-88-0p012-250);
   border-radius: 9px;
   background: var(--me-surface-sunken);
   color: var(--me-ink);
@@ -457,10 +457,10 @@
   align-items: center;
   justify-content: center;
   gap: 9px;
-  border: 1px solid oklch(88% 0.03 28);
+  border: 1px solid var(--tone-88-0p03-28);
   border-radius: var(--me-radius);
-  background: oklch(99% 0.008 30);
-  color: oklch(50% 0.15 28);
+  background: var(--tone-99-0p008-30);
+  color: var(--tone-50-0p15-28);
   font-size: 0.98rem;
   font-weight: 860;
   cursor: pointer;
@@ -468,7 +468,7 @@
 }
 
 .meSignOutButton:hover {
-  background: oklch(96.5% 0.02 30);
+  background: var(--tone-96p5-0p02-30);
 }
 
 .meSignOutButton:disabled {

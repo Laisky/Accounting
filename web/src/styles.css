@@ -1,6 +1,6 @@
 :root {
-  color: oklch(22% 0.035 238);
-  background: oklch(96% 0.018 112);
+  color: var(--tone-22-0p035-238);
+  background: var(--tone-96-0p018-112);
   font-family: 'Aptos', 'Segoe UI', system-ui, sans-serif;
   font-synthesis: none;
   line-height: 1.5;
@@ -56,13 +56,13 @@ button {
 }
 
 .authError {
-  background: oklch(96% 0.035 29);
-  color: oklch(45% 0.17 29);
+  background: var(--tone-96-0p035-29);
+  color: var(--tone-45-0p17-29);
 }
 
 .authStatus {
-  background: oklch(94% 0.04 152);
-  color: oklch(29% 0.095 164);
+  background: var(--tone-94-0p04-152);
+  color: var(--tone-29-0p095-164);
 }
 
 .sessionTools {
@@ -76,10 +76,10 @@ button {
 .sessionTools > span {
   max-width: 260px;
   padding: 8px 10px;
-  border: 1px solid oklch(80% 0.045 104);
+  border: 1px solid var(--tone-80-0p045-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
-  color: oklch(29% 0.04 238);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-29-0p04-238);
   font-size: 0.82rem;
   font-weight: 850;
   overflow-wrap: anywhere;
@@ -87,7 +87,7 @@ button {
 
 .eyebrow {
   margin: 0 0 8px;
-  color: oklch(39% 0.11 164);
+  color: var(--tone-39-0p11-164);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -104,10 +104,10 @@ button {
 
 .authMethods span {
   padding: 6px 9px;
-  border: 1px solid oklch(76% 0.075 164);
+  border: 1px solid var(--tone-76-0p075-164);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
-  color: oklch(31% 0.1 164);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-31-0p1-164);
   font-size: 0.78rem;
   font-weight: 850;
   line-height: 1.1;
@@ -117,9 +117,9 @@ button {
   display: grid;
   gap: 16px;
   padding: clamp(18px, 3vw, 26px);
-  border: 1px solid oklch(80% 0.045 104);
+  border: 1px solid var(--tone-80-0p045-104);
   border-radius: 8px;
-  background: oklch(98% 0.014 110);
+  background: var(--tone-98-0p014-110);
 }
 
 .activityPanel h2 {
@@ -141,9 +141,9 @@ button {
   align-items: center;
   min-height: 58px;
   padding: 10px 12px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
+  background: var(--tone-99-0p01-108);
 }
 
 .activityList li div {
@@ -161,7 +161,7 @@ button {
 }
 
 .activityList strong {
-  color: oklch(20% 0.04 242);
+  color: var(--tone-20-0p04-242);
   font-size: 0.92rem;
 }
 
@@ -169,7 +169,7 @@ button {
 .activityList time,
 .activityEmpty,
 .activityTotal {
-  color: oklch(43% 0.04 238);
+  color: var(--tone-43-0p04-238);
   font-size: 0.82rem;
   font-weight: 800;
 }
@@ -192,7 +192,7 @@ p {
 
 h1 {
   max-width: 760px;
-  color: oklch(18% 0.04 242);
+  color: var(--tone-18-0p04-242);
   font-size: clamp(2.25rem, 5vw, 4.85rem);
   letter-spacing: 0;
   line-height: 0.96;
@@ -200,20 +200,20 @@ h1 {
 
 h2 {
   max-width: 670px;
-  color: oklch(19% 0.04 242);
+  color: var(--tone-19-0p04-242);
   font-size: clamp(1.45rem, 3vw, 2.45rem);
   letter-spacing: 0;
   line-height: 1.06;
 }
 
 h3 {
-  color: oklch(19% 0.04 242);
+  color: var(--tone-19-0p04-242);
   font-size: 1.05rem;
   letter-spacing: 0;
 }
 
 h4 {
-  color: oklch(19% 0.04 242);
+  color: var(--tone-19-0p04-242);
   font-size: 0.92rem;
   letter-spacing: 0;
 }
@@ -236,9 +236,9 @@ h4 {
 .iconButton {
   width: 44px;
   height: 44px;
-  border: 1px solid oklch(78% 0.045 104);
-  background: oklch(99% 0.01 108);
-  color: oklch(23% 0.04 242);
+  border: 1px solid var(--tone-78-0p045-104);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-23-0p04-242);
 }
 
 .iconButton:hover,
@@ -253,9 +253,9 @@ h4 {
   grid-template-columns: minmax(260px, 1.4fr) repeat(2, minmax(140px, 0.4fr));
   gap: 1px;
   overflow: hidden;
-  border: 1px solid oklch(80% 0.045 104);
+  border: 1px solid var(--tone-80-0p045-104);
   border-radius: 8px;
-  background: oklch(80% 0.045 104);
+  background: var(--tone-80-0p045-104);
 }
 
 .summaryItem {
@@ -263,13 +263,13 @@ h4 {
   gap: 8px;
   min-height: 104px;
   padding: clamp(18px, 3vw, 28px);
-  background: oklch(98% 0.014 110);
+  background: var(--tone-98-0p014-110);
 }
 
 .summaryItem span,
 .sourceField label,
 dt {
-  color: oklch(42% 0.047 238);
+  color: var(--tone-42-0p047-238);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -277,7 +277,7 @@ dt {
 }
 
 .summaryItem strong {
-  color: oklch(25% 0.085 158);
+  color: var(--tone-25-0p085-158);
   font-size: clamp(1.55rem, 3vw, 2.35rem);
   letter-spacing: 0;
   line-height: 1;
@@ -296,9 +296,9 @@ dt {
 
 .importMain,
 .reviewPanel {
-  border: 1px solid oklch(80% 0.045 104);
+  border: 1px solid var(--tone-80-0p045-104);
   border-radius: 8px;
-  background: oklch(98% 0.014 110);
+  background: var(--tone-98-0p014-110);
 }
 
 .importMain {
@@ -317,9 +317,9 @@ dt {
 .sourceBadge {
   flex: 0 0 auto;
   padding: 7px 10px;
-  border: 1px solid oklch(76% 0.075 164);
+  border: 1px solid var(--tone-76-0p075-164);
   border-radius: 999px;
-  color: oklch(31% 0.1 164);
+  color: var(--tone-31-0p1-164);
   font-size: 0.78rem;
   font-weight: 800;
   white-space: nowrap;
@@ -334,17 +334,17 @@ dt {
   width: min(100%, 360px);
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid oklch(76% 0.055 104);
+  border: 1px solid var(--tone-76-0p055-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
-  color: oklch(20% 0.04 242);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-20-0p04-242);
   font-weight: 800;
 }
 
 .sourceField p,
 .reviewHeader p,
 .dropZone small {
-  color: oklch(43% 0.04 238);
+  color: var(--tone-43-0p04-238);
 }
 
 .dropZone {
@@ -353,10 +353,10 @@ dt {
   gap: 10px;
   min-height: 238px;
   padding: 28px;
-  border: 2px dashed oklch(70% 0.085 164);
+  border: 2px dashed var(--tone-70-0p085-164);
   border-radius: 8px;
-  background: linear-gradient(135deg, oklch(99% 0.01 108), oklch(94% 0.04 152)), oklch(98% 0.014 110);
-  color: oklch(30% 0.095 164);
+  background: linear-gradient(135deg, var(--tone-99-0p01-108), var(--tone-94-0p04-152)), var(--tone-98-0p014-110);
+  color: var(--tone-30-0p095-164);
   text-align: center;
   cursor: pointer;
 }
@@ -371,7 +371,7 @@ dt {
 
 .dropZone span {
   max-width: min(100%, 520px);
-  color: oklch(18% 0.04 242);
+  color: var(--tone-18-0p04-242);
   font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 900;
   line-height: 1.1;
@@ -385,7 +385,7 @@ dt {
 
 .dropZoneReady {
   border-style: solid;
-  background: oklch(97% 0.035 152);
+  background: var(--tone-97-0p035-152);
 }
 
 .actionRow {
@@ -403,14 +403,14 @@ dt {
 }
 
 .primaryButton {
-  background: oklch(31% 0.11 164);
-  color: oklch(98% 0.014 110);
+  background: var(--tone-31-0p11-164);
+  color: var(--tone-98-0p014-110);
 }
 
 .ghostButton {
-  border: 1px solid oklch(76% 0.055 104);
+  border: 1px solid var(--tone-76-0p055-104);
   background: transparent;
-  color: oklch(24% 0.04 242);
+  color: var(--tone-24-0p04-242);
 }
 
 .primaryButton:disabled,
@@ -439,8 +439,8 @@ dt {
   height: 38px;
   padding: 8px;
   border-radius: 8px;
-  background: oklch(91% 0.045 164);
-  color: oklch(31% 0.1 164);
+  background: var(--tone-91-0p045-164);
+  color: var(--tone-31-0p1-164);
 }
 
 .fileFacts {
@@ -449,27 +449,27 @@ dt {
   gap: 1px;
   margin: 0;
   overflow: hidden;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(82% 0.035 104);
+  background: var(--tone-82-0p035-104);
 }
 
 .fileFacts div {
   min-height: 78px;
   padding: 14px;
-  background: oklch(99% 0.01 108);
+  background: var(--tone-99-0p01-108);
 }
 
 dd {
   margin: 5px 0 0;
-  color: oklch(21% 0.04 242);
+  color: var(--tone-21-0p04-242);
   font-size: 1rem;
   font-weight: 850;
 }
 
 .importError {
   margin: 0;
-  color: oklch(45% 0.17 29);
+  color: var(--tone-45-0p17-29);
   font-size: 0.88rem;
   font-weight: 800;
 }
@@ -483,10 +483,10 @@ dd {
 .previewSummary span {
   min-height: 38px;
   padding: 9px 10px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
-  color: oklch(25% 0.04 242);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-25-0p04-242);
   font-size: 0.82rem;
   font-weight: 850;
   overflow-wrap: anywhere;
@@ -500,10 +500,10 @@ dd {
 
 .schemaNotice {
   padding: 10px 12px;
-  border: 1px solid oklch(78% 0.055 104);
+  border: 1px solid var(--tone-78-0p055-104);
   border-radius: 8px;
-  background: oklch(96% 0.02 112);
-  color: oklch(34% 0.045 238);
+  background: var(--tone-96-0p02-112);
+  color: var(--tone-34-0p045-238);
   font-size: 0.82rem;
   font-weight: 800;
   overflow-wrap: anywhere;
@@ -520,14 +520,14 @@ dd {
   gap: 4px;
   min-height: 54px;
   padding: 10px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
+  background: var(--tone-99-0p01-108);
 }
 
 .detectedGrid span,
 .rowDiagnostics li > span {
-  color: oklch(42% 0.047 238);
+  color: var(--tone-42-0p047-238);
   font-size: 0.74rem;
   font-weight: 850;
   letter-spacing: 0;
@@ -535,7 +535,7 @@ dd {
 }
 
 .detectedGrid strong {
-  color: oklch(22% 0.04 242);
+  color: var(--tone-22-0p04-242);
   font-size: 0.86rem;
   overflow-wrap: anywhere;
 }
@@ -552,9 +552,9 @@ dd {
   display: grid;
   gap: 4px;
   padding: 10px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
+  background: var(--tone-99-0p01-108);
 }
 
 .rowDiagnostics strong,
@@ -563,12 +563,12 @@ dd {
 }
 
 .rowDiagnostics strong {
-  color: oklch(23% 0.04 242);
+  color: var(--tone-23-0p04-242);
   font-size: 0.88rem;
 }
 
 .rowDiagnostics small {
-  color: oklch(43% 0.04 238);
+  color: var(--tone-43-0p04-238);
   font-weight: 750;
 }
 
@@ -586,7 +586,7 @@ dd {
   gap: 10px;
   align-items: center;
   min-height: 48px;
-  color: oklch(48% 0.032 238);
+  color: var(--tone-48-0p032-238);
 }
 
 .pipeline span {
@@ -595,9 +595,9 @@ dd {
   justify-content: center;
   width: 34px;
   height: 34px;
-  border: 1px solid oklch(82% 0.035 104);
+  border: 1px solid var(--tone-82-0p035-104);
   border-radius: 8px;
-  background: oklch(99% 0.01 108);
+  background: var(--tone-99-0p01-108);
 }
 
 .pipeline p {
@@ -605,12 +605,12 @@ dd {
 }
 
 .pipelineActive {
-  color: oklch(26% 0.095 164);
+  color: var(--tone-26-0p095-164);
 }
 
 .pipelineActive span {
-  border-color: oklch(70% 0.085 164);
-  background: oklch(91% 0.045 164);
+  border-color: var(--tone-70-0p085-164);
+  background: var(--tone-91-0p045-164);
 }
 
 .quickGrid {
@@ -624,15 +624,15 @@ dd {
   gap: 10px;
   justify-content: flex-start;
   padding: 0 18px;
-  border: 1px solid oklch(80% 0.045 104);
-  background: oklch(99% 0.01 108);
-  color: oklch(22% 0.04 242);
+  border: 1px solid var(--tone-80-0p045-104);
+  background: var(--tone-99-0p01-108);
+  color: var(--tone-22-0p04-242);
   font-weight: 850;
 }
 
 .quickGrid button:hover,
 .iconButton:hover {
-  border-color: oklch(57% 0.11 164);
+  border-color: var(--tone-57-0p11-164);
 }
 
 @media (max-width: 860px) {
@@ -691,7 +691,7 @@ dd {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: oklch(54% 0.03 230);
+  color: var(--tone-54-0p03-230);
   font-size: 0.72rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -701,9 +701,9 @@ dd {
   width: 100%;
   min-height: 38px;
   padding: 0 10px;
-  border: 1px solid oklch(86% 0.015 185);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 8px;
-  background: oklch(100% 0 0);
-  color: oklch(20% 0.035 235);
+  background: var(--tone-100-0-0);
+  color: var(--tone-20-0p035-235);
   font-weight: 760;
 }

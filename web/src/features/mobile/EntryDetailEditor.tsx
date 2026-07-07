@@ -1,6 +1,7 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ConfirmDialog } from '@/components/ui';
 import { type Account, type Category, type Entry, type EntryUpdateInput } from '@/lib/api/ledger';
 import { formatMoney, supportedCurrencies } from '@/lib/money';
 import './entry-detail-editor.css';
@@ -29,6 +30,7 @@ export function EntryDetailEditor({
 }: EntryDetailEditorProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [draft, setDraft] = useState(() => buildDraft(entry));
   const title = entryTitle(entry, categories);
   const canSave = draft.amountCents > 0 && Boolean(draft.accountId);
@@ -85,11 +87,24 @@ export function EntryDetailEditor({
         >
           {t('mobile.transactions.editDetails')}
         </button>
-        <button className="mobileDangerButton" type="button" disabled={isBusy} onClick={() => onDeleteEntry(entry.id)}>
+        <button className="mobileDangerButton" type="button" disabled={isBusy} onClick={() => setIsConfirmOpen(true)}>
           <Trash2 size={16} />
           {t('mobile.transactions.deleteEntry')}
         </button>
       </div>
+      <ConfirmDialog
+        open={isConfirmOpen}
+        title={t('mobile.transactions.deleteConfirmTitle')}
+        description={t('mobile.transactions.deleteConfirmBody', { title })}
+        confirmLabel={t('mobile.transactions.deleteEntry')}
+        cancelLabel={t('common.cancel')}
+        destructive
+        onCancel={() => setIsConfirmOpen(false)}
+        onConfirm={() => {
+          setIsConfirmOpen(false);
+          void onDeleteEntry(entry.id);
+        }}
+      />
       {isOpen ? (
         <form
           className="entryDetailForm"

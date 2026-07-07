@@ -75,7 +75,9 @@
       "filteredTotal": "total filtré",
       "heading": "Tendance des revenus, dépenses et du solde",
       "income": "Revenu",
+      "point": "{{period}} — Revenu {{income}}, Dépense {{expense}}, Solde {{balance}}",
       "range": "Plage de {{low}} à {{high}}",
+      "scrubber": "Explorer la tendance de trésorerie par période",
       "summary": "Résumé de tendance"
     }
   }

@@ -2,10 +2,10 @@
   display: grid;
   gap: 13px;
   padding: 18px 18px 16px;
-  border: 1px solid oklch(93% 0.006 185);
+  border: 1px solid var(--tone-93-0p006-185);
   border-radius: 8px;
-  background: oklch(100% 0 0);
-  box-shadow: 0 10px 26px oklch(62% 0.04 210 / 10%);
+  background: var(--tone-100-0-0);
+  box-shadow: 0 10px 26px var(--tone-62-0p04-210-a10);
 }
 
 .budgetCard > div:first-child {
@@ -17,7 +17,7 @@
 
 .budgetCard h1 {
   margin: 0;
-  color: oklch(24% 0.035 235);
+  color: var(--tone-24-0p035-235);
   font-size: 1.08rem;
   line-height: 1.15;
 }
@@ -26,12 +26,12 @@
   display: flex;
   gap: 6px;
   align-items: baseline;
-  color: oklch(66% 0.025 230);
+  color: var(--tone-66-0p025-230);
   white-space: nowrap;
 }
 
 .budgetCard strong {
-  color: oklch(24% 0.035 235);
+  color: var(--tone-24-0p035-235);
   font-size: 1.04rem;
 }
 
@@ -39,21 +39,21 @@
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
-  background: oklch(95% 0.006 185);
+  background: var(--tone-95-0p006-185);
 }
 
 .budgetTrack span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, oklch(71% 0.16 45), oklch(67% 0.18 31));
+  background: linear-gradient(90deg, var(--tone-71-0p16-45), var(--tone-67-0p18-31));
 }
 
 .budgetCard footer {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   gap: 8px;
-  color: oklch(65% 0.024 230);
+  color: var(--tone-65-0p024-230);
   font-size: 0.78rem;
   font-weight: 780;
 }
@@ -63,9 +63,9 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   padding: 12px;
-  border: 1px solid oklch(91% 0.008 185);
+  border: 1px solid var(--tone-91-0p008-185);
   border-radius: 8px;
-  background: oklch(99% 0.002 180);
+  background: var(--tone-99-0p002-180);
 }
 
 .quickRecord label,
@@ -80,7 +80,7 @@
 
 .quickRecord span,
 .mobileField span {
-  color: oklch(54% 0.03 230);
+  color: var(--tone-54-0p03-230);
   font-size: 0.72rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -91,10 +91,10 @@
   width: 100%;
   min-height: 38px;
   padding: 0 10px;
-  border: 1px solid oklch(86% 0.015 185);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 8px;
-  background: oklch(100% 0 0);
-  color: oklch(20% 0.035 235);
+  background: var(--tone-100-0-0);
+  color: var(--tone-20-0p035-235);
   font-weight: 760;
 }
 
@@ -114,8 +114,8 @@
 
 .quickRecord button {
   grid-column: 1 / -1;
-  background: oklch(67% 0.18 31);
-  color: oklch(99% 0.002 180);
+  background: var(--tone-67-0p18-31);
+  color: var(--tone-99-0p002-180);
 }
 
 .quickRecord button:disabled,
@@ -144,7 +144,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 6px 9px;
-  color: oklch(62% 0.025 230);
+  color: var(--tone-62-0p025-230);
   font-size: 0.86rem;
   font-weight: 820;
 }
@@ -162,7 +162,7 @@
 
 .dayGroup li {
   min-height: 82px;
-  border-bottom: 1px solid oklch(93% 0.006 185);
+  border-bottom: 1px solid var(--tone-93-0p006-185);
 }
 
 .transactionRowButton {
@@ -182,12 +182,12 @@
 }
 
 .transactionRowButton:focus-visible {
-  outline: 2px solid oklch(69% 0.14 255);
+  outline: 2px solid var(--tone-69-0p14-255);
   outline-offset: -3px;
 }
 
 .transactionRowButton:hover {
-  background: oklch(97% 0.006 185);
+  background: var(--tone-97-0p006-185);
 }
 
 .transactionIcon {
@@ -197,8 +197,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: oklch(75% 0.14 178);
-  color: oklch(99% 0.002 180);
+  background: var(--tone-75-0p14-178);
+  color: var(--tone-99-0p002-180);
 }
 
 .dayGroup li div {
@@ -208,7 +208,7 @@
 }
 
 .dayGroup strong {
-  color: oklch(23% 0.034 235);
+  color: var(--tone-23-0p034-235);
   font-size: 1.04rem;
   overflow-wrap: anywhere;
 }
@@ -216,13 +216,13 @@
 .dayGroup small,
 .listFooter,
 .emptyState {
-  color: oklch(64% 0.024 230);
+  color: var(--tone-64-0p024-230);
   font-size: 0.87rem;
   font-weight: 760;
 }
 
 .transactionRowButton > b {
-  color: oklch(20% 0.035 235);
+  color: var(--tone-20-0p035-235);
   font-size: 1.02rem;
   font-weight: 880;
   white-space: nowrap;

@@ -16,6 +16,7 @@
       "balanceAfter": "残高 {{amount}}",
       "balanceChart": "口座残高チャート",
       "chartPoint": "{{date}}：{{amount}}",
+      "chartPointChange": "{{date}}：{{amount}}（{{change}}）",
       "empty": "この口座にはまだ取引がありません。",
       "entryMeta": "{{time}} / {{member}}",
       "error": "口座取引を読み込めませんでした。",
@@ -26,6 +27,7 @@
       "opening": "開始残高",
       "searchAccount": "この口座を検索",
       "searchTitle": "{{name}} を検索",
+      "summary": "口座残高の概要",
       "title": "口座取引",
       "totalIn": "総入金 {{amount}}",
       "totalOut": "総出金 {{amount}}"
@@ -76,6 +78,7 @@
     },
     "brand": "Accounting",
     "budget": {
+      "meter": "{{total}} 中 {{spent}} を支出（{{percent}}%）",
       "remaining": "残り",
       "spent": "支出 {{amount}}",
       "title": "今月の支出予算",
@@ -145,10 +148,14 @@
       "totpConfirmFailed": "TOTP setup could not be confirmed.",
       "totpDisableFailed": "TOTP could not be disabled.",
       "totpSetupFailed": "TOTP setup could not be started.",
-      "totpStatusFailed": "TOTP status could not be loaded."
+      "totpStatusFailed": "TOTP status could not be loaded.",
+      "entryRestoreFailed": "記録を復元できませんでした。"
     },
     "home": {
-      "title": "ホーム"
+      "title": "ホーム",
+      "emptyTitle": "まだ取引がありません",
+      "emptyBody": "最初の記録を追加すると、支出と残高がここに表示されます。",
+      "recordCta": "記録する"
     },
     "me": {
       "accountUid": "アカウントUID",
@@ -280,7 +287,8 @@
       "profileCurrencyUpdated": "主通貨を更新しました。",
       "totpDisabled": "TOTP disabled.",
       "totpEnabled": "TOTP enabled.",
-      "totpSetupStarted": "TOTP setup started."
+      "totpSetupStarted": "TOTP setup started.",
+      "entryRestored": "記録を復元しました。"
     },
     "transactions": {
       "accountFallback": "口座",
@@ -305,7 +313,16 @@
       "tags": "Tags",
       "tagsFor": "Tags for {{title}}",
       "timeFor": "Time for {{title}}",
-      "title": "取引"
+      "title": "取引",
+      "deleteConfirmTitle": "この記録を削除しますか？",
+      "deleteConfirmBody": "「{{title}}」を削除します。数秒間は元に戻せます。"
+    },
+    "shortcuts": {
+      "title": "キーボードショートカット",
+      "newEntry": "新規記録",
+      "search": "取引を検索",
+      "help": "このヘルプを表示",
+      "close": "ダイアログを閉じる"
     }
   }
 }

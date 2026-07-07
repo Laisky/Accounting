@@ -179,6 +179,13 @@ describe('AccountTransactionsView', () => {
     expect(screen.getByText('Jun 10, 2026')).toBeInTheDocument();
     expect(screen.getByText('$1,070.00')).toBeInTheDocument();
     expect(screen.getByText('+$70.00')).toBeInTheDocument();
+    // aria-valuetext mirrors the visible tooltip, including the per-point change for screen readers.
+    expect(slider).toHaveAttribute('aria-valuetext', expect.stringContaining('+$70.00'));
+
+    // Blurring returns the chart to its latest-balance resting state and hides the tooltip.
+    fireEvent.blur(slider);
+    expect(slider).toHaveAttribute('aria-valuenow', '4');
+    expect(screen.queryByText('Opening balance')).not.toBeInTheDocument();
   });
 
   it('filters account entries through source and destination transfer accounts', () => {

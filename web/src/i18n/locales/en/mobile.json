@@ -16,6 +16,7 @@
       "balanceAfter": "Balance {{amount}}",
       "balanceChart": "Account balance chart",
       "chartPoint": "{{date}}: {{amount}}",
+      "chartPointChange": "{{date}}: {{amount}} ({{change}})",
       "empty": "No transactions in this account yet.",
       "entryMeta": "{{time}} / {{member}}",
       "error": "Account transactions could not be loaded.",
@@ -26,6 +27,7 @@
       "opening": "Opening balance",
       "searchAccount": "Search this account",
       "searchTitle": "Search {{name}}",
+      "summary": "Account balance summary",
       "title": "Account transactions",
       "totalIn": "Total in {{amount}}",
       "totalOut": "Total out {{amount}}"
@@ -76,6 +78,7 @@
     },
     "brand": "Accounting",
     "budget": {
+      "meter": "Spent {{spent}} of {{total}} ({{percent}}%)",
       "remaining": "Remaining",
       "spent": "Spent {{amount}}",
       "title": "Monthly spending budget",
@@ -145,10 +148,14 @@
       "totpConfirmFailed": "TOTP setup could not be confirmed.",
       "totpDisableFailed": "TOTP could not be disabled.",
       "totpSetupFailed": "TOTP setup could not be started.",
-      "totpStatusFailed": "TOTP status could not be loaded."
+      "totpStatusFailed": "TOTP status could not be loaded.",
+      "entryRestoreFailed": "The entry could not be restored."
     },
     "home": {
-      "title": "Home"
+      "title": "Home",
+      "emptyTitle": "No transactions yet",
+      "emptyBody": "Record your first entry to see your spending and balances here.",
+      "recordCta": "Record entry"
     },
     "me": {
       "accountUid": "Account UID",
@@ -280,7 +287,8 @@
       "profileCurrencyUpdated": "Primary currency updated.",
       "totpDisabled": "TOTP disabled.",
       "totpEnabled": "TOTP enabled.",
-      "totpSetupStarted": "TOTP setup started."
+      "totpSetupStarted": "TOTP setup started.",
+      "entryRestored": "Entry restored."
     },
     "transactions": {
       "accountFallback": "Account",
@@ -305,7 +313,16 @@
       "tags": "Tags",
       "tagsFor": "Tags for {{title}}",
       "timeFor": "Time for {{title}}",
-      "title": "Transactions"
+      "title": "Transactions",
+      "deleteConfirmTitle": "Delete this entry?",
+      "deleteConfirmBody": "\"{{title}}\" will be removed. You can undo for a few seconds."
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "newEntry": "New entry",
+      "search": "Search transactions",
+      "help": "Show this help",
+      "close": "Close dialogs"
     }
   }
 }

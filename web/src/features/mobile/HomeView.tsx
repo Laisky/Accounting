@@ -1,6 +1,7 @@
 import { Package } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyState } from '@/components/ui';
 import { type Account, type Category, type Entry, type LedgerSummary } from '@/lib/api/ledger';
 import { convertEntryAmountCents, formatMoney } from '@/lib/money';
 
@@ -11,6 +12,7 @@ type HomeViewProps = {
   currencyCode: string;
   entries: Entry[];
   onOpenEntry?: (entryId: string) => void;
+  onRecordEntry?: () => void;
   rateIndex: Map<string, number>;
   summary: LedgerSummary;
 };
@@ -31,6 +33,7 @@ export function HomeView({
   currencyCode,
   entries,
   onOpenEntry,
+  onRecordEntry,
   rateIndex,
   summary,
 }: HomeViewProps) {
@@ -54,7 +57,19 @@ export function HomeView({
             {t('mobile.budget.remaining')} <strong>{formatMoney(remainingCents, currencyCode)}</strong>
           </p>
         </div>
-        <div className="budgetTrack" aria-hidden="true">
+        <div
+          className="budgetTrack"
+          role="meter"
+          aria-label={t('mobile.budget.title')}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          aria-valuetext={t('mobile.budget.meter', {
+            spent: formatMoney(monthlyExpenseCents, currencyCode),
+            total: formatMoney(budgetTotalCents, currencyCode),
+            percent: progress,
+          })}
+        >
           <span style={{ width: `${progress}%` }} />
         </div>
         <footer>
@@ -114,7 +129,13 @@ export function HomeView({
             </article>
           ))
         ) : (
-          <p className="emptyState">{t('mobile.transactions.empty')}</p>
+          <EmptyState
+            icon={<Package size={22} />}
+            title={t('mobile.home.emptyTitle')}
+            description={t('mobile.home.emptyBody')}
+            actionLabel={onRecordEntry ? t('mobile.home.recordCta') : undefined}
+            onAction={onRecordEntry}
+          />
         )}
       </section>
     </section>

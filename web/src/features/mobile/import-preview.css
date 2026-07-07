@@ -8,10 +8,10 @@
   place-items: center;
   min-height: 150px;
   padding: 22px 18px;
-  border: 1px dashed oklch(74% 0.055 190);
+  border: 1px dashed var(--tone-74-0p055-190);
   border-radius: 12px;
-  background: oklch(99% 0.006 180);
-  color: oklch(26% 0.04 230);
+  background: var(--tone-99-0p006-180);
+  color: var(--tone-26-0p04-230);
   text-align: center;
   cursor: pointer;
 }
@@ -25,7 +25,7 @@
 }
 
 .mobileImportDrop svg {
-  color: oklch(57% 0.11 190);
+  color: var(--tone-57-0p11-190);
 }
 
 .mobileImportDrop strong {
@@ -37,14 +37,14 @@
 .mobileImportDrop span,
 .mobileImportEmpty span,
 .mobileImportRows small {
-  color: oklch(61% 0.026 230);
+  color: var(--tone-61-0p026-230);
   font-size: 0.84rem;
   font-weight: 760;
 }
 
 .mobileImportDropReady {
-  border-color: oklch(64% 0.12 165);
-  background: oklch(96% 0.024 165);
+  border-color: var(--tone-64-0p12-165);
+  background: var(--tone-96-0p024-165);
 }
 
 .mobileImportActions {
@@ -60,20 +60,20 @@
   min-height: 42px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: oklch(95% 0.032 165);
-  color: oklch(34% 0.09 160);
+  background: var(--tone-95-0p032-165);
+  color: var(--tone-34-0p09-160);
   font-size: 0.86rem;
   font-weight: 830;
 }
 
 .mobileImportMessageError {
-  background: oklch(95% 0.035 25);
-  color: oklch(45% 0.17 28);
+  background: var(--tone-95-0p035-25);
+  color: var(--tone-45-0p17-28);
 }
 
 .mobileImportMessageWarning {
-  background: oklch(96% 0.045 86);
-  color: oklch(42% 0.1 74);
+  background: var(--tone-96-0p045-86);
+  color: var(--tone-42-0p1-74);
 }
 
 .mobileImportPreview {
@@ -94,7 +94,7 @@
   gap: 8px;
   padding: 12px;
   border-radius: 12px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .mobileImportDestination {
@@ -118,7 +118,7 @@
 
 .mobileImportMetrics span,
 .mobileImportDetected span {
-  color: oklch(58% 0.025 230);
+  color: var(--tone-58-0p025-230);
   font-size: 0.72rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -126,7 +126,7 @@
 
 .mobileImportMetrics strong,
 .mobileImportDetected strong {
-  color: oklch(22% 0.034 235);
+  color: var(--tone-22-0p034-235);
   font-size: 0.95rem;
   font-weight: 860;
   overflow-wrap: anywhere;
@@ -141,13 +141,13 @@
 }
 
 .mobileImportSectionHeader span {
-  color: oklch(22% 0.034 235);
+  color: var(--tone-22-0p034-235);
   font-size: 0.96rem;
   font-weight: 880;
 }
 
 .mobileImportSectionHeader strong {
-  color: oklch(56% 0.095 165);
+  color: var(--tone-56-0p095-165);
   font-size: 0.78rem;
   font-weight: 860;
   white-space: nowrap;
@@ -155,7 +155,7 @@
 
 .mobileImportMemberMappings p {
   margin: 0;
-  color: oklch(48% 0.03 230);
+  color: var(--tone-48-0p03-230);
   font-size: 0.82rem;
   font-weight: 720;
 }
@@ -169,7 +169,7 @@
 
 .mobileImportDestination label > span,
 .mobileImportCreateBook label > span {
-  color: oklch(58% 0.025 230);
+  color: var(--tone-58-0p025-230);
   font-size: 0.72rem;
   font-weight: 860;
   text-transform: uppercase;
@@ -181,10 +181,10 @@
   min-width: 0;
   height: 38px;
   padding: 0 10px;
-  border: 1px solid oklch(88% 0.013 220);
+  border: 1px solid var(--tone-88-0p013-220);
   border-radius: 8px;
-  background: oklch(98% 0.004 220);
-  color: oklch(22% 0.034 235);
+  background: var(--tone-98-0p004-220);
+  color: var(--tone-22-0p034-235);
   font: inherit;
   font-size: 0.88rem;
   font-weight: 760;
@@ -192,8 +192,8 @@
 
 .mobileImportDestination select:focus,
 .mobileImportCreateBook input:focus {
-  border-color: oklch(61% 0.11 170);
-  outline: 3px solid oklch(88% 0.05 170);
+  border-color: var(--tone-61-0p11-170);
+  outline: 3px solid var(--tone-88-0p05-170);
 }
 
 .mobileImportCreateBook {
@@ -217,7 +217,7 @@
 }
 
 .mobileImportMappingRow span {
-  color: oklch(30% 0.04 235);
+  color: var(--tone-30-0p04-235);
   font-size: 0.86rem;
   font-weight: 840;
   overflow-wrap: anywhere;
@@ -228,23 +228,23 @@
   min-width: 0;
   height: 38px;
   padding: 0 10px;
-  border: 1px solid oklch(88% 0.013 220);
+  border: 1px solid var(--tone-88-0p013-220);
   border-radius: 8px;
-  background: oklch(98% 0.004 220);
-  color: oklch(22% 0.034 235);
+  background: var(--tone-98-0p004-220);
+  color: var(--tone-22-0p034-235);
   font: inherit;
   font-size: 0.88rem;
   font-weight: 720;
 }
 
 .mobileImportMappingRow input:focus {
-  border-color: oklch(61% 0.11 170);
-  outline: 3px solid oklch(88% 0.05 170);
+  border-color: var(--tone-61-0p11-170);
+  outline: 3px solid var(--tone-88-0p05-170);
 }
 
 .mobileImportMappingRow small {
   grid-column: 2;
-  color: oklch(56% 0.04 220);
+  color: var(--tone-56-0p04-220);
   font-size: 0.75rem;
   font-weight: 720;
   overflow-wrap: anywhere;
@@ -257,7 +257,7 @@
   justify-content: center;
   min-height: 80px;
   border-radius: 12px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .mobileImportRows {
@@ -266,7 +266,7 @@
   margin: 0;
   list-style: none;
   border-radius: 12px;
-  background: oklch(100% 0 0);
+  background: var(--tone-100-0-0);
 }
 
 .mobileImportRows li {
@@ -276,7 +276,7 @@
   align-items: center;
   min-height: 68px;
   padding: 12px;
-  border-bottom: 1px solid oklch(93% 0.006 185);
+  border-bottom: 1px solid var(--tone-93-0p006-185);
 }
 
 .mobileImportRows li:last-child {
@@ -290,19 +290,19 @@
 }
 
 .mobileImportRows span {
-  color: oklch(62% 0.025 230);
+  color: var(--tone-62-0p025-230);
   font-size: 0.76rem;
   font-weight: 810;
 }
 
 .mobileImportRows strong {
-  color: oklch(23% 0.034 235);
+  color: var(--tone-23-0p034-235);
   font-size: 0.98rem;
   overflow-wrap: anywhere;
 }
 
 .mobileImportRows b {
-  color: oklch(20% 0.035 235);
+  color: var(--tone-20-0p035-235);
   font-size: 0.94rem;
   font-weight: 870;
   white-space: nowrap;
@@ -315,7 +315,7 @@
 .mobileImportRows p {
   grid-column: 1 / -1;
   margin: 0;
-  color: oklch(46% 0.03 230);
+  color: var(--tone-46-0p03-230);
   font-size: 0.8rem;
   font-weight: 760;
   overflow-wrap: anywhere;

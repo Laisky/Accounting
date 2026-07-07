@@ -30,6 +30,8 @@
       "accountReady": "口座の準備が整いました。",
       "entryPosted": "記帳しました。"
     },
-    "total": "合計"
+    "total": "合計",
+    "undo": "元に戻す",
+    "cancel": "キャンセル"
   }
 }

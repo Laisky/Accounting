@@ -1,16 +1,16 @@
 .bottomNav {
-  --bottom-nav-active-fill: oklch(94% 0.05 42);
-  --bottom-nav-active-ink: oklch(56% 0.18 34);
-  --bottom-nav-active-border: oklch(84% 0.09 42);
-  --bottom-nav-active-shadow: oklch(60% 0.16 34 / 18%);
+  --bottom-nav-active-fill: var(--tone-94-0p05-42);
+  --bottom-nav-active-ink: var(--tone-56-0p18-34);
+  --bottom-nav-active-border: var(--tone-84-0p09-42);
+  --bottom-nav-active-shadow: var(--tone-60-0p16-34-a18);
 
   grid-area: nav;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 84px;
   padding: 9px 10px calc(18px + env(safe-area-inset-bottom));
-  border-top: 1px solid oklch(91% 0.006 185);
-  background: oklch(100% 0 0 / 96%);
+  border-top: 1px solid var(--tone-91-0p006-185);
+  background: var(--tone-100-0-0-a96);
   backdrop-filter: blur(14px);
 }
 
@@ -26,7 +26,7 @@
   place-items: center;
   min-width: 0;
   background: transparent;
-  color: oklch(42% 0.024 230);
+  color: var(--tone-42-0p024-230);
 }
 
 .bottomNav span {
@@ -102,7 +102,7 @@
   .mobileShell {
     padding: 0;
     place-items: stretch;
-    background: oklch(96% 0.018 112);
+    background: var(--tone-96-0p018-112);
   }
 
   .phoneFrame {
@@ -129,7 +129,7 @@
     min-height: 0;
     padding: 16px 8px calc(16px + env(safe-area-inset-bottom));
     border-top: 0;
-    border-right: 1px solid oklch(91% 0.006 185);
+    border-right: 1px solid var(--tone-91-0p006-185);
   }
 
   .bottomNav button {
@@ -168,13 +168,13 @@
     gap: 10px;
     align-items: center;
     padding: 6px 12px 18px;
-    color: oklch(20% 0.035 235);
+    color: var(--tone-20-0p035-235);
     font-size: 1.05rem;
     font-weight: 930;
   }
 
   .navBrand svg {
-    color: oklch(60% 0.16 31);
+    color: var(--tone-60-0p16-31);
   }
 
   .bottomNav button {
@@ -187,7 +187,7 @@
   }
 
   .bottomNav button:hover {
-    background: oklch(96% 0.012 235);
+    background: var(--tone-96-0p012-235);
   }
 
   .bottomNav b {
@@ -200,7 +200,7 @@
 
   .mobileHeader {
     padding: 18px var(--shell-gutter);
-    border-bottom: 1px solid oklch(91% 0.006 185);
+    border-bottom: 1px solid var(--tone-91-0p006-185);
   }
 
   /* Center and cap the working canvas; expose a named query container for downstream views. */
@@ -222,25 +222,25 @@
 
 @media (prefers-color-scheme: dark) {
   .bottomNav {
-    --bottom-nav-active-fill: oklch(26% 0.06 38);
-    --bottom-nav-active-ink: oklch(78% 0.12 48);
-    --bottom-nav-active-border: oklch(45% 0.09 42);
-    --bottom-nav-active-shadow: oklch(18% 0.02 235 / 45%);
+    --bottom-nav-active-fill: var(--tone-26-0p06-38);
+    --bottom-nav-active-ink: var(--tone-78-0p12-48);
+    --bottom-nav-active-border: var(--tone-45-0p09-42);
+    --bottom-nav-active-shadow: var(--tone-18-0p02-235-a45);
 
-    border-color: oklch(30% 0.018 235);
-    background: oklch(18% 0.014 235 / 96%);
+    border-color: var(--tone-30-0p018-235);
+    background: var(--tone-18-0p014-235-a96);
   }
 
   .bottomNav button {
-    color: oklch(72% 0.018 235);
+    color: var(--tone-72-0p018-235);
   }
 
   .bottomNav button:hover {
-    background: oklch(24% 0.018 235);
+    background: var(--tone-24-0p018-235);
   }
 
   .navBrand {
-    color: oklch(90% 0.015 235);
+    color: var(--tone-90-0p015-235);
   }
 }
 

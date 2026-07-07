@@ -75,7 +75,9 @@
       "filteredTotal": "筛选后合计",
       "heading": "收入、支出和结余趋势",
       "income": "收入",
+      "point": "{{period}} — 收入 {{income}}，支出 {{expense}}，结余 {{balance}}",
       "range": "范围 {{low}} 至 {{high}}",
+      "scrubber": "按周期浏览现金流趋势",
       "summary": "趋势汇总"
     }
   }
