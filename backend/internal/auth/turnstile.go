@@ -83,7 +83,9 @@ func (v *HTTPVerifier) Verify(ctx context.Context, token string, remoteIP string
 	if err != nil {
 		return errors.Wrap(err, "call turnstile verification endpoint")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.Errorf("turnstile verification endpoint returned %s", resp.Status)

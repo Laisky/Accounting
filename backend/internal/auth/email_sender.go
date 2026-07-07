@@ -67,19 +67,77 @@ func (s *SMTPEmailSender) SendAuthCode(ctx context.Context, delivery EmailCodeDe
 	}
 
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
-	auth := smtp.PlainAuth("", s.cfg.Username, s.cfg.Password, s.cfg.Host)
-	if strings.TrimSpace(s.cfg.Username) == "" {
-		auth = nil
-	}
 	message := authEmailMessage(s.cfg.From, delivery.Email, purpose, delivery.Code)
-	if err := smtp.SendMail(addr, auth, s.cfg.From, []string{delivery.Email}, []byte(message)); err != nil {
+	if err := s.sendMail(ctx, addr, delivery.Email, []byte(message)); err != nil {
 		return errors.Wrap(err, "send auth email")
 	}
 
 	return nil
 }
 
-// tlsConfig receives SMTP config and returns the TLS settings used by future SMTP clients.
+// sendMail receives SMTP address, recipient, and message data, then sends it through STARTTLS.
+func (s *SMTPEmailSender) sendMail(ctx context.Context, addr string, recipient string, message []byte) error {
+	client, err := smtp.Dial(addr)
+	if err != nil {
+		return errors.Wrap(err, "dial smtp")
+	}
+	defer func() {
+		_ = client.Close()
+	}()
+	if err := checkContext(ctx); err != nil {
+		return err
+	}
+	ok, _ := client.Extension("STARTTLS")
+	if !ok {
+		return errors.WithStack(errors.New("smtp starttls is unavailable"))
+	}
+	if err := client.StartTLS(tlsConfig(s.cfg)); err != nil {
+		return errors.Wrap(err, "start smtp tls")
+	}
+	if err := checkContext(ctx); err != nil {
+		return err
+	}
+	if strings.TrimSpace(s.cfg.Username) != "" {
+		auth := smtp.PlainAuth("", s.cfg.Username, s.cfg.Password, s.cfg.Host)
+		if err := client.Auth(auth); err != nil {
+			return errors.Wrap(err, "authenticate smtp")
+		}
+	}
+	if err := client.Mail(s.cfg.From); err != nil {
+		return errors.Wrap(err, "set smtp sender")
+	}
+	if err := client.Rcpt(recipient); err != nil {
+		return errors.Wrap(err, "set smtp recipient")
+	}
+	writer, err := client.Data()
+	if err != nil {
+		return errors.Wrap(err, "open smtp data")
+	}
+	if _, err := writer.Write(message); err != nil {
+		_ = writer.Close()
+		return errors.Wrap(err, "write smtp data")
+	}
+	if err := writer.Close(); err != nil {
+		return errors.Wrap(err, "close smtp data")
+	}
+	if err := client.Quit(); err != nil {
+		return errors.Wrap(err, "quit smtp")
+	}
+
+	return nil
+}
+
+// checkContext receives a context and returns its cancellation error when canceled.
+func checkContext(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return errors.Wrap(ctx.Err(), "smtp auth email canceled")
+	default:
+		return nil
+	}
+}
+
+// tlsConfig receives SMTP config and returns the TLS settings used by SMTP clients.
 func tlsConfig(cfg SMTPConfig) *tls.Config {
 	return &tls.Config{
 		InsecureSkipVerify: !cfg.ForceTLSVerify, //nolint:gosec // Explicit local-development escape hatch from runtime config.

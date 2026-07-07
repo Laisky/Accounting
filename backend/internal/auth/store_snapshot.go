@@ -10,7 +10,8 @@ type Snapshot struct {
 	PendingTOTP       map[string]PendingTOTPSetup `json:"pendingTotp"`
 	TOTPReplays       []TOTPReplaySnapshot        `json:"totpReplays"`
 	FailedTOTPs       map[string]int              `json:"failedTotps"`
-	FailedLogins      map[string]int              `json:"failedLogins"`
+	LoginThrottles    map[string]LoginThrottle    `json:"loginThrottles"`
+	FailedLogins      map[string]int              `json:"failedLogins,omitempty"`
 	Passkeys          []PasskeyCredential         `json:"passkeys"`
 	PasskeyCeremonies []PasskeyCeremony           `json:"passkeyCeremonies"`
 }
@@ -45,8 +46,20 @@ func NewMemoryStoreFromSnapshot(snapshot Snapshot) *MemoryStore {
 	for userID, count := range snapshot.FailedTOTPs {
 		store.failedTOTPs[userID] = count
 	}
+	for email, throttle := range snapshot.LoginThrottles {
+		if throttle.Email == "" {
+			throttle.Email = email
+		}
+		store.loginThrottles[email] = throttle
+	}
 	for email, count := range snapshot.FailedLogins {
-		store.failedLogins[email] = count
+		if _, ok := store.loginThrottles[email]; ok {
+			continue
+		}
+		store.loginThrottles[email] = LoginThrottle{
+			Email:       email,
+			FailedCount: count,
+		}
 	}
 	for _, passkey := range snapshot.Passkeys {
 		passkey = clonePasskeyCredential(passkey)
@@ -72,7 +85,7 @@ func (s *MemoryStore) Snapshot() Snapshot {
 		PendingTOTP:       make(map[string]PendingTOTPSetup, len(s.pendingTOTP)),
 		TOTPReplays:       make([]TOTPReplaySnapshot, 0, len(s.totpReplays)),
 		FailedTOTPs:       make(map[string]int, len(s.failedTOTPs)),
-		FailedLogins:      make(map[string]int, len(s.failedLogins)),
+		LoginThrottles:    make(map[string]LoginThrottle, len(s.loginThrottles)),
 		Passkeys:          make([]PasskeyCredential, 0, len(s.passkeysByID)),
 		PasskeyCeremonies: make([]PasskeyCeremony, 0, len(s.passkeyCeremonies)),
 	}
@@ -98,8 +111,8 @@ func (s *MemoryStore) Snapshot() Snapshot {
 	for userID, count := range s.failedTOTPs {
 		snapshot.FailedTOTPs[userID] = count
 	}
-	for email, count := range s.failedLogins {
-		snapshot.FailedLogins[email] = count
+	for email, throttle := range s.loginThrottles {
+		snapshot.LoginThrottles[email] = throttle
 	}
 	for _, passkey := range s.passkeysByID {
 		snapshot.Passkeys = append(snapshot.Passkeys, clonePasskeyCredential(passkey))

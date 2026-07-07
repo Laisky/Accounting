@@ -23,9 +23,15 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	cfg := config.LoadFromEnv()
+	cfg, err := config.LoadFromEnv()
 	log := logger.Setup(cfg.Debug)
+	if err != nil {
+		log.Fatal("load config", zap.Error(err))
+	}
 	log = logger.SetupEnhanced(ctx, cfg)
+	if err := cfg.Validate(); err != nil {
+		log.Fatal("validate config", zap.Error(err))
+	}
 	log.Info("accounting backend starting", zap.String("addr", cfg.Addr))
 
 	telemetryProviders, err := telemetry.Init(ctx, cfg.Telemetry)

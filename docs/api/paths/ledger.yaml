@@ -150,6 +150,79 @@
             },
         }
       default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  post:
+    tags: [ledger]
+    parameters: [{ $ref: "../openapi.yaml#/components/parameters/BookID" }]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/BookMemberCreateRequest",
+                },
+            },
+        }
+    responses:
+      "201":
+        {
+          description: Created book member,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/BookMember" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/books/{bookID}/members/{userID}:
+  patch:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/UserID" },
+      ]
+    requestBody:
+      required: true
+      content:
+        {
+          application/json:
+            {
+              schema:
+                {
+                  $ref: "../openapi.yaml#/components/schemas/BookMemberRoleUpdateRequest",
+                },
+            },
+        }
+    responses:
+      "200":
+        {
+          description: Updated book member,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/BookMember" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+  delete:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+        { $ref: "../openapi.yaml#/components/parameters/UserID" },
+      ]
+    responses:
+      "204": { $ref: "../openapi.yaml#/components/responses/Empty" }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
 /books/{bookID}/ledger/summary:
   get:
     tags: [ledger]
@@ -303,6 +376,28 @@
       "201":
         {
           description: Created account,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/Account" },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/accounts/{accountID}/shares/{bookID}:
+  delete:
+    tags: [ledger]
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/AccountID" },
+        { $ref: "../openapi.yaml#/components/parameters/BookID" },
+      ]
+    responses:
+      "200":
+        {
+          description: Updated account,
           content:
             {
               application/json:

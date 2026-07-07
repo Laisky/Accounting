@@ -112,7 +112,7 @@ func (s *SQLStore) CreateBook(ctx context.Context, book Book, owner BookMember, 
 	owner = cloneBookMember(owner)
 	categories = cloneCategories(categories)
 	if err := s.records.WithTx(ctx, func(tx *persistence.RecordStore) error {
-		if err := tx.Insert(ctx, mustRecord(ledgerBooksNS, book.ID, "", book.OwnerUserID, "", book)); err != nil {
+		if err := tx.Insert(ctx, mustRecord(ledgerBooksNS, book.ID, "", book.OwnerUserID, book)); err != nil {
 			return errors.Wrap(err, "insert book")
 		}
 		if err := tx.Insert(ctx, memberRecord(owner)); err != nil {
@@ -122,7 +122,7 @@ func (s *SQLStore) CreateBook(ctx context.Context, book Book, owner BookMember, 
 			if category.BookID != book.ID {
 				return errors.WithStack(errors.New("default category book id differs"))
 			}
-			if err := tx.Insert(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", "", category)); err != nil {
+			if err := tx.Insert(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", category)); err != nil {
 				return errors.Wrap(err, "insert default category")
 			}
 		}
@@ -136,7 +136,7 @@ func (s *SQLStore) CreateBook(ctx context.Context, book Book, owner BookMember, 
 // UpdateBook receives a book and replaces mutable settings for an existing book.
 func (s *SQLStore) UpdateBook(ctx context.Context, book Book) (Book, error) {
 	book = cloneBook(book)
-	if err := s.records.Update(ctx, mustRecord(ledgerBooksNS, book.ID, "", book.OwnerUserID, "", book)); err != nil {
+	if err := s.records.Update(ctx, mustRecord(ledgerBooksNS, book.ID, "", book.OwnerUserID, book)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Book{}, errors.Wrapf(ErrNotFound, "book %q not found", book.ID)
 		}
@@ -155,6 +155,26 @@ func (s *SQLStore) CreateBookMember(ctx context.Context, member BookMember) (Boo
 		return BookMember{}, errors.Wrap(err, "insert book member")
 	}
 	return cloneBookMember(member), nil
+}
+
+// UpdateBookMember receives a membership and replaces the matching existing member.
+func (s *SQLStore) UpdateBookMember(ctx context.Context, member BookMember) (BookMember, error) {
+	member = cloneBookMember(member)
+	if err := s.records.Update(ctx, memberRecord(member)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return BookMember{}, errors.Wrapf(ErrNotFound, "user %q is not a member of book %q", member.UserID, member.BookID)
+		}
+		return BookMember{}, errors.Wrap(err, "update book member")
+	}
+	return cloneBookMember(member), nil
+}
+
+// DeleteBookMember receives book and user ids and removes the matching membership.
+func (s *SQLStore) DeleteBookMember(ctx context.Context, bookID string, userID string) error {
+	if _, err := s.Member(ctx, bookID, userID); err != nil {
+		return err
+	}
+	return s.records.Delete(ctx, ledgerMembersNS, memberKey(bookID, userID))
 }
 
 // Member receives a book id and user id and returns the explicit membership relationship.
@@ -205,7 +225,7 @@ func (s *SQLStore) CreateEntry(ctx context.Context, entry Entry) (Entry, error) 
 	entry.ID = entryID
 
 	entry = cloneEntry(entry)
-	if err := s.records.Insert(ctx, mustRecord(ledgerEntriesNS, entry.ID, entry.BookID, entry.CreatorUserID, "", entry)); err != nil {
+	if err := s.records.Insert(ctx, mustRecord(ledgerEntriesNS, entry.ID, entry.BookID, entry.CreatorUserID, entry)); err != nil {
 		return Entry{}, errors.Wrap(err, "insert entry")
 	}
 	return cloneEntry(entry), nil
@@ -214,7 +234,7 @@ func (s *SQLStore) CreateEntry(ctx context.Context, entry Entry) (Entry, error) 
 // UpdateEntry receives an entry and replaces the matching existing entry.
 func (s *SQLStore) UpdateEntry(ctx context.Context, entry Entry) (Entry, error) {
 	entry = cloneEntry(entry)
-	if err := s.records.Update(ctx, mustRecord(ledgerEntriesNS, entry.ID, entry.BookID, entry.CreatorUserID, "", entry)); err != nil {
+	if err := s.records.Update(ctx, mustRecord(ledgerEntriesNS, entry.ID, entry.BookID, entry.CreatorUserID, entry)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Entry{}, errors.Wrapf(ErrNotFound, "entry %q not found", entry.ID)
 		}
@@ -249,7 +269,7 @@ func (s *SQLStore) Categories(ctx context.Context, bookID string) ([]Category, e
 // CreateCategory receives a category and stores it when its id is unique.
 func (s *SQLStore) CreateCategory(ctx context.Context, category Category) (Category, error) {
 	category = cloneCategory(category)
-	if err := s.records.Insert(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", "", category)); err != nil {
+	if err := s.records.Insert(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", category)); err != nil {
 		return Category{}, errors.Wrap(err, "insert category")
 	}
 	return cloneCategory(category), nil
@@ -258,7 +278,7 @@ func (s *SQLStore) CreateCategory(ctx context.Context, category Category) (Categ
 // UpdateCategory receives a category and replaces the matching existing category.
 func (s *SQLStore) UpdateCategory(ctx context.Context, category Category) (Category, error) {
 	category = cloneCategory(category)
-	if err := s.records.Update(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", "", category)); err != nil {
+	if err := s.records.Update(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", category)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Category{}, errors.Wrapf(ErrNotFound, "category %q not found", category.ID)
 		}
@@ -285,7 +305,7 @@ func (s *SQLStore) AccountGroups(ctx context.Context) ([]AccountGroup, error) {
 // CreateAccountGroup receives an account group and stores it when its id is unique.
 func (s *SQLStore) CreateAccountGroup(ctx context.Context, group AccountGroup) (AccountGroup, error) {
 	group = cloneAccountGroup(group)
-	if err := s.records.Insert(ctx, mustRecord(ledgerGroupsNS, group.ID, "", group.UserID, "", group)); err != nil {
+	if err := s.records.Insert(ctx, mustRecord(ledgerGroupsNS, group.ID, "", group.UserID, group)); err != nil {
 		return AccountGroup{}, errors.Wrap(err, "insert account group")
 	}
 	return cloneAccountGroup(group), nil
@@ -294,7 +314,7 @@ func (s *SQLStore) CreateAccountGroup(ctx context.Context, group AccountGroup) (
 // UpdateAccountGroup receives an account group and replaces the matching existing group.
 func (s *SQLStore) UpdateAccountGroup(ctx context.Context, group AccountGroup) (AccountGroup, error) {
 	group = cloneAccountGroup(group)
-	if err := s.records.Update(ctx, mustRecord(ledgerGroupsNS, group.ID, "", group.UserID, "", group)); err != nil {
+	if err := s.records.Update(ctx, mustRecord(ledgerGroupsNS, group.ID, "", group.UserID, group)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return AccountGroup{}, errors.Wrapf(ErrNotFound, "account group %q not found", group.ID)
 		}
@@ -318,8 +338,20 @@ func (s *SQLStore) Accounts(ctx context.Context) ([]Account, error) {
 // CreateAccount receives an account and stores it when its id is unique.
 func (s *SQLStore) CreateAccount(ctx context.Context, account Account) (Account, error) {
 	account = cloneAccount(account)
-	if err := s.records.Insert(ctx, mustRecord(ledgerAccountsNS, account.ID, "", account.UserID, "", account)); err != nil {
+	if err := s.records.Insert(ctx, mustRecord(ledgerAccountsNS, account.ID, "", account.UserID, account)); err != nil {
 		return Account{}, errors.Wrap(err, "insert account")
+	}
+	return cloneAccount(account), nil
+}
+
+// UpdateAccount receives an account and replaces the matching existing account.
+func (s *SQLStore) UpdateAccount(ctx context.Context, account Account) (Account, error) {
+	account = cloneAccount(account)
+	if err := s.records.Update(ctx, mustRecord(ledgerAccountsNS, account.ID, "", account.UserID, account)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Account{}, errors.Wrapf(ErrNotFound, "account %q not found", account.ID)
+		}
+		return Account{}, errors.Wrap(err, "update account")
 	}
 	return cloneAccount(account), nil
 }
@@ -346,7 +378,7 @@ func (s *SQLStore) ReplaceExchangeRates(ctx context.Context, rates []ExchangeRat
 			}
 		}
 		for _, rate := range cloneExchangeRates(rates) {
-			if err := tx.Insert(ctx, mustRecord(ledgerRatesNS, rate.Currency, "", "", "", rate)); err != nil {
+			if err := tx.Insert(ctx, mustRecord(ledgerRatesNS, rate.Currency, "", "", rate)); err != nil {
 				return err
 			}
 		}
@@ -357,7 +389,7 @@ func (s *SQLStore) ReplaceExchangeRates(ctx context.Context, rates []ExchangeRat
 func (s *SQLStore) seed(ctx context.Context, data SeedData) error {
 	return s.records.WithTx(ctx, func(tx *persistence.RecordStore) error {
 		for _, book := range data.Books {
-			if err := tx.Insert(ctx, mustRecord(ledgerBooksNS, book.ID, "", book.OwnerUserID, "", book)); err != nil {
+			if err := tx.Insert(ctx, mustRecord(ledgerBooksNS, book.ID, "", book.OwnerUserID, book)); err != nil {
 				return err
 			}
 		}
@@ -367,27 +399,27 @@ func (s *SQLStore) seed(ctx context.Context, data SeedData) error {
 			}
 		}
 		for _, entry := range data.Entries {
-			if err := tx.Insert(ctx, mustRecord(ledgerEntriesNS, entry.ID, entry.BookID, entry.CreatorUserID, "", entry)); err != nil {
+			if err := tx.Insert(ctx, mustRecord(ledgerEntriesNS, entry.ID, entry.BookID, entry.CreatorUserID, entry)); err != nil {
 				return err
 			}
 		}
 		for _, category := range data.Categories {
-			if err := tx.Insert(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", "", category)); err != nil {
+			if err := tx.Insert(ctx, mustRecord(ledgerCategoriesNS, category.ID, category.BookID, "", category)); err != nil {
 				return err
 			}
 		}
 		for _, group := range data.Groups {
-			if err := tx.Insert(ctx, mustRecord(ledgerGroupsNS, group.ID, "", group.UserID, "", group)); err != nil {
+			if err := tx.Insert(ctx, mustRecord(ledgerGroupsNS, group.ID, "", group.UserID, group)); err != nil {
 				return err
 			}
 		}
 		for _, account := range data.Accounts {
-			if err := tx.Insert(ctx, mustRecord(ledgerAccountsNS, account.ID, "", account.UserID, "", account)); err != nil {
+			if err := tx.Insert(ctx, mustRecord(ledgerAccountsNS, account.ID, "", account.UserID, account)); err != nil {
 				return err
 			}
 		}
 		for _, rate := range data.Rates {
-			if err := tx.Insert(ctx, mustRecord(ledgerRatesNS, rate.Currency, "", "", "", rate)); err != nil {
+			if err := tx.Insert(ctx, mustRecord(ledgerRatesNS, rate.Currency, "", "", rate)); err != nil {
 				return err
 			}
 		}
@@ -396,24 +428,23 @@ func (s *SQLStore) seed(ctx context.Context, data SeedData) error {
 }
 
 func memberRecord(member BookMember) persistence.Record {
-	return mustRecord(ledgerMembersNS, memberKey(member.BookID, member.UserID), member.BookID, member.UserID, "", member)
+	return mustRecord(ledgerMembersNS, memberKey(member.BookID, member.UserID), member.BookID, member.UserID, member)
 }
 
 func memberKey(bookID string, userID string) string {
 	return persistence.JoinKey(bookID, userID)
 }
 
-func mustRecord(namespace string, key string, parentKey string, ownerKey string, secondaryKey string, value any) persistence.Record {
+func mustRecord(namespace string, key string, parentKey string, ownerKey string, value any) persistence.Record {
 	data, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}
 	return persistence.Record{
-		Namespace:    namespace,
-		Key:          key,
-		ParentKey:    parentKey,
-		OwnerKey:     ownerKey,
-		SecondaryKey: secondaryKey,
-		Data:         data,
+		Namespace: namespace,
+		Key:       key,
+		ParentKey: parentKey,
+		OwnerKey:  ownerKey,
+		Data:      data,
 	}
 }

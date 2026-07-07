@@ -1,4 +1,4 @@
-.PHONY: build backend-build cli-build frontend-build clean dev ensure-web-deps lint backend-lint cli-lint frontend-lint test backend-test cli-test frontend-test e2e frontend-e2e
+.PHONY: build backend-build backend-vuln cli-build frontend-build clean dev ensure-web-deps lint backend-lint cli-lint frontend-lint test backend-test cli-test frontend-test e2e frontend-e2e
 
 BACKEND_ADDR ?= :8080
 FRONTEND_PORT ?= 5173
@@ -36,6 +36,10 @@ backend-lint:
 	cd backend && gofmt -w $$(find . -name '*.go' -not -path './vendor/*')
 	cd backend && go mod tidy
 	cd backend && go vet ./...
+	cd backend && go tool golangci-lint run ./...
+
+backend-vuln:
+	cd backend && go tool govulncheck ./...
 
 cli-lint:
 	cd cli && gofmt -w $$(find . -name '*.go' -not -path './vendor/*')

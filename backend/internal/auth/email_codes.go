@@ -26,7 +26,7 @@ func (s *Service) RequestEmailVerification(ctx context.Context, request EmailCod
 
 	record, err := s.store.UserByEmail(ctx, email)
 	if err != nil {
-		return EmailCodeDelivery{
+		return EmailCodeDelivery{ //nolint:nilerr // Preserve email-enumeration resistance for unknown addresses.
 			Email:     email,
 			ExpiresAt: s.clock().UTC().Add(s.cfg.EmailVerificationTTL).UTC(),
 		}, nil
@@ -35,7 +35,7 @@ func (s *Service) RequestEmailVerification(ctx context.Context, request EmailCod
 		return EmailCodeDelivery{
 			Email:     email,
 			ExpiresAt: s.clock().UTC().Add(s.cfg.EmailVerificationTTL).UTC(),
-		}, nil
+		}, nil //nolint:nilerr // Preserve email-enumeration resistance for unknown or inactive accounts.
 	}
 
 	delivery, err := s.createEmailCode(ctx, email, EmailCodePurposeVerification)
@@ -87,7 +87,7 @@ func (s *Service) RequestPasswordReset(ctx context.Context, request EmailCodeReq
 
 	record, err := s.store.UserByEmail(ctx, email)
 	if err != nil || record.Status != UserStatusActive {
-		return EmailCodeDelivery{
+		return EmailCodeDelivery{ //nolint:nilerr // Preserve email-enumeration resistance for unknown or inactive accounts.
 			Email:     email,
 			ExpiresAt: s.clock().UTC().Add(s.cfg.EmailVerificationTTL).UTC(),
 		}, nil
@@ -131,8 +131,11 @@ func (s *Service) ConfirmPasswordReset(ctx context.Context, request ConfirmPassw
 	if err != nil {
 		return User{}, errors.Wrap(err, "update reset password")
 	}
-	if err := s.store.ResetFailedLogin(ctx, email); err != nil {
-		return User{}, errors.Wrap(err, "reset failed login")
+	if err := s.store.ResetLoginThrottle(ctx, email); err != nil {
+		return User{}, errors.Wrap(err, "reset login throttle")
+	}
+	if err := s.store.DeleteSessionsByUser(ctx, updated.ID); err != nil {
+		return User{}, errors.Wrap(err, "revoke sessions after password reset")
 	}
 
 	return updated.User, nil

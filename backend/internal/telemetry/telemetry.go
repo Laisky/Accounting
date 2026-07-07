@@ -28,7 +28,7 @@ type ProviderBundle struct {
 // Init receives runtime config, initializes OpenTelemetry tracing when enabled, and returns providers for shutdown.
 func Init(ctx context.Context, cfg config.TelemetryConfig) (*ProviderBundle, error) {
 	if !cfg.Enabled {
-		return nil, nil
+		return nil, nil //nolint:nilnil // Disabled telemetry intentionally returns no providers and no error.
 	}
 
 	if cfg.Endpoint == "" {

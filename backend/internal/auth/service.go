@@ -8,15 +8,38 @@ import (
 
 	"github.com/Laisky/errors/v2"
 	"github.com/google/uuid"
+
+	"github.com/Laisky/Accounting/backend/internal/crypto/keyring"
 )
 
 const (
 	turnstileModeAlways       = "always"
 	turnstileModeAfterFailure = "after_failure"
+	loginLockFreeFailures     = 5
+	loginLockBaseDuration     = time.Minute
+	loginLockMaxDuration      = time.Hour
 )
 
 // ErrInvalidCredentials is returned for login failures without revealing whether an email exists.
 var ErrInvalidCredentials = errors.New("invalid email or password")
+
+// ErrLoginLocked is returned when password login is temporarily locked after repeated failures.
+var ErrLoginLocked = errors.New("login temporarily locked")
+
+// LoginLockedError carries the remaining lockout duration for a temporarily locked login.
+type LoginLockedError struct {
+	RetryAfter time.Duration
+}
+
+// Error returns a stable non-sensitive lockout message.
+func (e *LoginLockedError) Error() string {
+	return ErrLoginLocked.Error()
+}
+
+// Is reports whether target matches ErrLoginLocked.
+func (e *LoginLockedError) Is(target error) bool {
+	return target == ErrLoginLocked
+}
 
 // Config contains auth service settings derived from runtime config.
 type Config struct {
@@ -37,6 +60,7 @@ type Config struct {
 	PasskeyRPOrigin            string
 	TurnstileEnabled           bool
 	TurnstileLoginMode         string
+	TOTPKeyring                *keyring.Ring
 }
 
 // Clock returns the current time for testable UTC lifecycle behavior.
@@ -49,6 +73,7 @@ type Service struct {
 	store     Store
 	email     EmailSender
 	sso       ExternalSSOValidator
+	totpKeys  *keyring.Ring
 	turnstile TurnstileVerifier
 }
 
@@ -81,6 +106,7 @@ func NewService(cfg Config, store Store, turnstile TurnstileVerifier) *Service {
 		clock:     func() time.Time { return time.Now().UTC() },
 		store:     store,
 		email:     NoopEmailSender{},
+		totpKeys:  cfg.TOTPKeyring,
 		turnstile: turnstile,
 	}
 }
@@ -177,13 +203,16 @@ func (s *Service) Login(ctx context.Context, request LoginRequest) (AuthResult, 
 	if err != nil {
 		return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
 	}
+	if err := s.rejectLockedLogin(ctx, email); err != nil {
+		return AuthResult{}, err
+	}
 	if err := s.requireLoginTurnstile(ctx, email, request.TurnstileToken, request.RemoteIP); err != nil {
 		return AuthResult{}, err
 	}
 
 	record, err := s.store.UserByEmail(ctx, email)
 	if err != nil {
-		if _, failErr := s.store.IncrementFailedLogin(ctx, email); failErr != nil {
+		if failErr := s.recordFailedLogin(ctx, email); failErr != nil {
 			return AuthResult{}, errors.Wrap(failErr, "record failed login")
 		}
 		return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
@@ -194,13 +223,16 @@ func (s *Service) Login(ctx context.Context, request LoginRequest) (AuthResult, 
 		return AuthResult{}, errors.Wrap(err, "verify password")
 	}
 	if !matched || record.Status != UserStatusActive {
-		if _, failErr := s.store.IncrementFailedLogin(ctx, email); failErr != nil {
+		if failErr := s.recordFailedLogin(ctx, email); failErr != nil {
 			return AuthResult{}, errors.Wrap(failErr, "record failed login")
 		}
 		return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
 	}
 	if record.TOTPEnabled && s.cfg.TOTPEnabled {
 		if strings.TrimSpace(request.TOTPCode) == "" {
+			if err := s.store.ResetLoginThrottle(ctx, email); err != nil {
+				return AuthResult{}, errors.Wrap(err, "reset login throttle")
+			}
 			// Password verified but this user still owes a second factor. Signal
 			// the challenge instead of failing so the client can prompt for it.
 			// User is carried for server-side auditing only; no session is issued.
@@ -210,13 +242,30 @@ func (s *Service) Login(ctx context.Context, request LoginRequest) (AuthResult, 
 			return AuthResult{}, err
 		}
 	}
+	needsRehash, err := NeedsPasswordRehash(record.PasswordHash)
+	if err != nil {
+		return AuthResult{}, errors.Wrap(err, "inspect password hash")
+	}
+	if needsRehash {
+		passwordHash, err := HashPassword(request.Password)
+		if err != nil {
+			return AuthResult{}, err
+		}
+		record.PasswordHash = passwordHash
+		record.UpdatedAt = s.clock().UTC()
+		updated, err := s.store.UpdateUser(ctx, record)
+		if err != nil {
+			return AuthResult{}, errors.Wrap(err, "upgrade password hash")
+		}
+		record = updated
+	}
 
 	result, err := s.createSession(ctx, record)
 	if err != nil {
 		return AuthResult{}, err
 	}
-	if err := s.store.ResetFailedLogin(ctx, email); err != nil {
-		return AuthResult{}, errors.Wrap(err, "reset failed login")
+	if err := s.store.ResetLoginThrottle(ctx, email); err != nil {
+		return AuthResult{}, errors.Wrap(err, "reset login throttle")
 	}
 
 	return result, nil
@@ -247,17 +296,11 @@ func (s *Service) LoginWithExternalSSO(ctx context.Context, request ExternalSSOL
 
 	record, err := s.store.UserByID(ctx, ssoUserID)
 	if err == nil {
-		if record.Status != UserStatusActive {
-			return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
-		}
-		return s.createSession(ctx, record)
+		return s.createExternalSSOSession(ctx, record, ssoUserID)
 	}
 	record, err = s.store.UserByEmail(ctx, email)
 	if err == nil {
-		if record.Status != UserStatusActive {
-			return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
-		}
-		return s.createSession(ctx, record)
+		return s.createExternalSSOSession(ctx, record, ssoUserID)
 	}
 	if !s.cfg.ExternalSSOAutoProvision {
 		return AuthResult{}, errors.Wrap(err, "load external sso user")
@@ -274,12 +317,35 @@ func (s *Service) LoginWithExternalSSO(ctx context.Context, request ExternalSSOL
 			UpdatedAt:     now,
 			BaseCurrency:  DefaultBaseCurrency,
 		},
+		ExternalSSOSubject: ssoUserID,
 	})
 	if err != nil {
 		return AuthResult{}, errors.Wrap(err, "create external sso user")
 	}
 
 	return s.createSession(ctx, created)
+}
+
+func (s *Service) createExternalSSOSession(ctx context.Context, record UserRecord, ssoUserID string) (AuthResult, error) {
+	if record.Status != UserStatusActive {
+		return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
+	}
+
+	switch strings.TrimSpace(record.ExternalSSOSubject) {
+	case "":
+		record.ExternalSSOSubject = ssoUserID
+		record.UpdatedAt = s.clock().UTC()
+		updated, err := s.store.UpdateUser(ctx, record)
+		if err != nil {
+			return AuthResult{}, errors.Wrap(err, "bind external sso subject")
+		}
+		record = updated
+	case ssoUserID:
+	default:
+		return AuthResult{}, errors.WithStack(ErrInvalidCredentials)
+	}
+
+	return s.createSession(ctx, record)
 }
 
 // UserProfile receives an authenticated actor and returns the current public user profile.
@@ -379,6 +445,19 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	return nil
 }
 
+// LogoutAll receives a user id and revokes every active session for that user.
+func (s *Service) LogoutAll(ctx context.Context, userID string) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return errors.Wrap(ErrInvalidCredentials, "user id is required")
+	}
+	if err := s.store.DeleteSessionsByUser(ctx, userID); err != nil {
+		return errors.Wrap(err, "delete user sessions")
+	}
+
+	return nil
+}
+
 // CookieSettings receives a secure flag and session expiry and returns secure browser cookie settings.
 func (s *Service) CookieSettings(name string, secure bool, expiresAt time.Time) CookieSettings {
 	return NewCookieSettings(name, secure, expiresAt.UTC(), s.clock().UTC())
@@ -411,6 +490,58 @@ func (s *Service) createSession(ctx context.Context, record UserRecord) (AuthRes
 	}, nil
 }
 
+// rejectLockedLogin receives a normalized email and rejects attempts while its lockout is active.
+func (s *Service) rejectLockedLogin(ctx context.Context, email string) error {
+	throttle, err := s.store.LoginThrottle(ctx, email)
+	if err != nil {
+		return errors.Wrap(err, "load login throttle")
+	}
+	now := s.clock().UTC()
+	if throttle.LockedUntil.After(now) {
+		return errors.WithStack(&LoginLockedError{RetryAfter: throttle.LockedUntil.Sub(now)})
+	}
+	return nil
+}
+
+// recordFailedLogin receives a normalized email and stores the next password-login throttle state.
+func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
+	throttle, err := s.store.LoginThrottle(ctx, email)
+	if err != nil {
+		return errors.Wrap(err, "load login throttle")
+	}
+	now := s.clock().UTC()
+	throttle.Email = email
+	throttle.FailedCount++
+	throttle.UpdatedAt = now
+	if duration := loginLockDuration(throttle.FailedCount); duration > 0 {
+		throttle.LockedUntil = now.Add(duration).UTC()
+	} else {
+		throttle.LockedUntil = time.Time{}
+	}
+	if err := s.store.StoreLoginThrottle(ctx, throttle); err != nil {
+		return errors.Wrap(err, "store login throttle")
+	}
+	return nil
+}
+
+// loginLockDuration receives a consecutive failure count and returns its lockout duration.
+func loginLockDuration(failedCount int) time.Duration {
+	if failedCount <= loginLockFreeFailures {
+		return 0
+	}
+	duration := loginLockBaseDuration
+	for range failedCount - loginLockFreeFailures - 1 {
+		if duration >= loginLockMaxDuration/2 {
+			return loginLockMaxDuration
+		}
+		duration *= 2
+	}
+	if duration > loginLockMaxDuration {
+		return loginLockMaxDuration
+	}
+	return duration
+}
+
 // requireTurnstile receives token data and enforces Turnstile when it is enabled.
 func (s *Service) requireTurnstile(ctx context.Context, token string, remoteIP string) error {
 	if !s.cfg.TurnstileEnabled {
@@ -429,11 +560,11 @@ func (s *Service) requireLoginTurnstile(ctx context.Context, email string, token
 		return nil
 	}
 	if s.cfg.TurnstileLoginMode == turnstileModeAfterFailure {
-		failures, err := s.store.FailedLoginCount(ctx, email)
+		throttle, err := s.store.LoginThrottle(ctx, email)
 		if err != nil {
-			return errors.Wrap(err, "load failed login count")
+			return errors.Wrap(err, "load login throttle")
 		}
-		if failures == 0 {
+		if throttle.FailedCount == 0 {
 			return nil
 		}
 	}

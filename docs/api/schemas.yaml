@@ -281,6 +281,18 @@ BookMemberList:
         items:
           type: array
           items: { $ref: "#/BookMember" }
+BookMemberCreateRequest:
+  type: object
+  required: [userId, role]
+  properties:
+    userId: { type: string }
+    role: { type: string, enum: [administrator, member, viewer] }
+    displayName: { type: string }
+BookMemberRoleUpdateRequest:
+  type: object
+  required: [role]
+  properties:
+    role: { type: string, enum: [owner, administrator, member, viewer] }
 AccountGroup:
   type: object
   required: [id, userId, name, sortOrder, createdAt, updatedAt]
@@ -494,9 +506,12 @@ ExchangeRate:
     updatedAt: { type: string, format: date-time }
 AuditEvent:
   type: object
-  required: [id, action, targetType, createdAt]
+  required: [id, seq, hash, action, targetType, createdAt]
   properties:
     id: { type: string }
+    seq: { type: integer, minimum: 1 }
+    prevHash: { type: string }
+    hash: { type: string }
     actorId: { type: string }
     actorEmail: { type: string, format: email }
     action: { type: string }

@@ -255,3 +255,124 @@ func TestRegisterRoutesBookMembersListEnforcesMembership(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusForbidden, rec.Code)
 }
+
+// TestRegisterRoutesBookMembersCreateEnforcesManagerRoles verifies manager-only member creation.
+func TestRegisterRoutesBookMembersCreateEnforcesManagerRoles(t *testing.T) {
+	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner", "user-member", "user-new")
+
+	body := `{"userId":"user-new","role":"viewer","displayName":"New viewer"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/books/book-household/members", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	var member ledger.BookMember
+	err := json.Unmarshal(rec.Body.Bytes(), &member)
+	require.NoError(t, err)
+	require.Equal(t, "book-household", member.BookID)
+	require.Equal(t, "user-new", member.UserID)
+	require.Equal(t, ledger.RoleViewer, member.Role)
+	require.Equal(t, "New viewer", member.DisplayName)
+
+	body = `{"userId":"user-new","role":"member"}`
+	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/members", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusForbidden, rec.Code)
+
+	body = `{"userId":"user-new","role":"owner"}`
+	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/members", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+// TestRegisterRoutesBookMembersUpdateHandlesOwnership verifies role changes keep primary ownership consistent.
+func TestRegisterRoutesBookMembersUpdateHandlesOwnership(t *testing.T) {
+	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner", "user-member", "user-viewer")
+
+	body := `{"role":"administrator"}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/books/book-household/members/user-owner", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+
+	body = `{"role":"owner"}`
+	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/members/user-member", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var member ledger.BookMember
+	err := json.Unmarshal(rec.Body.Bytes(), &member)
+	require.NoError(t, err)
+	require.Equal(t, ledger.RoleOwner, member.Role)
+
+	req = httptest.NewRequest(http.MethodGet, "/api/books/book-household", nil)
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var book ledger.BookListItem
+	err = json.Unmarshal(rec.Body.Bytes(), &book)
+	require.NoError(t, err)
+	require.Equal(t, "user-member", book.OwnerUserID)
+	require.Equal(t, ledger.RoleOwner, book.Role)
+
+	body = `{"role":"administrator"}`
+	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/members/user-owner", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/members/user-viewer", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+// TestRegisterRoutesBookMembersDeleteEnforcesManagerRoles verifies member removal and sole-owner protection.
+func TestRegisterRoutesBookMembersDeleteEnforcesManagerRoles(t *testing.T) {
+	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner", "user-admin", "user-member", "user-viewer")
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/books/book-household/members/user-member", nil)
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNoContent, rec.Code)
+
+	req = httptest.NewRequest(http.MethodGet, "/api/books/book-household/members", nil)
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.NotContains(t, rec.Body.String(), `"userId":"user-member"`)
+
+	req = httptest.NewRequest(http.MethodDelete, "/api/books/book-household/members/user-owner", nil)
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+
+	req = httptest.NewRequest(http.MethodDelete, "/api/books/book-household/members/user-admin", nil)
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusForbidden, rec.Code)
+}

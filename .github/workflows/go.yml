@@ -13,6 +13,22 @@ jobs:
   backend-and-cli:
     name: Backend and CLI
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: accounting
+          POSTGRES_PASSWORD: accounting
+          POSTGRES_DB: accounting_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U accounting -d accounting_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://accounting:accounting@localhost:5432/accounting_test?sslmode=disable
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -33,6 +49,14 @@ jobs:
 
       - name: Verify generated lint edits are committed
         run: git diff --exit-code -- backend cli
+
+      - name: Build backend and CLI
+        run: |
+          make backend-build
+          make cli-build
+
+      - name: Scan backend vulnerabilities
+        run: make backend-vuln
 
       - name: Test backend and CLI
         run: |

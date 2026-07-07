@@ -1,6 +1,8 @@
 package ledger
 
 import (
+	"context"
+	"runtime"
 	"testing"
 	"time"
 
@@ -25,4 +27,30 @@ func TestRatesFromECBCubesReturnsUSDRelativeRates(t *testing.T) {
 	require.Equal(t, "0.80000000", rates[2].UnitsPerUSD)
 	require.Equal(t, "USD", rates[3].Currency)
 	require.Equal(t, "1.00000000", rates[3].UnitsPerUSD)
+}
+
+// TestStartDailyExchangeRateUpdaterStopsOnContextCancel verifies scheduled refresh workers exit on cancel.
+func TestStartDailyExchangeRateUpdaterStopsOnContextCancel(t *testing.T) {
+	baseline := runtime.NumGoroutine()
+	ctx, cancel := context.WithCancel(t.Context())
+	fetcher := blockingRateFetcher{started: make(chan struct{})}
+	service := NewService()
+
+	service.StartDailyExchangeRateUpdater(ctx, fetcher)
+	<-fetcher.started
+	cancel()
+
+	require.Eventually(t, func() bool {
+		return runtime.NumGoroutine() <= baseline+1
+	}, time.Second, 10*time.Millisecond)
+}
+
+type blockingRateFetcher struct {
+	started chan struct{}
+}
+
+func (f blockingRateFetcher) FetchExchangeRates(ctx context.Context) ([]ExchangeRate, error) {
+	close(f.started)
+	<-ctx.Done()
+	return nil, ctx.Err()
 }

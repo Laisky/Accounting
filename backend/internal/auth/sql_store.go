@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/Laisky/errors/v2"
@@ -21,8 +22,8 @@ const (
 	authTOTPReplaysNS       = "auth.totp_replays"
 	authFailedTOTPsNS       = "auth.failed_totps"
 	authFailedLoginsNS      = "auth.failed_logins"
-	authPasskeysNS          = "auth.passkeys"
-	authPasskeyCeremoniesNS = "auth.passkey_ceremonies"
+	authPasskeysNS          = "auth.passkeys"           //nolint:gosec // Persistence namespace names are not credentials.
+	authPasskeyCeremoniesNS = "auth.passkey_ceremonies" //nolint:gosec // Persistence namespace names are not credentials.
 )
 
 // SQLStore persists authentication records directly in SQL rows.
@@ -48,7 +49,7 @@ func NewSQLiteStore(db *sql.DB) (*SQLStore, error) {
 // CreateUser receives a user record and stores it when its email and id are unique.
 func (s *SQLStore) CreateUser(ctx context.Context, user UserRecord) (UserRecord, error) {
 	user = cloneUserRecord(user)
-	if err := s.records.Insert(ctx, record(authUsersNS, user.ID, "", "", user.Email, user)); err != nil {
+	if err := s.records.Insert(ctx, record(authUsersNS, user.ID, "", user.Email, user)); err != nil {
 		return UserRecord{}, errors.Wrap(err, "insert user")
 	}
 	return cloneUserRecord(user), nil
@@ -88,7 +89,7 @@ func (s *SQLStore) UpdateUser(ctx context.Context, user UserRecord) (UserRecord,
 		return UserRecord{}, errors.WithStack(errors.New("user email cannot change"))
 	}
 	user = cloneUserRecord(user)
-	if err := s.records.Update(ctx, record(authUsersNS, user.ID, "", "", user.Email, user)); err != nil {
+	if err := s.records.Update(ctx, record(authUsersNS, user.ID, "", user.Email, user)); err != nil {
 		return UserRecord{}, errors.Wrap(err, "update user")
 	}
 	return cloneUserRecord(user), nil
@@ -96,7 +97,7 @@ func (s *SQLStore) UpdateUser(ctx context.Context, user UserRecord) (UserRecord,
 
 // StoreSession receives a hashed session token and stores the associated session metadata.
 func (s *SQLStore) StoreSession(ctx context.Context, tokenHash string, session Session) error {
-	return s.records.Upsert(ctx, record(authSessionsNS, tokenHash, "", session.UserID, "", session))
+	return s.records.Upsert(ctx, record(authSessionsNS, tokenHash, session.UserID, "", session))
 }
 
 // SessionByTokenHash receives a hashed session token and returns the matching active session.
@@ -116,10 +117,67 @@ func (s *SQLStore) DeleteSession(ctx context.Context, tokenHash string) error {
 	return s.records.Delete(ctx, authSessionsNS, tokenHash)
 }
 
+// DeleteSessionsByUser receives a user id and removes all sessions owned by that user.
+func (s *SQLStore) DeleteSessionsByUser(ctx context.Context, userID string) error {
+	return s.records.DeleteByOwner(ctx, authSessionsNS, userID)
+}
+
+// MigrateTOTPSecrets receives a secret transform and rewrites stored TOTP secrets in place.
+func (s *SQLStore) MigrateTOTPSecrets(ctx context.Context, encrypt func(userID string, secret string) (string, error)) error {
+	var users []UserRecord
+	if err := s.records.List(ctx, authUsersNS, nil, nil, &users); err != nil {
+		return errors.Wrap(err, "list users for totp migration")
+	}
+	for _, user := range users {
+		if strings.TrimSpace(user.TOTPSecret) == "" {
+			continue
+		}
+		secret, err := encrypt(user.ID, user.TOTPSecret)
+		if err != nil {
+			return err
+		}
+		if secret == user.TOTPSecret {
+			continue
+		}
+		user.TOTPSecret = secret
+		if _, err := s.UpdateUser(ctx, user); err != nil {
+			return errors.Wrap(err, "update migrated totp user")
+		}
+	}
+
+	records, err := s.records.ListRecords(ctx, authPendingTOTPNS)
+	if err != nil {
+		return errors.Wrap(err, "list pending totp records for migration")
+	}
+	for _, record := range records {
+		var setup PendingTOTPSetup
+		if err := json.Unmarshal(record.Data, &setup); err != nil {
+			return errors.Wrap(err, "decode pending totp setup")
+		}
+		if strings.TrimSpace(setup.Secret) == "" {
+			continue
+		}
+		secret, err := encrypt(setup.UserID, setup.Secret)
+		if err != nil {
+			return err
+		}
+		if secret == setup.Secret {
+			continue
+		}
+		setup.Secret = secret
+		record.Data = mustJSON(setup)
+		if err := s.records.Upsert(ctx, record); err != nil {
+			return errors.Wrap(err, "update migrated pending totp setup")
+		}
+	}
+
+	return nil
+}
+
 // StoreEmailCode receives a one-time email code record and stores it by email and purpose.
 func (s *SQLStore) StoreEmailCode(ctx context.Context, code EmailCodeRecord) error {
 	code = cloneEmailCodeRecord(code)
-	return s.records.Upsert(ctx, record(authEmailCodesNS, emailCodeRecordKey(code.Email, code.Purpose), "", "", "", code))
+	return s.records.Upsert(ctx, record(authEmailCodesNS, emailCodeRecordKey(code.Email, code.Purpose), "", "", code))
 }
 
 // EmailCode receives email and purpose and returns the matching one-time code record.
@@ -141,7 +199,7 @@ func (s *SQLStore) DeleteEmailCode(ctx context.Context, email string, purpose Em
 
 // StorePendingTOTPSetup receives a session id and stores its pending unconfirmed TOTP setup.
 func (s *SQLStore) StorePendingTOTPSetup(ctx context.Context, sessionID string, setup PendingTOTPSetup) error {
-	return s.records.Upsert(ctx, record(authPendingTOTPNS, sessionID, "", setup.UserID, "", setup))
+	return s.records.Upsert(ctx, record(authPendingTOTPNS, sessionID, setup.UserID, "", setup))
 }
 
 // PendingTOTPSetup receives a session id and returns its pending unconfirmed TOTP setup.
@@ -164,7 +222,7 @@ func (s *SQLStore) DeletePendingTOTPSetup(ctx context.Context, sessionID string)
 // StoreTOTPReplay receives a user id, code hash, and expiry and stores a replay marker.
 func (s *SQLStore) StoreTOTPReplay(ctx context.Context, userID string, codeHash string, expiresAt time.Time) error {
 	replay := TOTPReplaySnapshot{UserID: userID, CodeHash: codeHash, ExpiresAt: expiresAt.UTC()}
-	return s.records.Upsert(ctx, record(authTOTPReplaysNS, replayKey(userID, codeHash), "", userID, "", replay))
+	return s.records.Upsert(ctx, record(authTOTPReplaysNS, replayKey(userID, codeHash), userID, "", replay))
 }
 
 // TOTPReplayExists receives a user id, code hash, and current time and reports whether the code was reused.
@@ -201,19 +259,35 @@ func (s *SQLStore) FailedTOTPCount(ctx context.Context, userID string) (int, err
 	return s.records.Counter(ctx, authFailedTOTPsNS, userID)
 }
 
-// IncrementFailedLogin receives a normalized email and increments its failed login counter.
-func (s *SQLStore) IncrementFailedLogin(ctx context.Context, email string) (int, error) {
-	return s.records.IncrementCounter(ctx, authFailedLoginsNS, email)
+// LoginThrottle receives a normalized email and returns its password-login throttle state.
+func (s *SQLStore) LoginThrottle(ctx context.Context, email string) (LoginThrottle, error) {
+	var throttle LoginThrottle
+	if err := s.records.Get(ctx, authFailedLoginsNS, email, &throttle); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return LoginThrottle{}, nil
+		}
+		var legacyCount int
+		if legacyErr := s.records.Get(ctx, authFailedLoginsNS, email, &legacyCount); legacyErr == nil {
+			return LoginThrottle{Email: email, FailedCount: legacyCount}, nil
+		}
+		return LoginThrottle{}, errors.Wrap(err, "load login throttle")
+	}
+	return throttle, nil
 }
 
-// ResetFailedLogin receives a normalized email and clears its failed login counter.
-func (s *SQLStore) ResetFailedLogin(ctx context.Context, email string) error {
+// StoreLoginThrottle receives password-login throttle state and stores it by normalized email.
+func (s *SQLStore) StoreLoginThrottle(ctx context.Context, throttle LoginThrottle) error {
+	if strings.TrimSpace(throttle.Email) == "" {
+		return errors.WithStack(errors.New("login throttle email is required"))
+	}
+	throttle.LockedUntil = throttle.LockedUntil.UTC()
+	throttle.UpdatedAt = throttle.UpdatedAt.UTC()
+	return s.records.Upsert(ctx, record(authFailedLoginsNS, throttle.Email, "", "", throttle))
+}
+
+// ResetLoginThrottle receives a normalized email and clears its password-login throttle state.
+func (s *SQLStore) ResetLoginThrottle(ctx context.Context, email string) error {
 	return s.records.Delete(ctx, authFailedLoginsNS, email)
-}
-
-// FailedLoginCount receives a normalized email and returns its current failed login counter.
-func (s *SQLStore) FailedLoginCount(ctx context.Context, email string) (int, error) {
-	return s.records.Counter(ctx, authFailedLoginsNS, email)
 }
 
 // CreatePasskey receives a passkey credential and stores it when its ids are unique.
@@ -293,7 +367,7 @@ func (s *SQLStore) ListPasskeys(ctx context.Context, userID string) ([]PasskeyCr
 
 // StorePasskeyCeremony receives WebAuthn challenge state and stores it by ceremony id.
 func (s *SQLStore) StorePasskeyCeremony(ctx context.Context, ceremony PasskeyCeremony) error {
-	return s.records.Upsert(ctx, record(authPasskeyCeremoniesNS, ceremony.ID, "", ceremony.UserID, "", ceremony))
+	return s.records.Upsert(ctx, record(authPasskeyCeremoniesNS, ceremony.ID, ceremony.UserID, "", ceremony))
 }
 
 // PasskeyCeremony receives a ceremony id and returns the stored WebAuthn challenge state.
@@ -313,12 +387,16 @@ func (s *SQLStore) DeletePasskeyCeremony(ctx context.Context, ceremonyID string)
 	return s.records.Delete(ctx, authPasskeyCeremoniesNS, ceremonyID)
 }
 
-func record(namespace string, key string, parentKey string, ownerKey string, secondaryKey string, value any) persistence.Record {
+func record(namespace string, key string, ownerKey string, secondaryKey string, value any) persistence.Record {
+	return persistence.Record{Namespace: namespace, Key: key, OwnerKey: ownerKey, SecondaryKey: secondaryKey, Data: mustJSON(value)}
+}
+
+func mustJSON(value any) []byte {
 	data, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}
-	return persistence.Record{Namespace: namespace, Key: key, ParentKey: parentKey, OwnerKey: ownerKey, SecondaryKey: secondaryKey, Data: data}
+	return data
 }
 
 func emailCodeRecordKey(email string, purpose EmailCodePurpose) string {
@@ -330,7 +408,7 @@ func replayKey(userID string, codeHash string) string {
 }
 
 func passkeyRecord(passkey PasskeyCredential) persistence.Record {
-	return record(authPasskeysNS, passkey.ID, "", passkey.UserID, credentialKey(passkey.CredentialID), passkey)
+	return record(authPasskeysNS, passkey.ID, passkey.UserID, credentialKey(passkey.CredentialID), passkey)
 }
 
 func credentialKey(credentialID []byte) string {

@@ -48,29 +48,37 @@ func (l *authRateLimiter) allow(route string, clientIP string, subject string) b
 	}
 
 	now := l.clock().UTC()
-	key := authRateKey(route, clientIP, subject)
+	keys := authRateKeys(route, clientIP, subject)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	l.pruneLocked(now)
-	bucket := l.buckets[key]
-	if bucket.ResetAt.IsZero() || !bucket.ResetAt.After(now) {
-		l.buckets[key] = authRateBucket{
-			Count:    1,
-			ResetAt:  now.Add(l.cfg.Window).UTC(),
-			LastSeen: now,
+	for _, key := range keys {
+		bucket := l.buckets[key]
+		if bucket.ResetAt.IsZero() || !bucket.ResetAt.After(now) {
+			continue
 		}
-		return true
-	}
-	if bucket.Count >= l.cfg.Limit {
-		bucket.LastSeen = now
-		l.buckets[key] = bucket
-		return false
+		if bucket.Count >= l.cfg.Limit {
+			bucket.LastSeen = now
+			l.buckets[key] = bucket
+			return false
+		}
 	}
 
-	bucket.Count++
-	bucket.LastSeen = now
-	l.buckets[key] = bucket
+	for _, key := range keys {
+		bucket := l.buckets[key]
+		if bucket.ResetAt.IsZero() || !bucket.ResetAt.After(now) {
+			l.buckets[key] = authRateBucket{
+				Count:    1,
+				ResetAt:  now.Add(l.cfg.Window).UTC(),
+				LastSeen: now,
+			}
+			continue
+		}
+		bucket.Count++
+		bucket.LastSeen = now
+		l.buckets[key] = bucket
+	}
 	return true
 }
 
@@ -93,12 +101,21 @@ func requireAuthRateLimit(c *gin.Context, limiter *authRateLimiter, route string
 	return false
 }
 
-// authRateKey receives route, IP, and subject and returns a key without storing raw subject data.
-func authRateKey(route string, clientIP string, subject string) string {
+// authRateKeys receives route, IP, and subject and returns limiter keys without storing raw subject data.
+func authRateKeys(route string, clientIP string, subject string) []string {
+	keys := []string{authRateKey(route, "ip", clientIP)}
+	if subjectHash := hashAuthRateSubject(subject); subjectHash != "" {
+		keys = append(keys, authRateKey(route, "subject", subjectHash))
+	}
+	return keys
+}
+
+// authRateKey receives route, dimension, and value and returns a stable limiter bucket key.
+func authRateKey(route string, dimension string, value string) string {
 	return strings.Join([]string{
 		strings.TrimSpace(route),
-		strings.TrimSpace(clientIP),
-		hashAuthRateSubject(subject),
+		strings.TrimSpace(dimension),
+		strings.TrimSpace(value),
 	}, "\x00")
 }
 

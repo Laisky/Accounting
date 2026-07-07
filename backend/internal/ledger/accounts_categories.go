@@ -164,6 +164,38 @@ func (s *Service) CreateAccount(ctx context.Context, request CreateAccountReques
 	return created, nil
 }
 
+// UnshareAccount receives actor intent, enforces book manager roles, and removes a book share from an account.
+func (s *Service) UnshareAccount(ctx context.Context, request UnshareAccountRequest) (Account, error) {
+	manager, _, err := s.authorizeBookMember(ctx, request.Actor, request.BookID)
+	if err != nil {
+		return Account{}, err
+	}
+	if manager.Role != RoleOwner && manager.Role != RoleAdministrator {
+		return Account{}, errors.Wrapf(ErrAccessDenied, "role %q cannot unshare accounts", manager.Role)
+	}
+	if strings.TrimSpace(request.AccountID) == "" {
+		return Account{}, errors.Wrap(ErrInvalidInput, "account id is required")
+	}
+
+	account, err := s.accountByID(ctx, strings.TrimSpace(request.AccountID))
+	if err != nil {
+		return Account{}, err
+	}
+	if !slices.Contains(account.SharedBookIDs, request.BookID) {
+		return Account{}, errors.Wrapf(ErrNotFound, "account %q is not shared with book %q", request.AccountID, request.BookID)
+	}
+
+	updated := cloneAccount(account)
+	updated.SharedBookIDs = removeID(updated.SharedBookIDs, request.BookID)
+	updated.UpdatedAt = time.Now().UTC()
+	updated, err = s.store.UpdateAccount(ctx, updated)
+	if err != nil {
+		return Account{}, errors.Wrap(err, "update account share")
+	}
+
+	return updated, nil
+}
+
 // ListCategories receives actor and book scope, verifies membership, and returns a page of book categories.
 func (s *Service) ListCategories(ctx context.Context, request ListCategoriesRequest) (Page[Category], error) {
 	if request.Actor.UserID == "" {
@@ -465,6 +497,18 @@ func normalizeIDs(ids []string) []string {
 	}
 
 	return normalized
+}
+
+// removeID receives ids and returns a copy with the requested id removed.
+func removeID(ids []string, removedID string) []string {
+	filtered := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id != removedID {
+			filtered = append(filtered, id)
+		}
+	}
+
+	return filtered
 }
 
 // isSupportedAccountType receives an account type and reports whether it is supported.

@@ -8,9 +8,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"crypto/tls"
+
+	auditpkg "github.com/Laisky/Accounting/backend/internal/audit"
 	"github.com/Laisky/Accounting/backend/internal/auth"
 	"github.com/Laisky/Accounting/backend/internal/config"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
@@ -34,6 +38,80 @@ func TestRegisterRoutesHealth(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Contains(t, rec.Body.String(), `"status":"ok"`)
+}
+
+// TestSecurityHeadersAddsHSTSForHTTPS verifies HTTPS responses include strict transport policy.
+func TestSecurityHeadersAddsHSTSForHTTPS(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(securityHeaders(config.Config{}))
+	router.GET("/ok", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/ok", nil)
+	req.TLS = &tls.ConnectionState{}
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, "max-age=63072000; includeSubDomains", rec.Header().Get("Strict-Transport-Security"))
+	require.Equal(t, "nosniff", rec.Header().Get("X-Content-Type-Options"))
+}
+
+// TestSecurityHeadersOmitsHSTSForHTTP verifies plain HTTP responses do not emit HSTS.
+func TestSecurityHeadersOmitsHSTSForHTTP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(securityHeaders(config.Config{}))
+	router.GET("/ok", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/ok", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Empty(t, rec.Header().Get("Strict-Transport-Security"))
+}
+
+// TestSecurityHeadersTrustsForwardedHTTPSFromTrustedProxy verifies proxied HTTPS can emit HSTS.
+func TestSecurityHeadersTrustsForwardedHTTPSFromTrustedProxy(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(securityHeaders(config.Config{TrustedProxies: []string{"192.0.2.0/24"}}))
+	router.GET("/ok", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/ok", nil)
+	req.RemoteAddr = "192.0.2.10:1234"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, "max-age=63072000; includeSubDomains", rec.Header().Get("Strict-Transport-Security"))
+}
+
+// TestSecurityHeadersIgnoresSpoofedForwardedHTTPS verifies direct clients cannot spoof HSTS transport.
+func TestSecurityHeadersIgnoresSpoofedForwardedHTTPS(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(securityHeaders(config.Config{TrustedProxies: []string{"192.0.2.0/24"}}))
+	router.GET("/ok", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/ok", nil)
+	req.RemoteAddr = "198.51.100.10:1234"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Empty(t, rec.Header().Get("Strict-Transport-Security"))
 }
 
 // TestNewServerFilePersistenceDriverWritesSnapshots verifies file-backed stores are wired through server startup.
@@ -139,6 +217,26 @@ func TestRegisterRoutesRuntimeConfigExposesOnlyPublicValues(t *testing.T) {
 	require.Equal(t, "https://accounts.example.test", response.Passkey.RPOrigin)
 	require.Equal(t, "after_failure", response.Turnstile.LoginMode)
 	require.Equal(t, "turnstile-site", response.Turnstile.SiteKey)
+}
+
+// TestRegisterRoutesRejectsOversizedJSONBody verifies JSON routes cap memory exposure.
+func TestRegisterRoutesRejectsOversizedJSONBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	log := logger.Setup(false)
+	router.Use(requestLoggerForTest(log))
+	cfg := testConfig()
+	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
+
+	body := `{"email":"person@example.test","password":"correct horse battery staple","padding":"` +
+		strings.Repeat("x", int(maxJSONBodyBytes)+1) + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+	require.Contains(t, rec.Body.String(), "request body too large")
 }
 
 // TestRegisterRoutesLedgerSummary verifies the ledger summary endpoint returns domain-shaped data.
@@ -249,6 +347,59 @@ func TestRegisterRoutesAuthSessionFlow(t *testing.T) {
 
 	_, err = authService.SessionFromToken(t.Context(), sessionCookie.Value)
 	require.Error(t, err)
+}
+
+// TestRegisterRoutesAuthLogoutAllRevokesUserSessions verifies logout-all clears every session for the actor.
+func TestRegisterRoutesAuthLogoutAllRevokesUserSessions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	log := logger.Setup(false)
+	router.Use(requestLoggerForTest(log))
+	cfg := testConfig()
+	cfg.Auth.Session.CookieSecure = true
+	authService := testAuthService(cfg)
+	auditService := auditpkg.NewService(auditpkg.NewMemoryStore())
+	RegisterRoutes(router, cfg, ledger.NewService(), authService, auditService)
+
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerRec := httptest.NewRecorder()
+	router.ServeHTTP(registerRec, registerReq)
+	require.Equal(t, http.StatusCreated, registerRec.Code)
+	var registerBody struct {
+		User auth.User `json:"user"`
+	}
+	err := json.Unmarshal(registerRec.Body.Bytes(), &registerBody)
+	require.NoError(t, err)
+
+	firstCookie := loginForTest(t, router, cfg, "person@example.test", "correct horse battery staple")
+	secondCookie := loginForTest(t, router, cfg, "person@example.test", "correct horse battery staple")
+	require.NotEqual(t, firstCookie.Value, secondCookie.Value)
+
+	logoutReq := httptest.NewRequest(http.MethodPost, "/api/auth/logout-all", nil)
+	logoutReq.AddCookie(firstCookie)
+	logoutRec := httptest.NewRecorder()
+	router.ServeHTTP(logoutRec, logoutReq)
+	require.Equal(t, http.StatusOK, logoutRec.Code)
+
+	clearedCookies := logoutRec.Result().Cookies()
+	require.Len(t, clearedCookies, 1)
+	require.Equal(t, cfg.Auth.Session.CookieName, clearedCookies[0].Name)
+	require.Equal(t, -1, clearedCookies[0].MaxAge)
+
+	_, err = authService.SessionFromToken(t.Context(), firstCookie.Value)
+	require.Error(t, err)
+	_, err = authService.SessionFromToken(t.Context(), secondCookie.Value)
+	require.Error(t, err)
+
+	events, err := auditService.List(t.Context(), auditpkg.ListRequest{
+		ActorID:  registerBody.User.ID,
+		Page:     1,
+		PageSize: 10,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, events.Items)
+	require.Equal(t, auditpkg.ActionAuthLogoutAll, events.Items[0].Action)
 }
 
 // TestRegisterRoutesAuthRejectsUnknownJSONFields verifies mutating auth bodies fail closed.
@@ -536,6 +687,20 @@ func testConfig() config.Config {
 			},
 		},
 	}
+}
+
+func loginForTest(t *testing.T, router *gin.Engine, cfg config.Config, email string, password string) *http.Cookie {
+	t.Helper()
+
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"`+email+`","password":"`+password+`"}`))
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginRec := httptest.NewRecorder()
+	router.ServeHTTP(loginRec, loginReq)
+	require.Equal(t, http.StatusOK, loginRec.Code)
+	cookies := loginRec.Result().Cookies()
+	require.Len(t, cookies, 1)
+	require.Equal(t, cfg.Auth.Session.CookieName, cookies[0].Name)
+	return cookies[0]
 }
 
 // testAuthService receives config and returns an in-memory auth service for route tests.

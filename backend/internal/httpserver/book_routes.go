@@ -22,6 +22,16 @@ type bookUpdateRequest struct {
 	ReportingCurrency *string `json:"reportingCurrency"`
 }
 
+type bookMemberCreateRequest struct {
+	UserID      string `json:"userId"`
+	Role        string `json:"role"`
+	DisplayName string `json:"displayName"`
+}
+
+type bookMemberRoleUpdateRequest struct {
+	Role string `json:"role"`
+}
+
 // registerBookRoutes receives an API group and registers protected book workspace endpoints.
 func registerBookRoutes(api *gin.RouterGroup, ledgerService *ledger.Service, auditService *audit.Service) {
 	api.GET("/books", RequireSession(), func(c *gin.Context) {
@@ -181,5 +191,126 @@ func registerBookRoutes(api *gin.RouterGroup, ledgerService *ledger.Service, aud
 
 		log.Debug("book members requested", zap.String("book_id", c.Param("bookID")), zap.String("user_id", actor.UserID))
 		c.JSON(http.StatusOK, members)
+	})
+
+	api.POST("/books/:bookID/members", RequireSession(), func(c *gin.Context) {
+		log := gmw.GetLogger(c)
+
+		actor, ok := auth.ActorFromContext(c.Request.Context())
+		if !ok {
+			log.Debug("actor context missing")
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		var request bookMemberCreateRequest
+		if !decodeStrictJSON(c, &request) {
+			return
+		}
+
+		member, err := ledgerService.AddBookMember(c.Request.Context(), ledger.AddBookMemberRequest{
+			Actor:       ledger.Actor{UserID: actor.UserID},
+			BookID:      c.Param("bookID"),
+			UserID:      request.UserID,
+			Role:        ledger.Role(request.Role),
+			DisplayName: request.DisplayName,
+		})
+		if err != nil {
+			respondLedgerError(c, log, err)
+			return
+		}
+
+		log.Debug("book member added", zap.String("book_id", member.BookID), zap.String("member_user_id", member.UserID), zap.String("user_id", actor.UserID))
+		recordAuditEvent(c, auditService, audit.RecordRequest{
+			ActorID:    actor.UserID,
+			ActorEmail: actor.Email,
+			Action:     audit.ActionBookMemberAdded,
+			TargetType: "book_member",
+			TargetID:   member.BookID + ":" + member.UserID,
+			Metadata: map[string]string{
+				"book_id":        member.BookID,
+				"member_user_id": member.UserID,
+				"role":           string(member.Role),
+			},
+		})
+		c.JSON(http.StatusCreated, member)
+	})
+
+	api.PATCH("/books/:bookID/members/:userID", RequireSession(), func(c *gin.Context) {
+		log := gmw.GetLogger(c)
+
+		actor, ok := auth.ActorFromContext(c.Request.Context())
+		if !ok {
+			log.Debug("actor context missing")
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		var request bookMemberRoleUpdateRequest
+		if !decodeStrictJSON(c, &request) {
+			return
+		}
+
+		member, err := ledgerService.UpdateBookMemberRole(c.Request.Context(), ledger.UpdateBookMemberRoleRequest{
+			Actor:  ledger.Actor{UserID: actor.UserID},
+			BookID: c.Param("bookID"),
+			UserID: c.Param("userID"),
+			Role:   ledger.Role(request.Role),
+		})
+		if err != nil {
+			respondLedgerError(c, log, err)
+			return
+		}
+
+		log.Debug("book member role updated", zap.String("book_id", member.BookID), zap.String("member_user_id", member.UserID), zap.String("user_id", actor.UserID))
+		recordAuditEvent(c, auditService, audit.RecordRequest{
+			ActorID:    actor.UserID,
+			ActorEmail: actor.Email,
+			Action:     audit.ActionBookMemberRoleUpdated,
+			TargetType: "book_member",
+			TargetID:   member.BookID + ":" + member.UserID,
+			Metadata: map[string]string{
+				"book_id":        member.BookID,
+				"member_user_id": member.UserID,
+				"role":           string(member.Role),
+			},
+		})
+		c.JSON(http.StatusOK, member)
+	})
+
+	api.DELETE("/books/:bookID/members/:userID", RequireSession(), func(c *gin.Context) {
+		log := gmw.GetLogger(c)
+
+		actor, ok := auth.ActorFromContext(c.Request.Context())
+		if !ok {
+			log.Debug("actor context missing")
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		bookID := c.Param("bookID")
+		userID := c.Param("userID")
+		if err := ledgerService.RemoveBookMember(c.Request.Context(), ledger.RemoveBookMemberRequest{
+			Actor:  ledger.Actor{UserID: actor.UserID},
+			BookID: bookID,
+			UserID: userID,
+		}); err != nil {
+			respondLedgerError(c, log, err)
+			return
+		}
+
+		log.Debug("book member removed", zap.String("book_id", bookID), zap.String("member_user_id", userID), zap.String("user_id", actor.UserID))
+		recordAuditEvent(c, auditService, audit.RecordRequest{
+			ActorID:    actor.UserID,
+			ActorEmail: actor.Email,
+			Action:     audit.ActionBookMemberRemoved,
+			TargetType: "book_member",
+			TargetID:   bookID + ":" + userID,
+			Metadata: map[string]string{
+				"book_id":        bookID,
+				"member_user_id": userID,
+			},
+		})
+		c.Status(http.StatusNoContent)
 	})
 }

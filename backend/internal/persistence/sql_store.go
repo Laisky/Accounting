@@ -188,6 +188,17 @@ func (s *RecordStore) Delete(ctx context.Context, namespace string, key string) 
 	return nil
 }
 
+// DeleteByOwner removes all records in a namespace that match an owner key.
+func (s *RecordStore) DeleteByOwner(ctx context.Context, namespace string, ownerKey string) error {
+	ctx, cancel := withDefaultTimeout(ctx)
+	defer cancel()
+
+	if _, err := s.db.ExecContext(ctx, s.rebind(`DELETE FROM accounting_records WHERE namespace = ? AND owner_key = ?`), namespace, ownerKey); err != nil {
+		return errors.Wrap(err, "delete records by owner")
+	}
+	return nil
+}
+
 // Get decodes a record by namespace and primary key into dst.
 func (s *RecordStore) Get(ctx context.Context, namespace string, key string, dst any) error {
 	ctx, cancel := withDefaultTimeout(ctx)
@@ -223,7 +234,9 @@ func (s *RecordStore) List(ctx context.Context, namespace string, parentKey *str
 	if err != nil {
 		return errors.Wrap(err, "list records")
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	values := []json.RawMessage{}
 	for rows.Next() {
@@ -244,6 +257,34 @@ func (s *RecordStore) List(ctx context.Context, namespace string, parentKey *str
 		return errors.Wrap(err, "decode record list")
 	}
 	return nil
+}
+
+// ListRecords returns raw records for a namespace.
+func (s *RecordStore) ListRecords(ctx context.Context, namespace string) ([]Record, error) {
+	ctx, cancel := withDefaultTimeout(ctx)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctx, s.rebind(`SELECT namespace, record_key, parent_key, owner_key, secondary_key, data FROM accounting_records WHERE namespace = ?`), namespace)
+	if err != nil {
+		return nil, errors.Wrap(err, "list raw records")
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	records := []Record{}
+	for rows.Next() {
+		var record Record
+		if err := rows.Scan(&record.Namespace, &record.Key, &record.ParentKey, &record.OwnerKey, &record.SecondaryKey, &record.Data); err != nil {
+			return nil, errors.Wrap(err, "scan raw record")
+		}
+		records = append(records, record)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrap(err, "iterate raw records")
+	}
+
+	return records, nil
 }
 
 // WithTx runs fn in a database transaction.

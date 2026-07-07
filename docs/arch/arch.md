@@ -79,6 +79,7 @@ The core product model is user-centered bookkeeping:
 - A book can invite other users and can represent a personal, family, shared living, trip, project, or small-business scenario.
 - Book membership must be explicit. The minimum roles are owner, administrator, member, and viewer.
 - Book owners and administrators can manage book settings, categories, members, and all entries in the book.
+- Book owner role changes must preserve at least one owner. Promoting a member to owner makes that user the book's primary `ownerUserId`; demoting or removing the primary owner chooses another remaining owner, and demoting or removing the sole owner is rejected.
 - Book members can create entries and can edit or delete only entries they created.
 - Book viewers can read book data but cannot create or mutate entries.
 - Each entry belongs to exactly one book and has a creator.
@@ -88,6 +89,7 @@ The core product model is user-centered bookkeeping:
 - Newly created books are seeded with a broad editable default category tree so normal household bookkeeping can start without manual category setup.
 - Categories must be book-configurable and importable. Imports must preserve raw source category names when a normalized category mapping is uncertain.
 - Accounts are personal to a user by default. A book entry can reference an account owned by the entry creator without making that account visible to every book member unless the user explicitly shares or exposes it through an aggregate view.
+- Book owners and administrators can remove a book share from an account. Removing a book member does not implicitly unshare accounts owned by that user; account visibility changes must be explicit and audited.
 - Accounts can be grouped by user-defined groups such as cash, savings, credit cards, loans, investments, payment platforms, stored-value cards, and receivables.
 - Accounts must carry currency. Entries must carry transaction currency, account currency, book reporting currency, and exchange-rate metadata when they differ.
 - The webapp is the primary interface. CLI workflows should support administration, diagnostics, import automation, and future batch operations.
@@ -142,7 +144,12 @@ Request handlers must retrieve the request logger with `gmw.GetLogger(c)` once p
 
 Authentication and authorization must be enforced in middleware and service-level policy checks. Handlers should authenticate the user, load book membership when the route is book-scoped, and call domain services with an actor object that contains the user id, membership role, and request context.
 
-Sensitive values such as passwords, reset tokens, invite tokens, API keys, and session secrets must never be logged. Token and signature comparisons must use constant-time comparison. Password hashing must follow OWASP guidance and use at least 10,000 iterations in this project context.
+Sensitive values such as passwords, reset tokens, invite tokens, API keys, and session secrets must never be logged. Token and signature comparisons must use constant-time comparison. Password hashing uses Argon2id with OWASP baseline parameters (`m=19456,t=2,p=1`) for new hashes while preserving PBKDF2-SHA256 600,000-iteration legacy verification and transparent rehash after successful login.
+
+The HTTP layer rejects unknown JSON fields and caps normal JSON request bodies at 1 MiB. Larger
+multipart import uploads keep their separate import-specific limit. Browser security headers include
+content type sniffing protection, frame protection, referrer policy, a restrictive application CSP,
+and HSTS outside local debug mode.
 
 ## Authentication Architecture
 
@@ -155,22 +162,27 @@ Accounting should follow the proven `one-api` authentication shape while keeping
 - Cloudflare Turnstile must be supported on registration and login. The default product posture should bind Turnstile to both routes when enabled, while allowing an `after_failure` login mode that requires Turnstile after a recent failed login for the same email.
 - Sessions should be HTTP-only, SameSite=Lax cookies. Production deployments must use Secure cookies.
 - Session values should contain only stable user identity and role/status data, not secrets.
+- Password reset, TOTP disable, and explicit logout-all must revoke every active session for the user; explicit logout-all records `auth.logout_all`.
 - User `id` values are public stable UIDs generated as UUIDv7. APIs must never expose database-internal incrementing identifiers as user identity, and external SSO auto-provisioning must preserve the UUIDv7 UID carried in the SSO token subject (`sub`/`uid`).
 - Password hashes must use OWASP-compliant parameters and must never be returned by any API.
 - Auth routes must not reveal whether an email exists when credentials, reset requests, or verification requests fail.
-- TOTP is an optional per-user MFA method. Setup stores the generated secret only in the session until the user confirms a valid code.
+- TOTP is an optional per-user MFA method. Setup stores the generated secret only as `enc:v1:` envelope ciphertext until the user confirms a valid code; confirmed TOTP secrets stay envelope-encrypted at rest with a configured active key and optional retired decrypt-only keys.
 - TOTP verification must be rate-limited and must reject recently reused codes through a short replay cache, using PostgreSQL or Redis-compatible storage once available. The fallback in-memory cache is acceptable only for local development.
 - Passkey login is an optional WebAuthn flow. Users can register multiple passkeys after login, and passkey login should support discoverable credentials.
 - Passkey credentials must store raw credential id, public key, sign count, backup flags, transports, AAGUID, human label, and timestamps. Private key material is never stored by the server.
-- External SSO login is optional and configuration-driven. When enabled, the backend redirects users to the configured SSO login URL, then verifies the returned `sso_token` locally as an EdDSA JWT with the configured public Ed25519 key. Deployments should configure the public key PEM directly; the SSO metadata URL (`/runtime-config.json`, also surfaced by the provider token page) is an explicit fallback for key metadata discovery. Verification checks the algorithm/type, signature, `exp`/`iat`, issuer, `jti`, and that `sub == uid`, maps the SSO username to a local active user, and can provision that local user automatically when configured.
+- External SSO login is optional and configuration-driven. When enabled, the backend redirects users to the configured SSO login URL, then verifies the returned `sso_token` locally as an EdDSA JWT with the configured public Ed25519 key. Deployments should configure the public key PEM directly; the SSO metadata URL (`/runtime-config.json`, also surfaced by the provider token page) is an explicit fallback for key metadata discovery. Verification checks the algorithm/type, signature, `exp`/`iat`, issuer, `jti`, and that `sub == uid`, maps the SSO username to a local active user, binds the first verified SSO subject to that user record, and can provision that local user automatically only when explicitly configured.
 - Admins may disable another user's TOTP or passkeys for account recovery, but these actions must be audited.
 - The webapp must show available login methods based on public runtime config, but public config must expose only non-secret values such as Turnstile site key, passkey relying-party metadata, and the local SSO start path.
+
+Durable source reference for password storage: OWASP Password Storage Cheat Sheet,
+https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html.
 
 Initial auth API shape:
 
 - `POST /api/auth/register`: email/password registration with Turnstile and optional email verification code.
 - `POST /api/auth/login`: email/password login with Turnstile and optional `totp_code`.
 - `POST /api/auth/logout`: clears the active session.
+- `POST /api/auth/logout-all`: clears every active session owned by the authenticated user.
 - `GET /api/auth/email/verification`: sends a verification code for registration or email binding.
 - `POST /api/auth/password-reset/request`: sends a password reset code.
 - `POST /api/auth/password-reset/confirm`: verifies a reset code and updates the password.
@@ -181,7 +193,7 @@ Initial auth API shape:
 - `POST /api/auth/passkeys/login/begin`: starts a discoverable WebAuthn login ceremony.
 - `POST /api/auth/passkeys/login/finish`: completes a discoverable WebAuthn login ceremony and creates a session.
 - `GET /api/auth/sso/start`: creates a short-lived anti-CSRF state cookie and redirects to the configured external SSO login URL.
-- `GET /api/auth/sso/callback`: validates state and `sso_token`, creates a local session cookie, and redirects to a clean application URL.
+- `POST /api/auth/sso/callback`: validates form-posted `state` and `sso_token`, creates a local session cookie, and redirects to a clean application URL. A deprecated GET compatibility route remains for providers that cannot form-post and redacts `sso_token` from the request URL before logging completes.
 - `GET /api/auth/passkeys`: lists the authenticated user's passkeys with bounded pagination.
 - `POST /api/auth/passkeys/register/begin`: starts WebAuthn registration for the authenticated user.
 - `POST /api/auth/passkeys/register/finish`: stores the confirmed passkey credential.
@@ -217,14 +229,19 @@ Vite proxies `/api` to the Go server during local development. The Go server ser
 
 Before release, repository changes must keep the root gates passing:
 
-- `make lint` runs Go formatting/tidy/vet for `backend/` and `cli/`, then frontend Prettier,
-  ESLint, Stylelint, Knip, i18n alignment, and OpenAPI generated-type freshness checks.
+- `make lint` runs Go formatting/tidy/vet for `backend/` and `cli/`, backend
+  `golangci-lint` v2 with security and correctness analyzers from `backend/.golangci.yml`,
+  then frontend Prettier, ESLint, Stylelint, Knip, i18n alignment, and OpenAPI
+  generated-type freshness checks.
 - `make test` runs backend and CLI `go test -race -cover ./...` plus frontend Vitest.
+- `make backend-vuln` runs `govulncheck` against the backend module.
 - `make e2e` runs the Playwright browser suite for API/UI flows.
 
-GitHub Actions should enforce these same gates for pull requests, with frontend build and future
-contract, accessibility, visual, and observability checks added as the architecture overhaul phases
-land.
+GitHub Actions enforce these same gates for pull requests. The Go workflow starts a Postgres 17
+service, sets `DATABASE_URL` for SQL-path tests, runs backend and CLI lint, verifies generated Go
+lint edits are committed, builds both Go modules, runs `make backend-vuln`, and then runs the
+race/coverage tests. Frontend build plus future accessibility, visual, and observability checks
+remain tied to the architecture overhaul phases.
 
 The CI floor is split across `.github/workflows/go.yml`, `.github/workflows/web.yml`,
 `.github/workflows/e2e.yml`, and `.github/workflows/contract.yml`. Web jobs use Node 24 and
@@ -282,21 +299,26 @@ Initial endpoints:
 | `POST` | `/api/auth/passkeys/login/begin` | Starts a discoverable WebAuthn passkey login ceremony. |
 | `POST` | `/api/auth/passkeys/login/finish` | Completes a discoverable WebAuthn passkey login ceremony and creates an HttpOnly session cookie. |
 | `GET` | `/api/auth/sso/start` | Starts configured external SSO login with a short-lived state cookie and provider redirect. |
-| `GET` | `/api/auth/sso/callback` | Validates the external SSO token server-side, creates a local session cookie, and redirects to a clean URL. |
+| `POST` | `/api/auth/sso/callback` | Validates the form-posted external SSO token server-side, creates a local session cookie, and redirects to a clean URL. Deprecated GET compatibility remains for providers that cannot form-post. |
 | `GET` | `/api/auth/passkeys` | Authenticated paginated list of public passkey metadata for the current user. |
 | `POST` | `/api/auth/passkeys/register/begin` | Starts an authenticated WebAuthn passkey registration ceremony. |
 | `POST` | `/api/auth/passkeys/register/finish` | Completes an authenticated WebAuthn passkey registration ceremony and stores the public credential. |
 | `PUT` | `/api/auth/passkeys/{id}` | Authenticated passkey label update for an owned passkey. |
 | `DELETE` | `/api/auth/passkeys/{id}` | Authenticated passkey deletion for an owned passkey. |
 | `GET` | `/api/audit` | Authenticated user-visible audit event list for the current actor. |
+| `GET` | `/api/admin/audit` | Authenticated global audit event list for configured administrators. |
 | `GET` | `/api/books` | Authenticated paginated list of books where the current user has explicit membership, including the current user's role. |
 | `POST` | `/api/books` | Authenticated book creation with server-controlled id, owner, owner membership, and timestamps. |
 | `GET` | `/api/books/{bookID}` | Authenticated role-aware book settings read for explicit book members. |
 | `PATCH` | `/api/books/{bookID}` | Authenticated book settings update for owners and administrators, currently name and reporting currency. |
 | `GET` | `/api/books/{bookID}/members` | Authenticated paginated explicit member list for book members. |
+| `POST` | `/api/books/{bookID}/members` | Authenticated member addition for owners and administrators, with server-controlled timestamps. New members can be administrators, members, or viewers. |
+| `PATCH` | `/api/books/{bookID}/members/{userID}` | Authenticated member role update for owners and administrators, including owner promotion and sole-owner protection. |
+| `DELETE` | `/api/books/{bookID}/members/{userID}` | Authenticated member removal for owners and administrators, with sole-owner protection. |
 | `GET` | `/api/books/{bookID}/ledger/summary` | Authenticated book-scoped summary using explicit membership policy and optional UTC `start_date` / `end_date` day filters. |
 | `GET` | `/api/accounts` | Authenticated paginated list of personal accounts owned by the current user. |
 | `POST` | `/api/accounts` | Authenticated personal account creation with server-controlled id, owner, and timestamps. |
+| `DELETE` | `/api/accounts/{accountID}/shares/{bookID}` | Authenticated account unshare for book owners and administrators. |
 | `GET` | `/api/accounts/groups` | Authenticated paginated list of personal account groups owned by the current user. |
 | `POST` | `/api/accounts/groups` | Authenticated personal account group creation with server-controlled id, owner, and timestamps. |
 | `PATCH` | `/api/accounts/groups/{groupID}` | Authenticated personal account group update for the owning user. |
@@ -314,7 +336,7 @@ Future APIs should be grouped by domain and versioned once the first persistent 
 
 - `/api/auth`: session refresh, recovery-code administration, passkey admin recovery, and invite acceptance beyond the initial email/password, verification, password-reset, TOTP, and user-owned passkey contract.
 - `/api/users`: profile, preferences, and identity-safe user lookup for invitations.
-- `/api/books`: invitations, invitation acceptance, role changes, and member removal beyond the initial book workspace/settings/member-read contract.
+- `/api/books`: invitations and invitation acceptance beyond explicit member management.
 - `/api/books/{bookID}/entries`: income, expense, transfer, refund, reimbursement, borrow, lend, and repayment entries.
 - `/api/books/{bookID}/categories`: category mapping and display metadata beyond the initial create/update/archive contract.
 - `/api/accounts`: account balances, credit-card settings, and visibility settings beyond the initial account and group create/list/update contract.
@@ -326,7 +348,7 @@ Future APIs should be grouped by domain and versioned once the first persistent 
 Initial auth, book, account, category, entry, and import request contracts:
 
 - `POST /api/auth/register` accepts `email`, `password`, and optional `turnstile_token`. The response returns public user data only. Password hashes and plaintext passwords are never returned.
-- `POST /api/auth/login` accepts `email`, `password`, and optional `turnstile_token`. The response returns public user and session metadata and sets the configured HttpOnly session cookie.
+- `POST /api/auth/login` accepts `email`, `password`, and optional `turnstile_token`. The response returns public user and session metadata and sets the configured HttpOnly session cookie. After six consecutive failed password attempts for a normalized email address, login stores an exponential account lockout starting at one minute, doubling on later consecutive failures, and capping at one hour. While locked, even the correct password receives `429 Too Many Requests` with `Retry-After` and records `auth.login_locked`.
 - `GET /api/auth/email/verification` accepts `email` as a query parameter and returns a generic `202 Accepted` response with expiry metadata. The response never includes the verification code.
 - `POST /api/auth/email/verification` accepts `email` and `code`, consumes the one-time code, and returns public user data after activation.
 - `POST /api/auth/password-reset/request` accepts `email` and returns a generic `202 Accepted` response with expiry metadata. The response never includes the reset code or reveals whether the email exists.
@@ -336,15 +358,16 @@ Initial auth, book, account, category, entry, and import request contracts:
 - `POST /api/auth/totp/confirm` accepts `code`, validates the pending session-scoped secret, stores the confirmed secret on the user, and clears the pending setup.
 - `POST /api/auth/totp/disable` accepts `code`, validates the current TOTP secret, and clears the stored secret. Login for TOTP-enabled users requires `totp_code`, rejects replayed codes, and applies per-user failed-code limits.
 - Passkey begin endpoints return a server-side `flowId` plus WebAuthn public-key options. Finish endpoints accept `flowId` and a nested browser credential response. Registration requires an authenticated session and stores credential id, public key, sign count, backup flags, transports, AAGUID, label, and timestamps without private key material.
-- External SSO start accepts no body, stores only a hashed state value in an HttpOnly cookie, and redirects to the configured SSO login URL with `redirect_to`. The callback accepts `state` and `sso_token` query values, validates state with a constant-time comparison, validates the token server-side, clears the state cookie, creates the local session cookie, and never returns the token in a response body.
+- External SSO start accepts no body, stores only a hashed state value in an HttpOnly cookie, and redirects to the configured SSO login URL with `redirect_to`. The callback accepts form-posted `state` and `sso_token`, validates state with a constant-time comparison, validates the token server-side, clears the state cookie, creates the local session cookie, and never returns the token in a response body. The GET callback remains only as compatibility fallback and redacts `sso_token` from the URL before request logging completes.
 - `GET /api/users/me` returns the authenticated user's public profile and preferences, including `baseCurrency`.
 - `PATCH /api/users/me` accepts `baseCurrency` and returns the updated public user. The supported initial profile currencies are `USD`, `EUR`, `CNY`, and `CAD`; unsupported currencies and unknown JSON fields are rejected.
 - Paginated list endpoints accept optional `page` and `page_size`, reject unknown query filters, and bound `page_size` to at most `100`. New list endpoints return an envelope with `items`, `page`, `pageSize`, and `total`; the existing entry list keeps its domain-specific `entries` field with the same pagination metadata.
-- `GET /api/audit` accepts optional `page` and `page_size`, returns only audit events for the authenticated actor, and omits secret metadata such as passwords, tokens, secrets, and one-time codes. The initial feed records registration, login, logout, login failures, verification and password-reset requests and confirmations, TOTP setup/enable/disable, passkey registration/login/rename/delete, book create/update, account group create/update, account create, category create/update, entry create/update/delete, and Wacai import-preview creation.
+- `GET /api/audit` accepts optional `page` and `page_size`, returns only audit events for the authenticated actor, and omits secret metadata such as passwords, tokens, secrets, and one-time codes. `GET /api/admin/audit` returns the global audit feed only for authenticated users whose email is listed in `ACCOUNTING_ADMIN_EMAILS`. Audit events carry a monotonically increasing `seq` plus `prevHash`/`hash` chain fields so adjacent tampering is detectable. Failed password-login and lockout events include `metadata.subjectHash`, a SHA-256 hash of the normalized attempted email, instead of the raw guessed email. The initial feed records registration, login, logout, logout-all, login failures, verification and password-reset requests and confirmations, TOTP setup/enable/disable, passkey registration/login/rename/delete, book create/update, account group create/update, account create, category create/update, entry create/update/delete, and Wacai import-preview creation.
 - `POST /api/books` accepts `name` and `reportingCurrency`. The response returns the created book as a role-aware book list item with owner role for the creator.
 - `PATCH /api/books/{bookID}` accepts optional `name` and `reportingCurrency`. At least one field is required. The server controls book id, owner, role, and timestamps.
-- `GET /api/books/{bookID}/members` returns paginated explicit members for the book. Membership mutation, invitations, and invite acceptance remain future work until user lookup and invite contracts are defined.
+- `GET /api/books/{bookID}/members` returns paginated explicit members for the book. `POST /api/books/{bookID}/members` lets owners and administrators add explicit administrators, members, and viewers. `PATCH /api/books/{bookID}/members/{userID}` updates a member role, including owner promotion, while rejecting sole-owner demotion. `DELETE /api/books/{bookID}/members/{userID}` removes a member while rejecting sole-owner removal. Invitation and invite acceptance contracts remain future work until user lookup and invite contracts are defined.
 - `POST /api/accounts` accepts `groupId`, `name`, `type`, `currency`, `sharedBookIds`, and `openingBalanceCents`. The supported initial account types are `cash`, `savings`, `credit_card`, `loan`, `investment`, and `payment_platform`; stored-value, receivable, and payable variants remain import/modeling targets until explicit product contracts are added.
+- `DELETE /api/accounts/{accountID}/shares/{bookID}` removes a book id from an account's `sharedBookIds` when the actor is an owner or administrator of that book. The response returns the updated account.
 - `POST /api/accounts/groups` accepts `name` and `sortOrder`; `PATCH /api/accounts/groups/{groupID}` accepts optional `name` and `sortOrder`. Account groups are personal to the authenticated user, and ownership is server-controlled.
 - `POST /api/books/{bookID}/categories` accepts `parentId`, `name`, `direction`, `sortOrder`, and `rawSourceName`. Category direction must be `income` or `expense`.
 - `PATCH /api/books/{bookID}/categories/{categoryID}` accepts optional `parentId`, `name`, `direction`, `sortOrder`, `archived`, and `rawSourceName`. Category removal is archival by setting `archived=true`; hard delete is deferred to avoid breaking historical entry references.
@@ -405,9 +428,11 @@ The future double-entry layer can model:
 - Posting: one debit or credit line within a journal entry.
 - Reconciliation: statement-period matching, balance checks, and lock records.
 
-Persistent storage is hidden behind repository interfaces owned by the relevant domain package. The default `memory` driver is for local development. The `file` driver stores atomic JSON snapshots for auth, ledger, audit, and import-preview state under `ACCOUNTING_PERSISTENCE_DIR`; files are written with owner-only permissions because they contain password hashes, TOTP secrets, session hashes, and other server-side state. This single-node file driver is a durable bootstrap path.
+Persistent storage is hidden behind repository interfaces owned by the relevant domain package. The default `memory` driver is for local development. The `file` driver stores atomic JSON snapshots for auth, ledger, audit, and import-preview state under `ACCOUNTING_PERSISTENCE_DIR`; files are written with owner-only permissions because they contain password hashes, encrypted TOTP secret ciphertext, session hashes, and other server-side state. This single-node file driver is a durable bootstrap path.
 
 The `sqlite` and `postgres`/`postgresql` drivers are direct SQL drivers. They do not load domain snapshots into process memory and later flush them; each create, update, delete, counter increment, and idempotent import-batch claim writes SQL rows synchronously before returning success. Reads query SQL rows through the domain store. The first SQL schema uses a shared `accounting_records` table keyed by namespace, primary key, parent key, owner key, and optional unique secondary key, with each domain object encoded as JSON. This keeps the current API behavior and store contracts stable while moving durability and concurrency control to the database. A later relational migration can split high-value accounting tables once reporting and double-entry invariants require database-native joins and constraints.
+
+The P1 relational-storage foundation lives in `backend/internal/storage`. It opens Postgres and SQLite database pools, exposes a domain-neutral `DBTX` transaction surface, applies embedded goose migrations, and owns dialect placeholder rebinding. Its first migration creates the relational core tables, `account_shared_books`, foreign-key and check constraints, `goose_db_version`, and the entry keyset index. The second migration adds `auth_kv` for short-lived auth residual state that does not belong in the stable `users` or `sessions` tables. The ledger and auth packages now have relational `SQLRepository` implementations covered by storage-backed tests, but the running domain SQL stores still use `accounting_records` until the audit/import repositories and server selection switch to the new tables.
 
 PostgreSQL uses `database/sql` through pgx stdlib, stores JSON as `jsonb`, and sets the session time zone to UTC on startup. SQLite uses the `mattn/go-sqlite3` `database/sql` driver with WAL, foreign keys, a busy timeout, `synchronous=NORMAL`, and immediate write transactions; the SQLite pool is serialized with one open connection until a broader concurrent-write design is tested. These choices follow the current Go `database/sql` contract, pgx stdlib driver documentation, PostgreSQL timestamp/transaction guidance, and SQLite WAL/foreign-key/transaction guidance.
 
@@ -424,6 +449,11 @@ Controllers must not build SQL directly. SQL repositories must validate untruste
 ## Configuration
 
 Current backend environment variables:
+
+Typed boolean, integer, and duration environment variables fail startup when set to malformed
+non-empty values. Startup also validates cross-field dependencies such as SQL driver database URLs,
+OTLP endpoints, Turnstile keys, external SSO trust material, durable TOTP encryption keys, positive
+durations, and bounded port values before telemetry or HTTP serving begins.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -445,7 +475,8 @@ Current backend environment variables:
 | `ACCOUNTING_AUTH_EMAIL_SMTP_USERNAME` | empty | SMTP username. |
 | `ACCOUNTING_AUTH_EMAIL_SMTP_PASSWORD` | empty | SMTP password; never log or return this value. |
 | `ACCOUNTING_AUTH_EMAIL_SMTP_FROM` | empty | Sender address for auth emails. |
-| `ACCOUNTING_AUTH_EMAIL_FORCE_SMTP_TLS_VERIFY` | `true` | Requires SMTP TLS certificate verification. |
+| `ACCOUNTING_AUTH_EMAIL_FORCE_SMTP_TLS_VERIFY` | `true` | Requires SMTP STARTTLS certificate verification. |
+| `ACCOUNTING_ADMIN_EMAILS` | empty | Comma-separated normalized administrator email allowlist for `/api/admin/audit`. |
 | `ACCOUNTING_AUTH_RATE_LIMIT_ENABLED` | `true` | Enables fixed-window limits on public authentication routes. |
 | `ACCOUNTING_AUTH_RATE_LIMIT_LIMIT` | `20` | Maximum attempts per auth route, client IP, and email/flow subject within the window. |
 | `ACCOUNTING_AUTH_RATE_LIMIT_WINDOW` | `1m` | Public auth route rate-limit window. |
@@ -457,6 +488,8 @@ Current backend environment variables:
 | `ACCOUNTING_AUTH_TOTP_ENABLED` | `true` | Enables per-user TOTP MFA setup and login challenge. |
 | `ACCOUNTING_AUTH_TOTP_ISSUER` | `Accounting` | Issuer label in otpauth URIs. |
 | `ACCOUNTING_AUTH_TOTP_REPLAY_CACHE_DURATION` | `30s` | Time window used to reject reused TOTP codes. |
+| `ACCOUNTING_SECRET_KEY` | empty | Active secret used to derive the key-encryption key. Any passphrase of at least 16 characters, hashed into an AES-256 key (no base64 encoding). Required when TOTP is enabled with a durable persistence driver. |
+| `ACCOUNTING_SECRET_KEY_RETIRED` | empty | Optional comma-separated retired secrets (same passphrase form), used only for decrypting data written by older active keys. |
 | `ACCOUNTING_AUTH_PASSKEY_ENABLED` | `true` | Enables WebAuthn passkey registration and login. |
 | `ACCOUNTING_AUTH_PASSKEY_RP_DISPLAY_NAME` | `Accounting` | WebAuthn relying-party display name. |
 | `ACCOUNTING_AUTH_PASSKEY_RP_ID` | `localhost` | WebAuthn relying-party id; must match the serving domain. |
@@ -488,7 +521,7 @@ Accounting follows the `one-api` operational pattern for backend observability:
 - OpenTelemetry tracing is opt-in. When enabled, the backend initializes an OTLP HTTP trace exporter and installs Gin tracing middleware before request logging.
 - pprof is opt-in and served from a dedicated HTTP listener, not from the public API router.
 - The pprof listener defaults to `localhost:6060`. Binding it to a non-loopback address emits a warning because pprof has no built-in authentication.
-- Shutdown drains the API server, pprof listener, and telemetry provider within the configured shutdown timeout.
+- Shutdown drains the API server, scheduled exchange-rate updater, pprof listener, and telemetry provider within the configured shutdown timeout.
 
 ## Engineering Standards
 
@@ -508,6 +541,7 @@ Accounting follows the `one-api` operational pattern for backend observability:
 make dev
 make build
 make lint
+make backend-vuln
 make test
 make e2e
 ```
@@ -516,9 +550,9 @@ Required final gates after code changes:
 
 ```sh
 make lint
-cd backend && go test -race -cover ./...
-cd ../cli && go test -race -cover ./...
-pnpm --dir web run test:e2e
+make backend-vuln
+make test
+make e2e
 ```
 
 Equivalent separate invocations are also acceptable:

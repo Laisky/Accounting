@@ -63,3 +63,19 @@ func (s *SnapshotStore) EventsByActor(ctx context.Context, actorID string) ([]Ev
 
 	return s.memory.EventsByActor(ctx, actorID)
 }
+
+// AllEvents returns all audit events newest first.
+func (s *SnapshotStore) AllEvents(ctx context.Context) ([]Event, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.memory.AllEvents(ctx)
+}
+
+// Tail returns the newest stored event in append order.
+func (s *SnapshotStore) Tail(ctx context.Context) (Event, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.memory.Tail(ctx)
+}

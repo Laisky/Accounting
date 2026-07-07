@@ -17,6 +17,8 @@ type Store interface {
 	CreateBook(ctx context.Context, book Book, owner BookMember, categories []Category) (Book, BookMember, error)
 	UpdateBook(ctx context.Context, book Book) (Book, error)
 	CreateBookMember(ctx context.Context, member BookMember) (BookMember, error)
+	UpdateBookMember(ctx context.Context, member BookMember) (BookMember, error)
+	DeleteBookMember(ctx context.Context, bookID string, userID string) error
 	Member(ctx context.Context, bookID string, userID string) (BookMember, error)
 	Entry(ctx context.Context, bookID string, entryID string) (Entry, error)
 	Entries(ctx context.Context, bookID string) ([]Entry, error)
@@ -31,6 +33,7 @@ type Store interface {
 	UpdateAccountGroup(ctx context.Context, group AccountGroup) (AccountGroup, error)
 	Accounts(ctx context.Context) ([]Account, error)
 	CreateAccount(ctx context.Context, account Account) (Account, error)
+	UpdateAccount(ctx context.Context, account Account) (Account, error)
 	ExchangeRates(ctx context.Context) ([]ExchangeRate, error)
 	ReplaceExchangeRates(ctx context.Context, rates []ExchangeRate) error
 }
@@ -243,6 +246,45 @@ func (s *MemoryStore) CreateBookMember(_ context.Context, member BookMember) (Bo
 	s.members[member.BookID][member.UserID] = member
 
 	return cloneBookMember(member), nil
+}
+
+// UpdateBookMember receives a membership and replaces the matching existing member.
+func (s *MemoryStore) UpdateBookMember(_ context.Context, member BookMember) (BookMember, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.books[member.BookID]; !ok {
+		return BookMember{}, errors.Wrapf(ErrNotFound, "book %q not found", member.BookID)
+	}
+	bookMembers := s.members[member.BookID]
+	if bookMembers == nil {
+		return BookMember{}, errors.Wrapf(ErrNotFound, "book %q has no members", member.BookID)
+	}
+	if _, ok := bookMembers[member.UserID]; !ok {
+		return BookMember{}, errors.Wrapf(ErrNotFound, "user %q is not a member of book %q", member.UserID, member.BookID)
+	}
+
+	member = cloneBookMember(member)
+	bookMembers[member.UserID] = member
+
+	return cloneBookMember(member), nil
+}
+
+// DeleteBookMember receives book and user ids and removes the matching membership.
+func (s *MemoryStore) DeleteBookMember(_ context.Context, bookID string, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	bookMembers := s.members[bookID]
+	if bookMembers == nil {
+		return errors.Wrapf(ErrNotFound, "book %q has no members", bookID)
+	}
+	if _, ok := bookMembers[userID]; !ok {
+		return errors.Wrapf(ErrNotFound, "user %q is not a member of book %q", userID, bookID)
+	}
+
+	delete(bookMembers, userID)
+	return nil
 }
 
 // UpdateBook receives a book and replaces mutable settings for an existing book.
@@ -504,6 +546,24 @@ func (s *MemoryStore) CreateAccount(_ context.Context, account Account) (Account
 
 	account = cloneAccount(account)
 	s.accounts = append(s.accounts, account)
+
+	return cloneAccount(account), nil
+}
+
+// UpdateAccount receives an account and replaces the matching existing account.
+func (s *MemoryStore) UpdateAccount(_ context.Context, account Account) (Account, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	accountIndex := slices.IndexFunc(s.accounts, func(existing Account) bool {
+		return existing.ID == account.ID
+	})
+	if accountIndex < 0 {
+		return Account{}, errors.Wrapf(ErrNotFound, "account %q not found", account.ID)
+	}
+
+	account = cloneAccount(account)
+	s.accounts[accountIndex] = account
 
 	return cloneAccount(account), nil
 }

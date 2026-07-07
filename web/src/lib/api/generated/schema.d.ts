@@ -216,6 +216,17 @@ export interface paths {
             'application/json': components['schemas']['AuthResult'];
           };
         };
+        /** @description Login temporarily locked or auth rate limit exceeded */
+        429: {
+          headers: {
+            /** @description Seconds until retry is allowed when account lockout is active */
+            'Retry-After'?: number;
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
         default: components['responses']['Error'];
       };
     };
@@ -244,6 +255,42 @@ export interface paths {
       requestBody?: never;
       responses: {
         /** @description Session cleared */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StatusResponse'];
+          };
+        };
+        default: components['responses']['Error'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/auth/logout-all': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description All user sessions cleared */
         200: {
           headers: {
             [name: string]: unknown;
@@ -692,6 +739,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** @deprecated */
     get: {
       parameters: {
         query?: {
@@ -715,7 +763,32 @@ export interface paths {
       };
     };
     put?: never;
-    post?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/x-www-form-urlencoded': {
+            state: string;
+            sso_token: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Redirect to clean app URL. */
+        302: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        default: components['responses']['Error'];
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
@@ -1002,6 +1075,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/admin/audit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List global audit events for configured administrators. */
+    get: {
+      parameters: {
+        query?: {
+          page?: components['parameters']['Page'];
+          page_size?: components['parameters']['PageSize'];
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Global audit event list */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AuditEventList'];
+          };
+        };
+        default: components['responses']['Error'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/books': {
     parameters: {
       query?: never;
@@ -1163,11 +1276,95 @@ export interface paths {
       };
     };
     put?: never;
-    post?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          bookID: components['parameters']['BookID'];
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['BookMemberCreateRequest'];
+        };
+      };
+      responses: {
+        /** @description Created book member */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['BookMember'];
+          };
+        };
+        default: components['responses']['Error'];
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  '/books/{bookID}/members/{userID}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          bookID: components['parameters']['BookID'];
+          userID: components['parameters']['UserID'];
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        204: components['responses']['Empty'];
+        default: components['responses']['Error'];
+      };
+    };
+    options?: never;
+    head?: never;
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          bookID: components['parameters']['BookID'];
+          userID: components['parameters']['UserID'];
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['BookMemberRoleUpdateRequest'];
+        };
+      };
+      responses: {
+        /** @description Updated book member */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['BookMember'];
+          };
+        };
+        default: components['responses']['Error'];
+      };
+    };
     trace?: never;
   };
   '/books/{bookID}/ledger/summary': {
@@ -1374,6 +1571,45 @@ export interface paths {
       };
     };
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{accountID}/shares/{bookID}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          accountID: components['parameters']['AccountID'];
+          bookID: components['parameters']['BookID'];
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Updated account */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Account'];
+          };
+        };
+        default: components['responses']['Error'];
+      };
+    };
     options?: never;
     head?: never;
     patch?: never;
@@ -1957,6 +2193,16 @@ export interface components {
     BookMemberList: components['schemas']['PageInfo'] & {
       items: components['schemas']['BookMember'][];
     };
+    BookMemberCreateRequest: {
+      userId: string;
+      /** @enum {string} */
+      role: 'administrator' | 'member' | 'viewer';
+      displayName?: string;
+    };
+    BookMemberRoleUpdateRequest: {
+      /** @enum {string} */
+      role: 'owner' | 'administrator' | 'member' | 'viewer';
+    };
     AccountGroup: {
       id: string;
       userId: string;
@@ -2102,6 +2348,9 @@ export interface components {
     };
     AuditEvent: {
       id: string;
+      seq: number;
+      prevHash?: string;
+      hash: string;
       actorId?: string;
       /** Format: email */
       actorEmail?: string;
@@ -2215,6 +2464,8 @@ export interface components {
     Page: number;
     PageSize: number;
     BookID: string;
+    UserID: string;
+    AccountID: string;
     EntryID: string;
     CategoryID: string;
     GroupID: string;

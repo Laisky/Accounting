@@ -18,6 +18,10 @@ import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts';
 import { usePrepareStarterAccount } from '@/hooks/usePrepareStarterAccount';
 import type { AuthActor } from '@/lib/api/auth';
 import type { RuntimeConfig } from '@/lib/api/runtimeConfig';
+import '@/features/mobile/mobile-shell.css';
+import '@/features/mobile/mobile-navigation.css';
+import '@/features/mobile/mobile-account.css';
+import '@/features/mobile/mobile-home.css';
 import type { ShellOutletContext } from './shellOutlet';
 import { useShellChrome } from './useShellChrome';
 

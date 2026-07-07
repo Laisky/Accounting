@@ -41,6 +41,16 @@ components:
       in: path
       required: true
       schema: { type: string }
+    UserID:
+      name: userID
+      in: path
+      required: true
+      schema: { type: string }
+    AccountID:
+      name: accountID
+      in: path
+      required: true
+      schema: { type: string }
     EntryID:
       name: entryID
       in: path
@@ -114,6 +124,9 @@ components:
     BookUpdateRequest: { $ref: "./schemas.yaml#/BookUpdateRequest" }
     BookMember: { $ref: "./schemas.yaml#/BookMember" }
     BookMemberList: { $ref: "./schemas.yaml#/BookMemberList" }
+    BookMemberCreateRequest: { $ref: "./schemas.yaml#/BookMemberCreateRequest" }
+    BookMemberRoleUpdateRequest:
+      { $ref: "./schemas.yaml#/BookMemberRoleUpdateRequest" }
     AccountGroup: { $ref: "./schemas.yaml#/AccountGroup" }
     AccountGroupList: { $ref: "./schemas.yaml#/AccountGroupList" }
     AccountGroupCreateRequest:
@@ -146,6 +159,7 @@ paths:
   /auth/register: { $ref: "./paths/system.yaml#/~1auth~1register" }
   /auth/login: { $ref: "./paths/system.yaml#/~1auth~1login" }
   /auth/logout: { $ref: "./paths/system.yaml#/~1auth~1logout" }
+  /auth/logout-all: { $ref: "./paths/system.yaml#/~1auth~1logout-all" }
   /auth/session: { $ref: "./paths/system.yaml#/~1auth~1session" }
   /auth/email/verification:
     { $ref: "./paths/system.yaml#/~1auth~1email~1verification" }
@@ -171,16 +185,23 @@ paths:
   /auth/passkeys/{id}: { $ref: "./paths/system.yaml#/~1auth~1passkeys~1{id}" }
   /users/me: { $ref: "./paths/system.yaml#/~1users~1me" }
   /audit: { $ref: "./paths/system.yaml#/~1audit" }
+  /admin/audit: { $ref: "./paths/system.yaml#/~1admin~1audit" }
   /books: { $ref: "./paths/ledger.yaml#/~1books" }
   /books/{bookID}: { $ref: "./paths/ledger.yaml#/~1books~1{bookID}" }
   /books/{bookID}/members:
     { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1members" }
+  /books/{bookID}/members/{userID}:
+    { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1members~1{userID}" }
   /books/{bookID}/ledger/summary:
     { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1ledger~1summary" }
   /accounts/groups: { $ref: "./paths/ledger.yaml#/~1accounts~1groups" }
   /accounts/groups/{groupID}:
     { $ref: "./paths/ledger.yaml#/~1accounts~1groups~1{groupID}" }
   /accounts: { $ref: "./paths/ledger.yaml#/~1accounts" }
+  /accounts/{accountID}/shares/{bookID}:
+    {
+      $ref: "./paths/ledger.yaml#/~1accounts~1{accountID}~1shares~1{bookID}",
+    }
   /books/{bookID}/categories:
     { $ref: "./paths/ledger.yaml#/~1books~1{bookID}~1categories" }
   /books/{bookID}/categories/{categoryID}:

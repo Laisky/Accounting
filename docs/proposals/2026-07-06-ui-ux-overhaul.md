@@ -1,109 +1,252 @@
-# 用户侧 UI/UX 整改手册
+# User-Facing UI/UX Overhaul — Development Handbook
 
-- 状态:待开发组扩充为可交付执行的开发手册(本文只定方向、布局与验收口径,不含实现细节)
-- 日期:2026-07-06
-- 产品阶段:未发布。允许破坏性重构;**禁止任何向后兼容垫层**(不保留旧 class、旧主题机制、旧调色板的别名或双轨并存),一律干净切换。
-- 范围:`web/` 全部用户可见界面 —— 公开页(Landing/Boarding、Auth 全流程)与认证后工作台全部视图(Home、Accounts、Account Transactions、Record、Reports、Imports、Me/Security、Search、Entry Detail)及应用壳(导航、头部、通知)。
-- 明确不在范围:后端 API 与领域模型、i18n 架构(仅允许新增/修改文案 key)、React/Vite 技术栈更换、引入第三方组件库或图表库(**继续手写组件与 SVG 图表**)。
-- 关联文档:`docs/proposals/2026-07-06-architecture-overhaul.md`(工程架构,其 Phase 3/4 与本手册的 W1/W4 工作流对应,由开发组合并排期)、`docs/arch/frontend.md`(2026 UI/CSS 基线)、`docs/arch/i18n.md`。
+- **Status:** Ready for implementation. This document rewrites the architect's direction-setting
+  proposal into an executable, code-grounded manual with concrete change lists and an acceptance
+  matrix. A developer can pick up any workstream (`W*`) or page (`P*`) below and ship it without
+  further design negotiation; a reviewer can accept it against the stated gates.
+- **Date:** 2026-07-06 (direction) · rewritten 2026-07-07 against the post-Phase-7 code tree.
+- **Product stage:** Pre-launch. Breaking refactors are allowed. **No backward-compatibility
+  shims** — do not keep legacy class names, dual theme mechanisms, or parallel palettes alive.
+  Every migration is a clean cutover: when a page moves to the new system, its old CSS and
+  hand-rolled components are deleted in the same PR.
+- **Scope:** every user-visible surface under `web/` — the public pages (Landing, the full Auth
+  flow) and every authenticated view (Home, Accounts, Account Transactions, Record, Reports,
+  Imports, Me/Security, Search, Entry Detail) plus the application shell (navigation, header,
+  notices).
+- **Explicitly out of scope:** backend API and domain model; the i18n architecture (adding or
+  editing copy keys is allowed); the React/Vite stack; introducing a third-party component library
+  or charting library (**charts stay hand-written SVG**).
+- **Related docs:**
+  - `docs/proposals/archives/2026-07-06-architecture-overhaul.md` — the frontend architecture
+    overhaul (Phases 0–7), **implemented and archived**. Its Phase 4 ("Design System Foundation")
+    delivered the *scaffolding* this handbook builds on; see §1.1 for exactly what landed and what
+    it deferred. This handbook owns the deferred visual/UX work.
+  - `docs/arch/frontend.md` — the 2026 UI/CSS baseline and engineering gates. Item AC-11 requires
+    this file to be updated to describe the end state.
+  - `docs/arch/i18n.md` — five-language contract (`en` canonical, `zh`/`fr`/`es`/`ja`); the
+    `check:i18n` gate enforces identical key sets and line counts across locales.
+  - `docs/arch/landing.md` — landing-page product research (informs `P1`).
 
-## 1. 背景
+---
 
-### 1.1 问题陈述
+## 1. Background
 
-当前产品工程栈现代(React 19、OKLCH、容器查询、TanStack Query),但**视觉与交互层停留在"能用"阶段,整体观感陈旧**。基于 2026-07-06 代码树的诊断:
+### 1.1 What Phase 4 already delivered, and what it deferred
 
-| ID | 发现 | 证据 | 用户感知 |
+The architecture overhaul landed the *engineering scaffolding* for a design system. **Do not
+rebuild these** — adopt them:
+
+| Delivered (as-built) | Evidence |
+| --- | --- |
+| Cascade-layer order `@layer tokens, base, components, features` | `web/src/styles/layers.css` |
+| Semantic token layer + light/dark under `:root[data-theme="dark"]` | `web/src/styles/tokens.css:14-119` |
+| `ThemeContext` writes `data-theme` on `<html>`, persists `system`/`light`/`dark` | `web/src/contexts/ThemeContext.tsx:25-38` |
+| Color-tokenization script + CI gates (`check:tokens`, `lint:css`, stylelint `function-disallowed-list` + `color-no-hex`) | `web/scripts/tokenize-colors.mjs`, `web/stylelint.config.mjs`, `.github/workflows/web.yml` |
+| Seven tested UI primitives | `web/src/components/ui/{Button,Card,ConfirmDialog,EmptyState,FormField,Notice,Sheet}.tsx` + `ui.test.tsx` |
+| Router-based shell decomposition (layout route + lazy route bodies + `useShellChrome`) | `web/src/features/shell/`, `web/src/App.tsx` |
+| Responsive shell that reflows to a rail (≥768px) and a labelled sidebar (≥1024px) | `web/src/features/mobile/mobile-navigation.css:101-221` |
+
+Phase 4 **explicitly deferred** the substance of the visual overhaul (archived proposal,
+Phase-status notes): the full `@layer` migration of feature CSS, *adoption* of the primitives into
+features, retiring the `.mobileShellThemeDark` theming track, repointing feature CSS onto the
+semantic tokens, typography convergence, the desktop workspace, motion, chart interaction, the
+Landing/Auth redesign, and tri-state coverage. **That deferred work is this handbook.**
+
+### 1.2 Current-state diagnostic (as-built, with evidence)
+
+The original proposal's `U1–U10` table described the *pre-overhaul* tree. The table below is the
+accurate as-built state on the 2026-07-07 tree; each row is the real starting point for a
+workstream. Metrics are reproducible with the commands in §5.
+
+| ID | Finding | Evidence & metric | Owning workstream |
 | --- | --- | --- | --- |
-| U1 | 无色彩/字体设计令牌,~600 处裸 `oklch()` 字面量散落在 21 个 CSS 文件 | `src/styles.css`、`features/**/**.css`;`styles/tokens.css` 仅含布局变量 | 页面间色彩细微不一致,整体"东拼西凑"感 |
-| U2 | 暗色模式双轨且残缺:class 切换(`.mobileShellThemeDark`)只覆盖 3 个 CSS 文件,`mobile-navigation.css` 又用 `prefers-color-scheme`;Landing/Auth 完全无暗色 | `MobileWorkspace.tsx:589`、`mobile-navigation.css:223`、`ThemeContext.tsx` 未设置 `color-scheme` | 切换暗色后大面积白块、导航与内容主题错位 |
-| U3 | 报表调色板为硬编码 hex(`#2ec4b6` 等),与全局 OKLCH 双语言并存;图表色内联在 style 属性 | `reports/reportColors.ts`、`ReportVisuals.tsx:197,235,244` | 报表配色与全局气质割裂 |
-| U4 | 字重滥用:650–950 共十余档,标题普遍 800–930 | `styles.css`(18 处 ≥800)、`landing.css`(950/900/850)、`mobile-shell.css` | 厚重、拥挤、"上个时代的加粗美学" |
-| U5 | 桌面端本质是"手机壳放大":430px 圆角 `.phoneFrame` 铺满窗口,≥1024px 才出现侧栏,信息密度低 | `mobile-shell.css`、`docs/arch/frontend.md` | 桌面用户看到的是被拉宽的手机 App,不像专业记账工作台 |
-| U6 | Landing 页为 div 拼装的静态假截图 + 传统分节营销页,无动效、无差异化记忆点 | `features/landing/LandingPage.tsx`、`landing.css` | 第一印象平庸,转化说服力弱 |
-| U7 | 无共享 UI 基元:按钮/输入/下拉/弹层/卡片各 feature 自造,焦点环、触控尺寸、危险操作确认不统一 | `src/components/` 仅 3 个通用组件 | 同一动作在不同页面长得不一样、手感不一样 |
-| U8 | 三态(空/加载/错误)存在但不统一:Suspense 兜底是一行纯文本,空态无插画/无引导动作 | 各 view 的 `emptyState` class、`MobileWorkspaceContent.tsx` | 新用户首屏冷冰冰,不知道下一步做什么 |
-| U9 | 动效几乎缺席,仅零星 transition;无统一时长/缓动/减弱动效策略 | 全部 CSS | 交互反馈生硬,"没有生命感" |
-| U10 | 图表交互不齐:AccountTransactions 迷你图已有 scrub/tooltip,报表 donut/bar/trend 交互与无障碍程度参差 | `AccountTransactionsView.tsx`、`ReportVisuals.tsx` | 图表"看得见摸不着",移动端尤甚 |
+| **C0** | **Primitive palette is committed empty.** `styles/palette.css` ships an empty `:root {}` while **647** `var(--tone-*)` references (across **312** distinct names) exist in `src` CSS — including the semantic aliases in `tokens.css`. `check:tokens` does not catch this (it only greps for residual `oklch(` literals; see `tokenize-colors.mjs:58-66`). No build step regenerates the file (`build` = `tsc -b && vite build`). Every `var(--tone-*)` currently resolves to an invalid value, so colors fall back to inherited/initial. Both `frontend.md:176-180` and the archived proposal claim this file "holds every primitive"/"312 primitive tokens" — a doc-vs-reality regression. | `git show HEAD:web/src/styles/palette.css`; `grep -rho "var(--tone-" web/src --include='*.css' \| wc -l` → 647 | **S0 pre-flight**, then `W1` |
+| **C1** | **No designed token scale.** The 312 `--tone-*` names are a *mechanical* 1:1 lift of every distinct old `oklch()` literal (`tokenize-colors.mjs:31-41`), not a curated ramp. Feature CSS references machine primitives, **not** the semantic layer: semantic-role usage across `src/features` + `src/components` totals ~50 refs (`--surface`×10, `--ink`×14, `--border`×6, `--accent`×3, …) versus 647 machine refs. | grep counts in §5 | `W1` |
+| **C2** | **Theming is dual-track and incomplete.** `data-theme` exists but `MobileShell.tsx:94` still stamps `mobileShellTheme{Dark,Light}` on `<main>`; legacy `.mobileShellThemeDark` rules live in `mobile-shell.css`, `record-entry.css`, `record-category-sheet.css`; `mobile-navigation.css:223` themes via `@media (prefers-color-scheme: dark)`. `color-scheme` is never set on the document. Public routes (`/`, auth) are **not** wrapped in `ThemeProvider`, so `data-theme` is never written there. Views with **zero** dark rules of any kind: Accounts, Account Transactions, Reports, Imports, Me/Security, Search (bound to non-flipping `--tone-*`). | `MobileShell.tsx:94`; `app.workspace.test.tsx:57` asserts the legacy class | `W1` |
+| **C3** | **Typography is unconverged and ultra-heavy.** `font-weight` declarations span 620–950 (peaks: 950 in `landing.css`, 930 in `reports.css`/`mobile-shell.css`, 920 in `account-transactions.css`/`entry-detail.css`). The `--font-weight-*` tokens (400/500/600/700) are used only by `ui.css`. | `grep -rhoE "font-weight:\s*[0-9]+" web/src --include='*.css' \| sort \| uniq -c` | `W2` |
+| **C4** | **UI primitives exist but adoption is ~2%.** Only three feature import sites: `EntryDetailEditor` (`ConfirmDialog`), `MobileShell` (`Sheet`), `HomeView` (`EmptyState`). `Button`/`Card`/`FormField`/`Notice` have **zero** feature usage. ~73 raw `<button>` with bespoke classes; every form is hand-rolled `<label><input>`; ~13 hand-rolled empty-state blocks. Two hand-rolled overlays (`CategorySheet` `RecordEntryView.tsx:484`, `WorkspaceMenu` `MobileWorkspaceHeader.tsx:211`) reimplement `Sheet` without its focus trap/Escape/return-focus. | see `W3` change list | `W3` |
+| **C5** | **Missing primitives.** No `Select`, `Input`, `Skeleton`, `Toast`, `SegmentedControl`, `Tag`, or `AmountText`. Money formatting is centralized in `lib/money.ts` (`formatMoney`) but never componentized (~35 inline call sites); `font-variant-numeric: tabular-nums` is re-declared in **8** stylesheets instead of one utility. | see `W2`/`W3` | `W2`, `W3` |
+| **C6** | **Desktop is still the phone frame, restyled.** The shell reflows to rail/sidebar, but the element is literally `.phoneFrame` (`MobileShell.tsx:130`, `mobile-shell.css:70`); the rounded 430px mockup is still visible at 521–767px (`mobile-shell.css:79-84`). Desktop header carries no breadcrumb/search/quick-record; the sidebar carries no BookSwitcher/UserCard. Home and Account Transactions have **no** desktop layout at all; Accounts' "2-pane" is controls+list, not master-detail. | `mobile-navigation.css:101-221`; `mobile-home.css` has no `@media`/`@container` | `W4` |
+| **C7** | **No motion system.** Zero motion/duration/easing tokens. ~14 hand-written `transition:` rules cluster inconsistently at 120/140/160ms/0.15s; one keyframe (`Spinner`); `prefers-reduced-motion` handled in 6 files with three different (partly vacuous) patterns. | `grep -rn "prefers-reduced-motion" web/src --include='*.css'` → 6 files | `W5` |
+| **C8** | **Chart interaction is uneven and colors are hardcoded.** `TrendChart` (`ReportVisuals.tsx:327`) and the balance sparkline (`AccountTransactionsView.tsx:259`) nearly meet the standard; the **donut** and **ranked-bar** fail scrub/tooltip/keyboard/reduced-motion and paint from `reportColors.ts` hex applied inline (`ReportVisuals.tsx:208,242,296,305`). Scrub/tooltip/keyboard logic is duplicated across the two files with no shared module. | `reportColors.ts:1-10` (8 hex); duplicated `indexFromClientX` in both files | `W6` |
+| **C9** | **Landing is a static faked mockup.** `LandingPage.tsx:63-90` hand-builds a `<div>` "ledger window" from copy; there is no real component render, no motion, no dark theme, no theme control; CSS uses raw `--tone-*` + local `--landing-*` aliases. | `LandingPage.tsx:63-90`; `landing.css` has no `[data-theme]`/`prefers-color-scheme` | `P1` |
+| **C10** | **Tri-state is thin.** No `Skeleton` anywhere; loading is plain text/inline `Spinner`/nothing (Home/Accounts/Record render empty data during fetch via `?? []`). Exactly one guided `EmptyState` (Home); ~13 others are plain text. Only one retryable error affordance (`MeView.tsx:110`). Auth errors are not announced (no `aria-live`/`role="alert"`; `AuthWorkspace.tsx:379-380`). Destructive security actions (delete passkey, disable TOTP) have **no** confirmation at all (`PasskeySettingsView.tsx:177`, `TotpSettingsView.tsx:163`). | see `P12`, `P2`, `P9` | `P12` (+ per page) |
 
-### 1.2 整改目标
+### 1.3 Goals (unchanged in intent, restated as outcomes)
 
-把产品从"功能可用"提升到 **2026 年主流 SaaS 财务工具的第一梯队观感**:
+1. A single **light/precise/trustworthy** design language: generous whitespace, restrained color,
+   clear hierarchy, soft depth, precise numeric typography (`tabular-nums`, aligned, grouped).
+2. **One semantic-token-driven light/dark system** covering every route and component — including
+   the public pages.
+3. **A real multi-column desktop workspace**, not an enlarged phone; phone keeps the thumb-reachable
+   bottom navigation.
+4. **Every user-visible chart meets the interaction standard** (pointer+touch scrub, follow
+   tooltip, keyboard, ARIA), continuing the hand-written SVG approach.
+5. **WCAG 2.2 AA** is the launch floor; motion respects `prefers-reduced-motion`.
+6. A **product-grade Landing/Boarding** first impression: a realistic live product demo, clear
+   value proposition, dual theme, five languages without layout breakage.
 
-1. **轻盈、精密、可信**的统一设计语言:大留白、克制的色彩、清晰的层级、柔和的深度,数字排版精密(tabular-nums、对齐、千分位)。
-2. **一套语义化令牌驱动的全量明/暗双主题**,任意页面任意组件双主题完整。
-3. **桌面是真正的多栏工作台**,不是放大的手机;手机保持单手可达的底部导航 + 大拇指热区。
-4. **每一个用户可见图表都达到交互标准**(指针+触控 scrub、tooltip、键盘、ARIA),延续现有手写 SVG 路线。
-5. **WCAG 2.2 AA** 为发布底线;动效尊重 `prefers-reduced-motion`。
-6. Landing/Boarding 页具备**产品级第一印象**:真实感的动态产品演示、清晰的价值主张、双主题、五语言不破版。
+### 1.4 Design principles (binding)
 
-### 1.3 设计原则(开发组扩充时不得违背)
+1. **Tokens first.** Any color, size, radius, shadow, or motion duration comes from a token; a raw
+   literal is a defect. Feature CSS references the **semantic** layer (`--surface`, `--ink`, …), not
+   machine `--tone-*` primitives.
+2. **Adapt density, never remove capability.** Phones must not hide bookkeeping features
+   (`frontend.md` rule).
+3. **Build only the primitives the current flows need** — not a general component library.
+4. **Motion serves causal understanding** (where things came from, went to, what happened), not
+   decoration.
+5. **Money and destructive actions are confirmable, reversible, and reviewable** (WCAG 2.2 error
+   prevention).
+6. **Clean cutover.** New and old mechanisms never coexist; migrating a page deletes that page's
+   old styles and hand-rolled components in the same PR.
 
-1. 令牌先行:任何颜色、字号、圆角、阴影、动效时长必须来自令牌;裸字面量视为缺陷。
-2. 密度自适应而非功能裁剪:手机端不得隐藏记账能力(沿袭 `frontend.md` 既有铁律)。
-3. 组件基元只做当前流程需要的,不造通用组件库。
-4. 动效服务于因果理解(哪里来、去哪里、发生了什么),不做装饰性动画。
-5. 金额与破坏性操作必须可撤销、可确认、可核对(呼应 WCAG 2.2 错误预防条款)。
-6. 干净切换:新旧样式机制不并存,迁移到哪个页面就删掉哪个页面的旧样式。
+---
 
-## 2. 设计语言规范(方向性定义,细节由开发组落地)
+## 2. Design language specification
 
-### 2.1 令牌体系(W1 的规范来源)
+### 2.1 Token system (the source of truth for `W1`)
 
-三层结构,全部置于 `styles/tokens.css`(或拆分为 `tokens/*.css` 并经 `@layer tokens` 组织):
-
-```
-primitive  →  semantic  →  component(仅必要时)
---oklch 原子色阶      --color-bg-surface        --button-primary-bg
---font-size 字阶      --color-text-primary      --nav-item-active-fg
---space 间距阶        --color-border-subtle
---radius / --shadow   --color-accent / -danger / -success
---motion-duration/easing
-```
-
-- 色彩:全量 OKLCH;中性灰 10–12 档、品牌主色 1 组、语义色(收入/支出/转账/危险/警告/成功)各 1 组、图表分类色 8–10 档(替换 `reportColors.ts` 的 hex,同源生成明暗两套)。
-- 明暗主题:语义层通过 `:root[data-theme]` + `color-scheme` 一次性切换;组件 CSS 只允许引用语义层。删除 `.mobileShellThemeDark/Light` 与散落的 `prefers-color-scheme` 双轨机制。
-- 字体:维持系统栈;字阶 1.2 模数(约 12/13/15/18/22/28/34);**字重全站收敛为 400/500/600/700 四档,禁止 >700**。金额一律 `tabular-nums`。
-- 间距:4px 基准;圆角 4/8/12/16/full 五档;阴影 3 层(卡片/浮层/模态),低饱和低扩散。
-- 动效:时长 120/200/320ms 三档 + 标准/退出两条缓动曲线;`prefers-reduced-motion: reduce` 时全部降级为透明度切换或直接跳变。
-
-### 2.2 布局 DSL 约定
-
-本手册用以下 DSL 描述核心页面布局。开发组扩充时沿用同一记法。
+Three layers, `@layer tokens`, split across `styles/palette.css` (primitives) and
+`styles/tokens.css` (semantic + component):
 
 ```
-语法:
-  page <名称> { viewport <断点>: <树> }
-  容器: stack(纵) | row(横) | grid(cols:[...]) | scroll(可滚区)
-  修饰: [sticky] [fixed] [collapsible] [max:<宽>] [gap:<档>]
-  叶子: 组件名(参数)   ;  fab = 悬浮主操作按钮
-断点(与现状对齐): phone <768 | tablet 768–1023 | desktop ≥1024
+primitive            →  semantic                 →  component (only where needed)
+--neutral-0..1000        --surface / -raised          --button-primary-bg
+--brand-...              --ink / -muted / -subtle     --nav-item-active-fg
+--chart-1..10 (L & D)    --border / -subtle / -strong
+                         --accent / -danger / -success / -warning
+                         --focus / --focus-ring
 ```
 
-## 3. 变更清单
+Concrete requirements (exact L/C/H values are the designer's call within these constraints, then
+frozen as the reviewed baseline):
 
-分两层:**横向工作流 W1–W6**(基础设施,先行)与**纵向页面整改 P1–P12**(依赖 W 层)。每项由开发组扩充为带文件清单的执行任务。
+- **Color:** all OKLCH. Ship a *designed* scale, replacing the machine lift: a neutral ramp of
+  10–12 steps, one brand family, semantic families (income/expense/transfer/danger/warning/success),
+  and a chart categorical set of 8–10 hues **authored in both light and dark**. This chart set
+  replaces `reportColors.ts` (`W6`).
+- **Light/dark:** the semantic layer flips once under `:root[data-theme="dark"]` (already
+  scaffolded in `tokens.css:98-118`); component CSS references only the semantic layer. Set
+  `color-scheme: light dark` (and the resolved value per theme) so native form controls,
+  scrollbars, and `::selection` theme correctly. Delete `.mobileShellThemeDark/Light` and every
+  scattered `@media (prefers-color-scheme)` color rule.
+- **Type:** keep the system font stack; a ~1.2 modular scale (≈12/13/15/18/22/28/34, already present
+  as `--font-size-*`). **Weights converge to 400/500/600/700 only; nothing above 700.** Money is
+  always `tabular-nums`.
+- **Spacing/shape:** 4px base (`--space-*` present); radii 4/8/12/16/pill (present); three shadow
+  levels (present), low-saturation/low-spread.
+- **Motion (new, `W5`):** `--motion-fast: 120ms`, `--motion-base: 200ms`, `--motion-slow: 320ms`;
+  `--ease-standard` and `--ease-exit`. Under `prefers-reduced-motion: reduce`, all motion degrades
+  to an opacity change or an instant cut.
 
-### W1 设计令牌与主题统一
+### 2.2 Layout DSL
 
-- 重建 `styles/tokens.css` 为 2.1 的三层令牌;所有 feature CSS 改引语义令牌,清零裸 `oklch()`/hex 字面量。
-- 统一主题机制为 `data-theme`(system/light/dark 三选项保留在 Me 设置),`ThemeContext` 同步设置文档级 `color-scheme`;删除双轨旧机制。
-- Stylelint 新增规则:`tokens` 层之外禁止色彩字面量、禁止 `font-weight` >700(作为 CI 门禁,呼应架构手册 D10/D12)。
+Core layouts are described with this notation; developers keep the same notation when expanding a
+page into its component tree.
 
-### W2 排版与图标
+```
+syntax:
+  page <name> { viewport <breakpoint>: <tree> }
+  containers: stack(vertical) | row(horizontal) | grid(cols:[...]) | scroll
+  modifiers:  [sticky] [fixed] [collapsible] [max:<width>] [gap:<step>]
+  leaves:     ComponentName(args)  ;  fab = floating primary action
+breakpoints (match code): phone <768 | tablet 768–1023 | desktop ≥1024
+```
 
-- 全站字阶/字重按 2.1 收敛;清理 650–950 档。
-- 金额组件化:统一符号位置、千分位、正负色、`tabular-nums`。
-- 图标继续 lucide-react,统一 2 档尺寸与描边宽度令牌。
+---
 
-### W3 共享组件基元(`src/components/ui/`)
+## 3. Change list
 
-只建当前流程用到的:`Button`(含 danger/loading)、`Input/Field`、`Select`、`Sheet`(移动底部抽屉/桌面侧滑或居中对话框自适应)、`Dialog`(危险操作确认)、`Card`、`EmptyState`(插画位+标题+引导动作)、`Skeleton`、`Toast`、`SegmentedControl`、`Tag`、`AmountText`。全部满足:44px 触控目标、`:focus-visible` 焦点环令牌、键盘可达、ARIA 完整。各 feature 自造的同类实现随页面整改删除。
+Two layers: horizontal **workstreams `W1–W6`** (infrastructure, first) and vertical **page
+migrations `P1–P12`** (depend on the `W` layer). Each item states **Current → Changes →
+Acceptance**. File paths are relative to `web/`.
 
-### W4 应用壳:从"手机壳"到自适应工作台
+### W1 — Design tokens & unified theming
 
-- 删除桌面端 `.phoneFrame` 模型(≤520px 真机全出血形态保留)。
-- 目标壳布局:
+**Current:** semantic layer + gates scaffolded (`§1.1`); primitive palette empty (`C0`); feature
+CSS on machine tones (`C1`); dual-track theming (`C2`).
+
+**Changes:**
+
+| # | File(s) | Change |
+| --- | --- | --- |
+| W1.1 | `styles/palette.css` | Replace the generated machine palette with the **designed** primitive scale from §2.1 (neutral ramp, brand, semantic, chart ×10, light+dark). Hand-authored and reviewed; delete the "GENERATED — do not edit" header. |
+| W1.2 | `styles/tokens.css` | Repoint every semantic role onto the new primitives; keep the light values and the `:root[data-theme="dark"]` block; add `color-scheme` (see W1.4) and the motion tokens (`W5`). |
+| W1.3 | all feature/base CSS (`src/features/**`, `src/components/**`, `src/styles.css`) | Repoint every `var(--tone-*)` reference to the correct **semantic** token; delete the machine reference. This is done per page under `S3`, deleting each file's machine tones as the page migrates. |
+| W1.4 | `styles/tokens.css`, `contexts/ThemeContext.tsx` | Set `color-scheme` on `:root` and per theme; have `ThemeContext` also set `document.documentElement.style.colorScheme` (or rely on the CSS property). |
+| W1.5 | `features/shell/MobileShell.tsx:94,128`; `mobile-shell.css`, `record-entry.css:481-512`, `record-category-sheet.css:214`, `mobile-navigation.css:223` | **Delete the `.mobileShellThemeDark/Light` track entirely** and the `@media (prefers-color-scheme: dark)` color block. Theme comes only from `data-theme`. |
+| W1.6 | `app.workspace.test.tsx:57` | Rewrite the assertion (it currently asserts `mobileShellThemeDark`); assert `data-theme="dark"` on `<html>` instead. |
+| W1.7 | `scripts/tokenize-colors.mjs`, `package.json` | Retire the literal→`--tone-*` **rewrite** role. Keep/extend `check:tokens --check` to fail if (a) any raw `oklch(`/hex remains in feature CSS **and** (b) any referenced `var(--tone-*)` has no definition in `palette.css` (closes the `C0` gap). Once machine refs reach 0, remove the generator. |
+| W1.8 | `App.tsx` (public routes), `features/auth/*`, `features/landing/*` | Ensure `data-theme` is applied on public routes too (mount a lightweight theme signal above `/` and the auth routes, or lift `ThemeProvider`), so Landing/Auth theme correctly (`P1`/`P2`). |
+
+**Acceptance (W1):**
+- `grep -REn "oklch\(|#[0-9a-fA-F]{3,8}|rgba?\(" web/src --include='*.css' | grep -v '/styles/palette.css'` → **0**.
+- `grep -rn "var(--tone-" web/src --include='*.css'` → **0** (all feature CSS on semantic tokens);
+  `palette.css` is non-empty and hand-authored.
+- `grep -rn "mobileShellTheme\|prefers-color-scheme" web/src --include='*.css' --include='*.tsx'` →
+  only the `ThemeContext` `matchMedia('(prefers-color-scheme: dark)')` read for `system` mode.
+- `check:tokens` fails on a deliberately undefined `--tone-*`/empty palette (regression test for `C0`).
+- Every route renders correctly in light and dark; native controls adopt the theme (`color-scheme`).
+
+### W2 — Typography & numerics
+
+**Current:** weights 620–950 (`C3`); `tabular-nums` duplicated in 8 files (`C5`); money formatted
+in `lib/money.ts` but not componentized.
+
+**Changes:**
+
+| # | File(s) | Change |
+| --- | --- | --- |
+| W2.1 | all feature CSS | Map every `font-weight` onto 400/500/600/700 (`--font-weight-*`). No literal weights; none above 700. |
+| W2.2 | `components/ui/AmountText.tsx` (new), `styles/tokens.css` `.tabularNums` | Add an `AmountText` primitive (see `W3`) that owns money markup, sign/positive-negative color, grouping, and `tabular-nums`. Remove the 8 ad-hoc `font-variant-numeric` declarations in favor of it / the utility. |
+| W2.3 | icons (`lucide-react`) | Standardize on two icon sizes and one stroke width via tokens; audit stray sizes. |
+
+**Acceptance (W2):**
+- `grep -rhoE "font-weight:\s*[0-9]+" web/src --include='*.css'` yields only `400/500/600/700` (or
+  the `--font-weight-*` vars). Add a stylelint gate: disallow `font-weight` numeric > 700.
+- Every rendered amount uses `AmountText`; `tabular-nums` is declared in exactly one place.
+
+### W3 — Shared UI primitives (`components/ui/`)
+
+**Current:** 7 primitives exist, ~2% adoption (`C4`); 7 primitives missing (`C5`).
+
+**Changes — build the missing primitives (only what current flows need):**
+
+| # | New file | Notes |
+| --- | --- | --- |
+| W3.1 | `Select.tsx` | Token-styled native `<select>` wrapper with `FormField` wiring; replaces raw selects in Record/Accounts/Me/Imports/EntryDetailEditor + `LanguageSelector`. |
+| W3.2 | `Input.tsx` / extend `FormField` | Token-styled text/number input honoring `FormField`'s `id`/`describedBy`/`invalid`. |
+| W3.3 | `SegmentedControl.tsx` | Accessible segmented/tab primitive (roving tabindex, arrow keys, `aria-selected`). Adopt in Record type switch, Reports flow/time filters, Auth tabs. |
+| W3.4 | `Skeleton.tsx` | Shimmer/placeholder blocks; used by every view's loading state and the shell Suspense fallback (`P12`). |
+| W3.5 | `Toast.tsx` | Fold `NoticeContext` status/error/undo into a token-styled, `aria-live` toast; replaces the ad-hoc `.mobileNotice` markup in the shell. |
+| W3.6 | `Tag.tsx` | Entry/category tag chip; used by EntryDetail, Record category chips. |
+| W3.7 | `AmountText.tsx` | See `W2.2`. |
+
+**Changes — adopt the existing primitives and delete duplicates (per page under `S3`):**
+
+| # | Replace hand-rolled … | With | Sites (examples) |
+| --- | --- | --- | --- |
+| W3.8 | `.mobilePrimaryButton/.mobileSecondaryButton/.mobileDangerButton/.primaryButton/.ghostButton` and ~73 raw `<button>` | `<Button variant=…>` | `AuthWorkspace.tsx:382`, `EntryDetailEditor.tsx:90,207`, `MeView.tsx:107`, `TotpSettingsView.tsx:163`, `PasskeySettingsView.tsx:178`, `ImportPreviewView.tsx:252`, `AccountsView.tsx:303`, `CategoryManager.tsx:173`, … |
+| W3.9 | `CategorySheet` (`RecordEntryView.tsx:484`), `WorkspaceMenu` (`MobileWorkspaceHeader.tsx:211`) | `<Sheet>` (which provides focus trap/Escape/return-focus) | delete `record-category-sheet.css` overlay + the bespoke popover |
+| W3.10 | raw `<label><span/><input/select>` forms | `<FormField>` + `Select`/`Input` | `AuthWorkspace.tsx:283-357`, `EntryDetailEditor.tsx:116-201`, `RecordEntryView`, `AccountsView`, `MeView`, `Imports`, `Search` |
+| W3.11 | ~13 `.emptyState`/`.meEmpty`/`.reportEmpty`/`.passkeyEmpty` text blocks | `<EmptyState>` (with guided action where one exists) | `AccountTransactionsView.tsx:186`, `TransactionSearchView.tsx:99`, `ReportVisuals.tsx:276`, `MeView.tsx:85,126`, `PasskeySettingsView.tsx:190`, … |
+
+All primitives must satisfy: 44px touch target, `:focus-visible` ring token, keyboard operability,
+complete ARIA. Each new primitive ships with a unit test in `ui.test.tsx` and light/dark coverage.
+
+**Acceptance (W3):**
+- `grep -rn "from '@/components/ui'" web/src/features` shows every migrated view importing the
+  relevant primitive; `Button`/`Card`/`FormField`/`Notice` have real feature usage.
+- No feature file defines a `role="dialog"` overlay by hand; `grep -rn "categorySheetOverlay\|workspaceMenu " web/src` → 0.
+- `mobile*Button`, `primaryButton`, `ghostButton`, `secondaryAuthButton` classes are deleted.
+
+### W4 — Application shell: adaptive workspace, not a phone frame
+
+**Current:** shell reflows to rail/sidebar but is literally `.phoneFrame` with a 430px rounded
+mockup at 521–767px; minimal desktop chrome (`C6`).
+
+**Target shell:**
 
 ```
 page AppShell {
@@ -122,26 +265,75 @@ page AppShell {
     grid(cols:[248px,minmax(0,1fr)]) {
       sidebar { Brand Nav BookSwitcher UserCard }
       stack { header[sticky]{ Breadcrumb Search QuickRecord }
-              scroll[max:1440px] { <ActiveView 多栏形态> } }
+              scroll[max:1440px] { <ActiveView multi-column> } }
     }
 }
 ```
 
-- 桌面 header 常驻"快速记一笔"入口(打开 Record 的桌面形态),弥补 FAB 在桌面消失后的主动作可达性。
-- 通知条(notice 区)并入 Toast 体系,退出独立 grid area。
+**Changes:**
 
-### W5 动效系统
+| # | File(s) | Change |
+| --- | --- | --- |
+| W4.1 | `MobileShell.tsx:128-130`, `mobile-shell.css:70-87`, `mobile-navigation.css` | Rename/replace `.phoneFrame` with a semantic shell root; **delete the 430px rounded-mockup style**. Keep the full-bleed phone form (≤767px) and the rail (≥768) / sidebar (≥1024) reflow, rebuilt on real `Sidebar`/`Rail` structure, not `.bottomNav`-as-rail. |
+| W4.2 | desktop header | Add a persistent **Quick Record** entry (opens Record's desktop form), Search, and a breadcrumb — recovering the primary action the phone FAB provides. |
+| W4.3 | desktop sidebar | Add `BookSwitcher` and a `UserCard` (currently only in the phone header/Me). |
+| W4.4 | notices | Route the shell notice area through the `Toast` primitive (`W3.5`); drop the dedicated `notice` grid area. |
+| W4.5 | all shell CSS | Repoint to semantic tokens; converge weights (`navBrand` is 930, `mobile-shell.css:174`). |
 
-- 令牌化时长/缓动;定义四类标准动效:页面切换(轻淡入+位移)、弹层(底部抽屉弹簧感/对话框缩放)、列表增删(高度+透明度)、数值变化(金额滚动)。
-- 关键微交互:记账成功的确认反馈、tab 切换指示器滑动、图表 scrub 十字线跟手。
+**Coordinate with the archived overhaul's shell decomposition** — this is a rename/reframe of an
+existing structure, not greenfield.
 
-### W6 图表交互标准落地(延续既有标准)
+**Acceptance (W4):**
+- No `.phoneFrame` selector remains; `grep -rn "phoneFrame" web/src` → 0.
+- ≤767px: full-bleed, bottom tab bar + FAB. 768–1023px: 76px rail. ≥1024px: 248px sidebar with
+  BookSwitcher + UserCard, top bar with Breadcrumb + Search + Quick Record.
+- No rounded phone mockup at any width; three-breakpoint screenshots updated.
 
-所有用户可见图表(AccountTransactions 迷你趋势、Reports 的 donut/ranked bar/trend)统一达到:指针+触控 scrub、跟随 tooltip、键盘左右键步进+焦点态、`role="img"`+数据摘要 ARIA、双主题取色自图表令牌、`prefers-reduced-motion` 降级。抽出共享的 scrub/tooltip/坐标轴工具模块(仍是手写 SVG,不引库)。
+### W5 — Motion system
 
-### P1 Landing/Boarding 页
+**Current:** no tokens; inconsistent hand-written transitions; ad-hoc reduced-motion (`C7`).
 
-现状:静态假截图 + 五段式营销页,无暗色。目标:产品级第一印象。
+**Changes:**
+
+| # | File(s) | Change |
+| --- | --- | --- |
+| W5.1 | `styles/tokens.css` | Add duration/easing tokens (§2.1). |
+| W5.2 | all CSS with `transition:`/`animation:` | Replace literal durations/easings with tokens; define four standard motions: page transition (subtle fade+shift), overlay (bottom-sheet spring / dialog scale), list add/remove (height+opacity), value change (amount roll). |
+| W5.3 | key micro-interactions | Record success confirmation, tab-indicator slide, chart crosshair follow. |
+| W5.4 | a global reduced-motion rule | One consistent `@media (prefers-reduced-motion: reduce)` policy; remove the vacuous/partial per-file rules (`reports.css:585` targets a non-animated selector; `C7`). |
+
+**Acceptance (W5):**
+- `grep -rnE "transition:|animation:" web/src --include='*.css'` shows only token-based
+  durations/easings.
+- With reduced-motion forced, no positional/scale animation occurs anywhere.
+
+### W6 — Chart interaction standard (hand-written SVG)
+
+**Current:** `TrendChart` + sparkline near-standard; donut/ranked-bar fail; hardcoded hex; duplicated
+scrub logic (`C8`).
+
+**Changes:**
+
+| # | File(s) | Change |
+| --- | --- | --- |
+| W6.1 | `features/charts/` (new shared module) | Extract the duplicated scrub/tooltip/keyboard/axis logic (currently copied in `AccountTransactionsView.tsx:311-387` and `ReportVisuals.tsx:365-433`) into one hook/utility (`useScrub`, tooltip + axis helpers). Still hand-written SVG, no library. |
+| W6.2 | `reportColors.ts` → chart tokens | Delete the 8-hex array; source segment/bar/line colors from the `--chart-*` tokens (light+dark). Remove inline `style={{ background: … }}` / `stroke={…}` color application (`ReportVisuals.tsx:208,242,296,305`). |
+| W6.3 | `DonutChart` (`ReportVisuals.tsx:164`) | Add pointer+touch scrub across the arc, a follow tooltip, keyboard stepping through all segments with focus, and reduced-motion coverage for `.donutSegment` (`reports.css:255`). |
+| W6.4 | `RankedList` (`ReportVisuals.tsx:260`) | Make rows focusable with keyboard stepping + tooltip/summary; add `role="img"`+ARIA summary; reduced-motion for `.rankedList li` (`reports.css:310`). |
+| W6.5 | sparkline (`AccountTransactionsView.tsx:259`) | Replace the `aria-hidden` SVG + hardcoded gradient stops (`:394-395`) with a `role="img"`+summary and token-driven gradient. |
+| W6.6 | `TrendChart` | Fix the vacuous reduced-motion rule (`reports.css:585` targets `.trendDot`, which has no transition). |
+
+**Acceptance (W6):** every user-visible chart (sparkline, donut, ranked bar, trend) satisfies all
+seven criteria — pointer scrub, touch scrub, follow tooltip, keyboard L/R + focus, `role="img"`+ARIA
+summary, token colors, reduced-motion degradation. `grep -rn "reportColors" web/src` → 0.
+
+---
+
+### P1 — Landing / Boarding
+
+**Current (`C9`):** sticky header + hero with a **static `<div>` faked ledger mockup**
+(`LandingPage.tsx:63-90`); proof/workflow/trust/model sections; light-only; no theme control; raw
+`--tone-*` + `--landing-*` aliases; weights to 950.
 
 ```
 page Landing {
@@ -149,169 +341,335 @@ page Landing {
     stack {
       header[sticky] { Logo row{ LanguageSelector ThemeToggle SignIn } }
       scroll {
-        Hero { Headline Subline row{ CTA:注册 CTA2:查看演示 }
-               LiveProductDemo(auto-play, 真实组件渲染的记账→报表微剧本) }
-        ValueProps(grid:1col, 3–4 张卡)
-        FeatureTour(交替图文, 桌面/手机双形态截图)
+        Hero { Headline Subline row{ CTA:Register CTA2:View demo }
+               LiveProductDemo(auto-play; real components rendering a record→report micro-script) }
+        ValueProps(grid:1col, 3–4 cards)
+        FeatureTour(alternating text/visual, phone+desktop forms)
         TrustAndDataOwnership
         FinalCTA  Footer
       }
     }
   viewport desktop:
-    同结构, Hero 变 grid(cols:[5fr,7fr]) 左文右演示,
-    ValueProps 3col, FeatureTour 左右交替
+    same structure; Hero → grid(cols:[5fr,7fr]) text-left/demo-right; ValueProps 3col; FeatureTour alternating
 }
 ```
 
-- LiveProductDemo 用真实组件+种子数据循环演示"记一笔→分类→报表变化",替代 div 假截图;`prefers-reduced-motion` 时退化为静态首帧。
-- 全页接入令牌与双主题;五语言文案长度差异不破版。
+**Changes:** replace the faked mockup with a `LiveProductDemo` that renders **real** components with
+seed data, looping "record an entry → categorize → report updates" (static first frame under
+reduced-motion); add a `ThemeToggle` and apply `data-theme` on `/` (`W1.8`); migrate `landing.css`
+to semantic tokens + `Button`; converge weights; verify five-language layout.
 
-### P2 Auth 全流程(登录/TOTP/注册/验证/找回)
+**Acceptance:** dual-theme, five-language, three-breakpoint screenshots pass; live demo replaces the
+static mockup and degrades to a static frame under reduced-motion; Lighthouse targets in §5 met;
+`landing.css` has zero `--tone-*` and zero `font-weight > 700`.
 
-- 接入令牌、双主题、W3 表单基元;统一为居中单卡布局(桌面左侧加品牌氛围面板)。
-- 明确步骤指示(注册验证、找回确认为多步),错误信息就近显示并可被屏幕阅读器播报;Turnstile 位置与加载占位规范化。
+### P2 — Auth (login / TOTP / register / verify / recover)
+
+**Current:** two-column hero+card; all five flows + passkey + SSO present; light-only; not under
+`ThemeProvider`; hand-rolled forms (no `Button`/`FormField`); **errors not announced**
+(`AuthWorkspace.tsx:379-380`); tabs are `role="tablist"` but buttons lack `role="tab"`/`aria-selected`;
+Turnstile `aria-label` hardcoded English (`TurnstileWidget.tsx:85`).
 
 ```
-page Auth { viewport desktop:
-  grid(cols:[5fr,7fr]) { BrandPanel(氛围插画+价值一句话)
-                         stack[max:420px]{ StepIndicator? FormCard AltActions } }
-  viewport phone: stack[max:420px]{ Logo FormCard AltActions } }
+page Auth {
+  viewport desktop: grid(cols:[5fr,7fr]) { BrandPanel(atmosphere + one-line value)
+                                            stack[max:420px]{ StepIndicator? FormCard AltActions } }
+  viewport phone:   stack[max:420px]{ Logo FormCard AltActions } }
 ```
 
-### P3 Home
+**Changes:** adopt `FormField`/`Input`/`Button`/`SegmentedControl` (tabs); announce errors via
+`role="alert"`/`aria-live` (or `FormField`'s built-in wiring); apply `data-theme` (`W1.8`) and
+migrate `auth.css` + the `.authError/.authStatus` pills (`styles.css:50-66`) to semantic tokens;
+add `role="tab"`/`aria-selected`; i18n the Turnstile label and give it a loading placeholder.
 
-现状:预算卡+最近流水。目标:一屏看清"我现在的钱怎么样了"。
+**Acceptance:** dual-theme; axe 0 serious/critical; keyboard-only completion of sign-in→TOTP and
+register→verify; errors announced by a screen reader; `auth.css` on semantic tokens.
+
+### P3 — Home
+
+**Current:** only a synthetic budget card + day-grouped recent entries; **no net-summary card, no
+quick actions** (the `.quickRecord` CSS is dead), **no desktop layout** (`mobile-home.css` has no
+`@media`/`@container`); uses the one real `EmptyState`.
 
 ```
 page Home {
   viewport phone: stack[gap:m] {
-    GreetingRow(日期+账本)
-    NetSummaryCard(本月收/支/结余, 金额滚动动效, 迷你趋势)
-    QuickActions(row: 记一笔/转账/导入)
-    BudgetCard(进度条→环形或分段条, 超支预警色)
-    RecentEntries(按日分组, EmptyState:引导记第一笔)
+    GreetingRow(date + book)
+    NetSummaryCard(month income/expense/net, amount-roll motion, mini trend)
+    QuickActions(row: Record / Transfer / Import)
+    BudgetCard(progress → ring or segmented bar, overspend warning color)
+    RecentEntries(day-grouped, EmptyState: guide first entry)
   }
   viewport desktop: grid(cols:[2fr,1fr]) {
-    stack{ NetSummaryCard(带30日趋势图,达 W6 标准) RecentEntries }
+    stack{ NetSummaryCard(30-day trend chart, W6-compliant) RecentEntries }
     stack{ BudgetCard QuickActions UpcomingHints? }
   }
 }
 ```
 
-### P4 Accounts
+**Changes:** add `NetSummaryCard` (surface the real net figure, not the synthetic budget proxy at
+`HomeView.tsx:46-47`); render `QuickActions`; add the desktop two-column grid; use
+`Card`/`AmountText`; day totals to `tabular-nums`.
 
-- 分组账户树改为卡片化分组 + 每账户余额迷你趋势(可选);账户色点/图标令牌化。
-- 建账、账本切换/改名/币种收敛进 `Sheet` 基元;桌面双栏(左树右详情)沿用既有 2-pane 但按新令牌重绘。
+**Acceptance:** the DSL layout is present at phone and desktop; net/income/expense shown as real
+figures; new-user empty state guides "create account → first entry"; W6-compliant trend chart on
+desktop.
 
-### P5 Account Transactions
+### P4 — Accounts
 
-- 已有月分组+scrub 迷你图,按 W1/W6 重绘取色与 tooltip;月份小结行(收/支/净)强化。
-- 桌面形态:趋势图升为页首横幅图,列表变两栏密度。
+**Current:** card-grouped accordions (heuristic grouping), desktop 2-column **controls+list**
+(`accounts.css:23-71`) — not master-detail; no per-account trend; rows show opening balance, not a
+running balance; **zero dark rules** in `mobile-account.css`.
 
-### P6 Record(核心录入)
+**Changes:** adopt a real desktop **master-detail** 2-pane (tree left, selected-account detail
+right) instead of navigating away; card-grouped tree with token-driven account color dots/icons;
+optional per-account mini trend (W6); fold create-account / book rename / currency into `Sheet`;
+migrate to semantic tokens (adds full dark support); `Button`/`FormField`/`Select`.
 
-体验优先级最高的页面。目标:三次点击内完成一笔常规记账。
+**Acceptance:** desktop shows tree+detail side by side; dark theme correct; no `--tone-*` in
+`accounts.css`/`mobile-account.css`; forms/buttons use primitives.
+
+### P5 — Account Transactions
+
+**Current:** polished scrub sparkline + month accordions with subtotals and running balance; **no
+desktop layout** (fixed 132px chart, centered at ≤900px); raw `<p>` empty/not-found states; zero
+dark rules.
+
+**Changes:** on desktop, promote the sparkline to a page-top banner chart and give the list a
+two-column density; strengthen month subtotal rows; apply the W6 shared chart module + tokens;
+replace raw `<p>` empties with `EmptyState`; semantic tokens (dark support); weights (currently up
+to 920).
+
+**Acceptance:** desktop banner chart present and W6-compliant; dark theme correct; `EmptyState`
+used; `account-transactions.css` on semantic tokens, weights ≤700.
+
+### P6 — Record (core capture)
+
+**Current:** genuine desktop 2-pane already exists (`@container appMain (min-width:680px)`,
+`record-entry.css:526-601`); **four** entry types (expense/income/transfer/**borrow**) as a
+scrolling tab strip; amount on the category card is `tabular-nums`, calculator output is not; top-7
+quick-category grid + "All"; save is a keypad key (no separate fixed submit bar); **no
+continuous-entry mode**; hand-rolled `CategorySheet` (no focus trap); local `--record-*` aliases on
+machine tones; legacy `.mobileShellThemeDark` dark rules.
+
+**Changes:** convert the type strip to `SegmentedControl` (**keep all four types** — see Decision
+D1); make the calculator output `tabular-nums` via `AmountText`; add a fixed submit bar with a
+**continuous-entry** toggle that stays on the page after save (today `handleSave` clears fields but
+`RecordEntryView.tsx:106` navigates to `/home`); move `CategorySheet`/`CategoryManager` onto
+`Sheet`; add the 200ms success confirmation (W5); migrate `--record-*` and machine tones to semantic
+tokens and delete the legacy dark rules.
+
+**Acceptance:** three-tap common entry; continuous mode does not leave the page; category management
+uses `Sheet` (focus trap/Escape/return-focus); dark via `data-theme` only; `record-entry.css` on
+semantic tokens, weights ≤700.
+
+### P7 — Reports
+
+**Current:** 7-dimension navigation is an accessible **tab list** (roving tabindex);
+`.reportSegmented` flow (`all/expense/income`) and time (`year/month`) filters already exist; desktop
+body is a 2-column chart|list at `@container reportView (min-width:720px)` — not a 3-section
+overview+chart+list; donut/ranked-bar fail W6; 72 machine tones, no dark, weights to 930.
+
+**Changes:** adopt `SegmentedControl` for the flow/time filters (and reuse it for the dimension tabs'
+styling while keeping tab semantics for 7 items — see Decision D2); restructure desktop to
+overview-cards row + main chart + detail list; apply W6 to donut/ranked-bar + chart tokens; add
+inter-dimension transition motion (W5); semantic tokens (dark) + weight convergence.
+
+**Acceptance:** all charts W6-compliant with token colors; desktop three-section layout; dark theme
+correct; `reports.css` on semantic tokens, weights ≤700.
+
+### P8 — Imports
+
+**Current:** 7-stage state machine (`empty|ready|staging|staged|applying|applied|failed`) **not**
+visualized as a stepper; desktop is conservative CSS-only (comment confirmed at
+`import-preview.css:324-327`), no 2-pane mapping+preview; failure is a single string; empty state has
+no action.
+
+**Changes:** visualize the state machine as a **stepper**; build the desktop **2-pane** mapping-config
++ preview split (resolving the deferred follow-up); make the failure state an **actionable error
+list** (surface per-row diagnostics that today only appear in the staged table); `EmptyState` with a
+guided action; `Button`/`FormField`/`Select`; semantic tokens (dark).
+
+**Acceptance:** stage progression shown as a stepper; desktop 2-pane; failures list actionable rows;
+dark theme correct; semantic tokens, weights ≤700.
+
+### P9 — Me / Security (Passkey, TOTP)
+
+**Current:** MeView is a drill-in index with no desktop breakpoint; passkey has a desktop card grid,
+TOTP a 2-col enrollment form; **the theme 3-option selector lives in the header overflow menu**
+(`MobileWorkspaceHeader.tsx:233-262`), not here; **destructive actions have no confirmation at all**
+— delete passkey (`PasskeySettingsView.tsx:177`) and disable TOTP (`TotpSettingsView.tsx:163`) fire
+immediately; no skeletons; no retry.
+
+**Changes:** put every destructive action behind `ConfirmDialog` with clear consequence copy (mirror
+the correct EntryDetail delete flow) and, where reversible, an undo toast; place the canonical
+`system/light/dark` selector in Me/Security (keep a quick toggle in the desktop/tablet chrome — see
+Decision D3); give MeView a desktop multi-column card grid; migrate to semantic tokens (dark) +
+weights; `Button`/`FormField`.
+
+**Acceptance:** no destructive security action executes without a `ConfirmDialog`; theme selector
+present in Me/Security; desktop card grid; dark theme correct; semantic tokens, weights ≤700.
+
+### P10 — Search
+
+**Current:** header-persistent search trigger; own result-list shape; reuses the `.emptyState`
+*class* (not the primitive); **no search-term highlighting** (`includes()` filter, plain `<strong>`);
+desktop 2-col at ≥1024px; no skeleton/retry.
+
+**Changes:** reuse the RecentEntries list shape and the `EmptyState` primitive; add search-term
+highlighting (`<mark>`); skeleton loading + retryable error; semantic tokens (dark).
+
+**Acceptance:** matched terms highlighted; empty/loading/error via primitives; dark theme correct;
+`transaction-search.css` on semantic tokens.
+
+### P11 — Entry Detail / Edit
+
+**Current:** hero amount is neutral ink (weight 920) with **no type/positive-negative color**
+(`entry-detail.css:41-46`); editor is a bespoke `.entryDetailForm` (raw `<label>/<input>/<select>`),
+**not** reusing Record's form primitives; **delete correctly uses `ConfirmDialog` + 10s undo toast**
+(`EntryDetailEditor.tsx:95`, `EntryDetailRoute.tsx:84-103`) — the model to replicate elsewhere; only
+the read-only hero/card/note have legacy dark rules; editor form has none.
+
+**Changes:** color the hero amount by type/sign via `AmountText`; rebuild the editor on shared form
+primitives (`FormField`/`Input`/`Select`/`Sheet` category picker); keep the exemplary delete→undo
+flow; migrate to semantic tokens (full dark, incl. the editor form); weights ≤700.
+
+**Acceptance:** hero amount carries type color; editor uses shared primitives; delete keeps
+ConfirmDialog + undo; dark theme correct including the editor; semantic tokens.
+
+### P12 — Tri-state & onboarding (cross-cutting)
+
+**Current (`C10`):** no `Skeleton` anywhere; loading is plain text / inline `Spinner` / nothing;
+one guided `EmptyState`; one retryable error affordance; shell Suspense fallback is plain text
+(`MobileShell.tsx:171`); pre-auth splash is plain text (`App.tsx:57-67`).
+
+**Changes:** every view gets a **skeleton** loading state (`Skeleton`, `W3.4`), a **guided
+EmptyState**, and a **retryable error** state; replace the shell Suspense fallback and the pre-auth
+splash with skeletons; first-run guidance is the Home empty state itself (create first account →
+first entry), not a separate onboarding wizard.
+
+**Acceptance:** `P1–P11` each present skeleton/guided-empty/retryable-error; a new user with an empty
+book can complete "create account → first entry" from the Home empty state.
+
+---
+
+## 4. Implementation plan (stages & working method)
+
+| Stage | Content | Depends on | Exit condition |
+| --- | --- | --- | --- |
+| **S0.0** (pre-flight) | **Fix `C0`:** run `node scripts/tokenize-colors.mjs` to regenerate `palette.css` (restores the 312 value-exact primitives, un-breaks rendering); harden `check:tokens` (`W1.7`) so an empty/stale palette fails CI; commit. | — | App renders with intended colors again; hardened gate proven by a failing fixture. |
+| **S0.1** | `W1` designed tokens + light/dark + `color-scheme`; `W2` type scale; `W5.1` motion tokens. Establish Playwright screenshot baselines + the `font-weight>700` stylelint gate. | S0.0 | Gates live; semantic layer + designed primitives in place. |
+| **S1** | `W3` primitives (build the 7 missing; ready the adopters) + `W5` motion + `W6.1` shared chart module. | S0.1 | Each primitive has a test + light/dark + a11y; shared chart hook exists. |
+| **S2** | `W4` shell (remove phone-frame; real rail/sidebar; desktop header chrome; Toast). | S1 | Three-breakpoint baselines updated; navigation a11y passes. |
+| **S3** | `P1–P11` migrated **one page per PR**, in order: **P6 Record → P3 Home → P7 Reports → P5/P4 → P1 Landing → P2 Auth → P8–P11.** Each PR repoints that page to semantic tokens, adopts primitives, converges weights, and **deletes the page's old CSS + hand-rolled components + its `--tone-*` refs**. | S2 | Each page meets its §3 acceptance row + the per-page template in §6. |
+| **S4** | `P12` tri-state sweep + global polish (alignment/spacing/consistency) + a11y & performance audit; delete the now-unused generator + machine palette. | S3 | §5 matrix all green; `grep var(--tone-` → 0. |
+
+**Working method (binding):**
+
+- Every PR attaches three-breakpoint × dual-theme screenshots; the visual-regression baseline is
+  updated with the PR and the reviewer diffs it as the design review.
+- Five-language layout check is part of each page's exit (at least `zh`/`en`/`ja` screenshots;
+  `es`/`fr` spot-checked); `check:i18n` stays green.
+- No feature flags, no old-style toggles — each page cutover is atomic.
+
+---
+
+## 5. Test matrix
+
+| Dimension | Method | Coverage | Pass criteria |
+| --- | --- | --- | --- |
+| Visual regression | Playwright screenshot diff | `P1–P11` × {phone,tablet,desktop} × {light,dark} | Pixel-consistent with the reviewed baseline |
+| Accessibility | axe (Playwright) + manual keyboard walk | all pages + `W3` primitives + all charts | axe 0 serious/critical; keyboard-only sign-in→record→report→sign-out |
+| Contrast | token-level automated check | every semantic pair, both themes | body ≥ 4.5:1, large/graphic ≥ 3:1 (WCAG 2.2 AA) |
+| Responsive | manual + screenshots at 375/430/768/1024/1440 | all pages | no horizontal scroll, no occlusion, touch targets ≥ 44px |
+| Theme | screenshot matrix + toggle-instantaneity | all pages incl. Landing/Auth | no unthemed blocks; no white flash on toggle; `color-scheme` applied |
+| Chart interaction | Playwright pointer/touch/keyboard scripts | sparkline, donut, ranked bar, trend | scrub/tooltip/keyboard/ARIA all pass |
+| Motion | manual + forced `prefers-reduced-motion` | the four standard motions | no positional/scale animation under reduce; durations/easings from tokens |
+| i18n | five-language screenshot spot-check + `pnpm --dir web run check:i18n` | full for P1/P2/P6/P7, spot-check others | no overflow/truncation/breakage; key check green |
+| Performance | Lighthouse (Landing, Home, Reports) | cold load + interaction | LCP ≤ 2.5s, INP ≤ 200ms, CLS ≤ 0.1 (lab) |
+| Token/typography gate | `check:tokens` + `lint:css` + stylelint | all CSS | 0 color literals outside `palette.css`; 0 `var(--tone-*)`; 0 `font-weight > 700` |
+| Existing unit/E2E | Vitest + existing Playwright + `test:coverage` | all changed pages | existing suites green (assertions may update for DOM changes; e.g. `app.workspace.test.tsx:57`) |
+
+Reproducible metric commands (for reviewers):
 
 ```
-page Record {
-  viewport phone: stack {
-    TypeSwitch(segmented: 支出/收入/转账)
-    AmountPad(超大金额显示, tabular-nums, 自定义数字键盘可选)
-    QuickCategoryGrid(高频分类 8 宫格, 长按进管理)
-    FieldRows[collapsible] { 账户 日期 成员 商家 标签 备注 }
-    SubmitBar[fixed](主按钮+连续记账开关)
-  }
-  viewport desktop: grid(cols:[1fr,1fr]) {
-    ComposerCard(同上纵排)  AsidePreview(当日已记+分类速览)
-  }
-}
+# color literals outside the primitive file
+grep -REn "oklch\(|#[0-9a-fA-F]{3,8}|rgba?\(" web/src --include='*.css' | grep -v '/styles/palette.css'
+# machine-primitive references remaining
+grep -rn "var(--tone-" web/src --include='*.css' | wc -l
+# font weights above 700
+grep -rhoE "font-weight:\s*[0-9]+" web/src --include='*.css' | sort | uniq -c
+# legacy theme track
+grep -rn "mobileShellTheme\|prefers-color-scheme\|phoneFrame" web/src --include='*.css' --include='*.tsx'
+# primitive adoption
+grep -rn "from '@/components/ui'" web/src/features
 ```
 
-- 提交成功给 200ms 级确认动效(W5),"连续记账"模式不离开页面。
-- 分类管理(CategoryManager)套用 `Sheet` 基元。
+---
 
-### P7 Reports
+## 6. Acceptance criteria
 
-- 七维度导航改 `SegmentedControl`/桌面侧内 tab;donut/bar/trend 全部达 W6 标准并换图表令牌色。
-- 桌面形态:总览卡行 + 主图 + 明细列表三段式;维度间切换有轻动效衔接。
+The overhaul is complete when **all** of the following hold:
 
-### P8 Imports
+1. **Token coverage 100%.** Outside `styles/palette.css`, the color-literal grep in §5 returns 0;
+   `var(--tone-*)` in feature CSS returns 0 (feature CSS is on the semantic layer); `palette.css`
+   is a hand-authored designed scale; `check:tokens` fails on an empty/undefined-primitive palette.
+2. **Dual theme complete.** Every route (incl. Landing/Auth) is correct in light and dark; theming
+   is `data-theme`-only; `.mobileShellThemeDark/Light` and scattered `prefers-color-scheme` color
+   rules are deleted; `color-scheme` is set.
+3. **Typography converged.** `font-weight` is only 400/500/600/700; money is `AmountText` with
+   consistent `tabular-nums`.
+4. **Desktop workspace.** No `.phoneFrame` and no rounded phone mockup at any width;
+   Home/Reports/Record/Accounts render the DSL multi-column forms; ≤767px keeps the full-bleed phone
+   form with a working bottom nav.
+5. **Chart standard.** Every user-visible chart meets the seven W6 criteria; `reportColors.ts` is
+   deleted and replaced by chart tokens.
+6. **Primitives.** The `W3` set is built and actually used by the corresponding pages; per-feature
+   duplicate buttons/overlays/forms/empty-states are deleted; every destructive action (delete
+   entry, delete passkey, disable TOTP, apply import) goes through `ConfirmDialog` with clear
+   consequence copy.
+7. **Tri-state.** `P1–P11` each have skeleton loading, a guided empty state, and a retryable error
+   state; a new user can complete "create account → first entry" from the Home empty state.
+8. **Landing.** The live product demo replaces the faked mockup; dual-theme, five-language,
+   three-breakpoint all hold; Lighthouse targets in §5 met.
+9. **Accessibility.** The accessibility and contrast rows in §5 are green; money and destructive
+   operations meet WCAG 2.2 error prevention (confirmable/reversible); auth errors are announced.
+10. **Test matrix green.** Every §5 row passes; baselines committed; existing Vitest/Playwright
+    green.
+11. **Docs synced.** `docs/arch/frontend.md` is updated to describe the shipped tokens/theme/shell
+    (and corrected re: the palette). This handbook is moved to `docs/proposals/archives/` once the
+    matrix is green.
 
-- 分阶段状态机(empty→…→applied)可视化为步骤条;映射配置与预览按桌面 2-pane 展开(解除 arch 备忘中"保守 CSS-only"的遗留);失败态给出可操作的错误列表。
+**Per-page acceptance template** (apply when expanding each `P*` into tasks): dual-theme
+three-breakpoint screenshots reviewed; axe 0 serious/critical; keyboard-complete; i18n spot-check
+unbroken; the page's old CSS and hand-rolled components deleted; the page's `var(--tone-*)` count is
+0; each DSL region verified against the render.
 
-### P9 Me / Security(含 Passkey、TOTP)
+---
 
-- 桌面多栏卡片网格保留,按令牌重绘;主题三选项(system/light/dark)入口在此;危险操作(删除 passkey、禁用 TOTP)走 `Dialog` 确认基元。
+## 7. Risks & decisions
 
-### P10 Search
+### Open decisions (resolved here for the dev team)
 
-- 搜索入口在 header 常驻;结果页复用 RecentEntries 列表形态与空态基元;搜索词高亮。
+- **D1 — Record entry types.** The proposal named three (expense/income/transfer); the code has
+  **four** (adds `borrow`). **Keep all four**; render them in `SegmentedControl` (scrollable if
+  space-constrained on the narrowest phones).
+- **D2 — Reports dimension nav.** The proposal suggested a `SegmentedControl`; seven dimensions are
+  too many for a segmented control. **Keep tab semantics** (accessible `role="tablist"`, already
+  implemented) restyled to the primitive; use `SegmentedControl` for the binary flow/time filters.
+- **D3 — Theme selector location.** The canonical `system/light/dark` selector moves to
+  **Me/Security** (per the proposal); a quick light/dark toggle stays in the desktop/tablet chrome
+  (`W4` rail/header). Remove it from the phone header overflow to declutter.
+- **D4 — Accounts desktop.** Adopt true **master-detail** (tree + detail side by side) on desktop;
+  the current controls+list + navigate-away pattern is replaced.
 
-### P11 Entry Detail / 编辑
+### Risks
 
-- 详情 hero 金额大字 + 类型色;编辑复用 Record 表单基元;删除走 `Dialog` 确认且支持撤销 Toast。
-
-### P12 三态与引导(横切)
-
-- 每个视图必须有:骨架加载态(Skeleton)、含引导动作的空态(EmptyState)、可重试的错误态;Suspense 兜底从纯文本换为骨架。
-- 新用户首登引导:Home 空态即引导流(建第一个账户→记第一笔),不做独立 onboarding 向导页。
-
-## 4. 实现方法(阶段与工作方式,非实现细节)
-
-| 阶段 | 内容 | 依赖 | 出口条件 |
-| --- | --- | --- | --- |
-| S0 | W1 令牌 + W2 排版 + 主题机制统一;建立 Playwright 截图基线与 Stylelint 门禁 | 无(可与架构手册 Phase 4 合并) | 门禁生效;全站在新令牌下无回归 |
-| S1 | W3 组件基元 + W5 动效令牌 + W6 图表共享工具 | S0 | 基元有独立 story/测试,双主题、a11y 达标 |
-| S2 | W4 应用壳(去 phone-frame、三断点壳) | S1 | 三断点截图基线更新,导航 a11y 通过 |
-| S3 | P1–P11 按页迁移,顺序建议:P6 Record → P3 Home → P7 Reports → P5/P4 → P1 Landing → P2 Auth → P8–P11;每页一个 PR,迁移即删除该页旧 CSS/自造组件 | S2 | 每页满足 §6 该页验收行 |
-| S4 | P12 三态横扫 + 全站 polish(对齐/间距/一致性)+ 无障碍与性能审计 | S3 | §6 全矩阵绿 |
-
-工作方式约束:
-
-- 每个 PR 附三断点 × 双主题截图;视觉回归基线随 PR 更新并由 reviewer 核对。
-- 五语言破版检查纳入每页出口(至少 zh/en/ja 三语言截图,es/fr 抽查)。
-- 不设 feature flag、不留旧样式开关——每页切换是原子的。
-
-## 5. 测试矩阵
-
-| 维度 | 手段 | 覆盖对象 | 通过口径 |
-| --- | --- | --- | --- |
-| 视觉回归 | Playwright 截图对比 | P1–P11 × {phone,tablet,desktop} × {light,dark} | 与评审基线像素级一致 |
-| 无障碍 | axe(Playwright 集成)+ 手动键盘走查 | 全部页面 + W3 基元 + 全部图表 | axe 0 serious/critical;纯键盘可完成登录→记账→看报表→登出 |
-| 对比度 | 令牌级自动校验脚本 | 全部语义色对(双主题) | 正文 ≥4.5:1,大字/图形 ≥3:1(WCAG 2.2 AA) |
-| 响应式 | 手动 + 截图,断点 375/430/768/1024/1440 | 全部页面 | 无横向滚动、无遮挡、触控目标 ≥44px |
-| 主题 | 截图矩阵 + 切换即时性检查 | 全部页面含 Landing/Auth | 双主题无未适配区块;切换无闪白 |
-| 图表交互 | Playwright 指针/触控/键盘脚本 | 迷你趋势、donut、ranked bar、trend | scrub/tooltip/键盘步进/ARIA 摘要全通过 |
-| 动效 | 手动 + `prefers-reduced-motion` 强制用例 | W5 四类动效 | 减弱动效下无位移动画;时长/缓动来自令牌 |
-| i18n | 五语言截图抽查 + `pnpm run check:i18n` | P1、P2、P6、P7 全量,其余抽查 | 无溢出、无截断、无破版;key 校验通过 |
-| 性能 | Lighthouse(Landing、Home、Reports) | 冷加载 + 交互 | LCP ≤2.5s、INP ≤200ms、CLS ≤0.1(实验室口径) |
-| 门禁 | Stylelint/CI | 全部 CSS | 令牌层外色彩字面量 0;`font-weight>700` 0 |
-| 单元/E2E 存量 | Vitest + 既有 Playwright 流程 | 全部改动页 | 存量测试全绿(允许因 DOM 调整更新断言) |
-
-## 6. 验收标准
-
-整改整体验收(全部满足才算完成):
-
-1. **令牌覆盖率 100%**:`styles/tokens.css`(或 tokens 目录)之外,`grep -R 'oklch(\|#[0-9a-fA-F]\{3,8\}'` 在 `web/src/**/*.css` 命中为 0;Stylelint 门禁在 CI 生效。
-2. **双主题完整**:任意路由在 light/dark 下无未适配区块;主题机制仅剩 `data-theme` 一条通路,旧 class 机制与散落的 `prefers-color-scheme` 色彩声明全部删除;文档级 `color-scheme` 正确设置。
-3. **排版收敛**:全站 `font-weight` 仅 400/500/600/700;金额处处 `tabular-nums` 且格式一致。
-4. **桌面工作台**:≥1024px 不存在 `.phoneFrame` 视觉;Home/Reports/Record/Accounts 呈现本手册 DSL 描述的多栏形态;≤520px 保持全出血手机形态且底部导航可用。
-5. **图表标准**:每一个用户可见图表满足 W6 六项(scrub/tooltip/键盘/ARIA/令牌取色/减弱动效降级),`reportColors.ts` 的 hex 调色板被图表令牌替代并删除。
-6. **组件基元**:W3 清单全部落地且被对应页面实际使用;各 feature 内重复自造的按钮/弹层/表单实现删除;危险操作(删条目、删 passkey、禁用 TOTP、应用导入)全部经确认 Dialog 且文案明确后果。
-7. **三态覆盖**:P1–P11 每视图具备骨架加载、引导性空态、可重试错误态;新用户空账本首登可沿空态引导完成"建账→记第一笔"。
-8. **Landing 达标**:动态产品演示替代静态假截图;双主题、五语言、三断点全部不破版;Lighthouse 性能口径达 §5。
-9. **无障碍**:§5 无障碍与对比度行全绿;记账与删除等资金相关操作满足 WCAG 2.2 错误预防(可确认/可撤销)。
-10. **测试矩阵全绿**:§5 全部行通过;截图基线入库;存量 Vitest/Playwright 全绿。
-11. **文档同步**:`docs/arch/frontend.md` 更新为新令牌/主题/壳布局的事实描述;本手册移入 `docs/proposals/archives`(按仓库惯例)由开发手册取代。
-
-单页验收模板(开发组扩充每页任务时套用):双主题三断点截图通过评审;axe 无 serious+;键盘全流程可达;i18n 抽查不破版;该页旧样式与自造组件已删除;对应 DSL 布局逐区块核对一致。
-
-## 7. 风险与决策点
-
-| 风险 | 缓解 |
+| Risk | Mitigation |
 | --- | --- |
-| 全站重绘期间视觉新旧混搭 | S3 按页原子切换,页内不混;发布前完成全量,产品未发布故无用户暴露 |
-| 令牌一次到位设计成本高 | S0 先定 primitive+semantic 两层,component 层随 P 页按需补 |
-| Landing 动态演示体积/性能 | 复用真实组件与既有种子数据,不引入视频/大图;懒加载并给 LCP 留静态首帧 |
-| 截图基线维护成本 | 基线仅在页面级 PR 更新,评审人核对 diff 即评审设计 |
-| 与架构手册 Phase 3(壳拆分)排期冲突 | W4 壳重构与 Phase 3 组件拆分合并为同一批 PR 执行,避免同文件两次大改 |
+| The empty-palette regression (`C0`) means the app currently renders with fallback colors | `S0.0` fixes it before any other work and adds a gate so it cannot recur |
+| Mixed old/new visuals during the sweep | `S3` is atomic per page; product is pre-launch, so no user exposure |
+| Designing the full token scale up front is costly | `S0.1` fixes primitive + semantic; the component layer is added per page as needed |
+| Landing live-demo weight/perf | reuse real components + existing seed data (no video/large images); lazy-load; keep a static first frame for LCP |
+| Screenshot-baseline churn | baselines update only on page-level PRs; the reviewer diffs them as the design review |
+| Overlap with the (now-archived) shell decomposition | `W4` is a reframe of the existing rail/sidebar structure, not a second large rewrite of the same files |

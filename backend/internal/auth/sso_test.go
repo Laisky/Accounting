@@ -36,7 +36,7 @@ func TestServiceExternalSSOLoginCreatesLocalSession(t *testing.T) {
 			return now
 		})
 
-	result, err := service.LoginWithExternalSSO(context.Background(), ExternalSSOLoginRequest{Token: "opaque-sso-token"})
+	result, err := service.LoginWithExternalSSO(context.Background(), ExternalSSOLoginRequest{Token: "opaque-sso-token"}) // #nosec G101 -- Opaque test token is not a credential.
 	require.NoError(t, err)
 	require.NotEmpty(t, result.SessionToken)
 	require.Equal(t, "person@example.test", result.User.Email)
@@ -49,6 +49,10 @@ func TestServiceExternalSSOLoginCreatesLocalSession(t *testing.T) {
 	session, err := service.SessionFromToken(context.Background(), result.SessionToken)
 	require.NoError(t, err)
 	require.Equal(t, result.Session.ID, session.ID)
+
+	record, err := service.store.UserByID(context.Background(), result.User.ID)
+	require.NoError(t, err)
+	require.Equal(t, testExternalSSOUID, record.ExternalSSOSubject)
 }
 
 // TestServiceExternalSSOLoginRequiresUUIDv7Subject verifies SSO cannot create users with private provider ids.
@@ -100,6 +104,42 @@ func TestServiceExternalSSOLoginReusesExistingUser(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "local-user", result.User.ID)
 	require.Equal(t, "local-user", result.Session.UserID)
+
+	updated, err := store.UserByEmail(context.Background(), "person@example.test")
+	require.NoError(t, err)
+	require.Equal(t, testExternalSSOUID, updated.ExternalSSOSubject)
+}
+
+// TestServiceExternalSSOLoginRejectsSubjectMismatch verifies an email-bound SSO account cannot be reused by another subject.
+func TestServiceExternalSSOLoginRejectsSubjectMismatch(t *testing.T) {
+	store := NewMemoryStore()
+	createdAt := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	_, err := store.CreateUser(context.Background(), UserRecord{
+		User: User{
+			ID:            "local-user",
+			Email:         "person@example.test",
+			Status:        UserStatusActive,
+			EmailVerified: true,
+			CreatedAt:     createdAt,
+			UpdatedAt:     createdAt,
+		},
+		ExternalSSOSubject: testExternalSSOUID,
+	})
+	require.NoError(t, err)
+
+	service := NewService(Config{
+		ExternalSSOEnabled:       true,
+		ExternalSSOAutoProvision: false,
+		SessionTTL:               time.Hour,
+	}, store, NoopTurnstileVerifier{}).WithExternalSSOValidator(fakeExternalSSOValidator{
+		identity: ExternalSSOIdentity{
+			Subject:  "0194d5f8-19f7-7f7b-a8d3-421a60f8d8ad",
+			Username: "person@example.test",
+		},
+	})
+
+	_, err = service.LoginWithExternalSSO(context.Background(), ExternalSSOLoginRequest{Token: "opaque-sso-token"})
+	require.ErrorIs(t, err, ErrInvalidCredentials)
 }
 
 // TestServiceExternalSSOLoginDisabled verifies SSO login fails closed when disabled.

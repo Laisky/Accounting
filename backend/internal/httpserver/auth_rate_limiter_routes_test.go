@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestRegisterRoutesAuthRateLimitLogin verifies login limits are scoped by route, IP, and normalized email.
+// TestRegisterRoutesAuthRateLimitLogin verifies login limits apply to both IP and normalized email.
 func TestRegisterRoutesAuthRateLimitLogin(t *testing.T) {
-	router, _ := testAuthRateLimitRouter(t)
+	router := testAuthRateLimitRouter(t)
 
 	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
@@ -44,12 +44,38 @@ func TestRegisterRoutesAuthRateLimitLogin(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-	require.Equal(t, http.StatusUnauthorized, rec.Code)
+	require.Equal(t, http.StatusTooManyRequests, rec.Code)
+}
+
+// TestAuthRateLimiterLimitsSubjectAcrossIPs verifies one subject is limited even when IP changes.
+func TestAuthRateLimiterLimitsSubjectAcrossIPs(t *testing.T) {
+	limiter := newAuthRateLimiter(config.AuthRateLimitConfig{
+		Enabled: true,
+		Limit:   2,
+		Window:  time.Minute,
+	})
+
+	require.True(t, limiter.allow("auth.login", "192.0.2.1", "person@example.test"))
+	require.True(t, limiter.allow("auth.login", "192.0.2.2", "PERSON@example.test"))
+	require.False(t, limiter.allow("auth.login", "192.0.2.3", "person@example.test"))
+}
+
+// TestAuthRateLimiterLimitsIPAcrossSubjects verifies one IP is limited even when subject changes.
+func TestAuthRateLimiterLimitsIPAcrossSubjects(t *testing.T) {
+	limiter := newAuthRateLimiter(config.AuthRateLimitConfig{
+		Enabled: true,
+		Limit:   2,
+		Window:  time.Minute,
+	})
+
+	require.True(t, limiter.allow("auth.login", "192.0.2.1", "one@example.test"))
+	require.True(t, limiter.allow("auth.login", "192.0.2.1", "two@example.test"))
+	require.False(t, limiter.allow("auth.login", "192.0.2.1", "three@example.test"))
 }
 
 // TestRegisterRoutesAuthRateLimitRegister verifies registration attempts are limited generically.
 func TestRegisterRoutesAuthRateLimitRegister(t *testing.T) {
-	router, _ := testAuthRateLimitRouter(t)
+	router := testAuthRateLimitRouter(t)
 
 	for range 2 {
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"limited@example.test","password":"correct horse battery staple"}`))
@@ -69,7 +95,7 @@ func TestRegisterRoutesAuthRateLimitRegister(t *testing.T) {
 
 // TestRegisterRoutesAuthRateLimitPasswordReset verifies password reset requests do not reveal account existence.
 func TestRegisterRoutesAuthRateLimitPasswordReset(t *testing.T) {
-	router, _ := testAuthRateLimitRouter(t)
+	router := testAuthRateLimitRouter(t)
 
 	for range 2 {
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/password-reset/request", bytes.NewBufferString(`{"email":"missing@example.test"}`))
@@ -89,7 +115,7 @@ func TestRegisterRoutesAuthRateLimitPasswordReset(t *testing.T) {
 
 // TestRegisterRoutesAuthRateLimitPasskeyLogin verifies public passkey login endpoints are limited.
 func TestRegisterRoutesAuthRateLimitPasskeyLogin(t *testing.T) {
-	router, _ := testAuthRateLimitRouter(t)
+	router := testAuthRateLimitRouter(t)
 
 	for range 2 {
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/login/begin", nil)
@@ -119,7 +145,7 @@ func TestRegisterRoutesAuthRateLimitPasskeyLogin(t *testing.T) {
 }
 
 // testAuthRateLimitRouter returns a route test router with public auth limits set low.
-func testAuthRateLimitRouter(t *testing.T) (*gin.Engine, config.Config) {
+func testAuthRateLimitRouter(t *testing.T) *gin.Engine {
 	t.Helper()
 
 	gin.SetMode(gin.TestMode)
@@ -134,5 +160,5 @@ func testAuthRateLimitRouter(t *testing.T) (*gin.Engine, config.Config) {
 	}
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	return router, cfg
+	return router
 }

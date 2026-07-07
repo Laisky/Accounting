@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"encoding/json"
+	stderrors "errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -20,6 +21,8 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/ledger"
 	"github.com/Laisky/Accounting/backend/internal/telemetry"
 )
+
+const maxJSONBodyBytes int64 = 1 << 20
 
 // RuntimeConfigResponse contains only public frontend runtime settings.
 type RuntimeConfigResponse struct {
@@ -151,7 +154,7 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 	registerBookRoutes(api, ledgerService, auditService)
 	registerAccountCategoryRoutes(api, ledgerService, auditService)
 	registerImportRoutes(api, importService, ledgerService, authService, auditService)
-	registerAuditRoutes(api, auditService)
+	registerAuditRoutes(api, cfg, auditService)
 	registerUserRoutes(api, authService, auditService)
 
 	api.GET("/books/:bookID/ledger/summary", RequireSession(), func(c *gin.Context) {
@@ -442,18 +445,33 @@ func buildRuntimeConfigResponse(cfg config.Config) RuntimeConfigResponse {
 
 // decodeStrictJSON receives a Gin context and destination and decodes a request body without unknown fields.
 func decodeStrictJSON(c *gin.Context, dst any) bool {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxJSONBodyBytes)
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(dst); err != nil {
+		if isRequestBodyTooLarge(err) {
+			respondAPIMessage(c, http.StatusRequestEntityTooLarge, "request body too large")
+			return false
+		}
 		respondAPIMessage(c, http.StatusBadRequest, "invalid request body")
 		return false
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if isRequestBodyTooLarge(err) {
+			respondAPIMessage(c, http.StatusRequestEntityTooLarge, "request body too large")
+			return false
+		}
 		respondAPIMessage(c, http.StatusBadRequest, "invalid request body")
 		return false
 	}
 
 	return true
+}
+
+// isRequestBodyTooLarge receives a decode error and returns whether the JSON body cap was exceeded.
+func isRequestBodyTooLarge(err error) bool {
+	var maxBytesErr *http.MaxBytesError
+	return stderrors.As(err, &maxBytesErr)
 }
 
 // parseLedgerSummaryFilter receives a Gin context and returns validated UTC calendar date filters.
@@ -579,7 +597,7 @@ func respondLedgerError(c *gin.Context, log glog.Logger, err error) {
 // setSessionCookie receives auth result data and writes the session cookie to the response.
 func setSessionCookie(c *gin.Context, cfg config.Config, authService *auth.Service, token string, expiresAt time.Time) {
 	settings := authService.CookieSettings(cfg.Auth.Session.CookieName, cfg.Auth.Session.CookieSecure, expiresAt)
-	http.SetCookie(c.Writer, &http.Cookie{
+	http.SetCookie(c.Writer, &http.Cookie{ //nolint:gosec // Session cookies set Secure/HttpOnly/SameSite from runtime config.
 		Name:     settings.Name,
 		Value:    token,
 		Path:     settings.Path,
@@ -593,7 +611,7 @@ func setSessionCookie(c *gin.Context, cfg config.Config, authService *auth.Servi
 
 // clearSessionCookie receives a Gin context and writes an expired session cookie to the response.
 func clearSessionCookie(c *gin.Context, cfg config.Config) {
-	http.SetCookie(c.Writer, &http.Cookie{
+	http.SetCookie(c.Writer, &http.Cookie{ //nolint:gosec // Expiring session cookies preserves Secure/HttpOnly/SameSite from runtime config.
 		Name:     cfg.Auth.Session.CookieName,
 		Value:    "",
 		Path:     "/",

@@ -34,6 +34,8 @@ func TestServiceRecordSanitizesMetadata(t *testing.T) {
 	require.NotContains(t, event.Metadata, "password")
 	require.NotContains(t, event.Metadata, "token")
 	require.NotContains(t, event.Metadata, "code")
+	require.Equal(t, int64(1), event.Seq)
+	require.NotEmpty(t, event.Hash)
 	require.True(t, event.CreatedAt.Equal(now))
 }
 
@@ -61,7 +63,48 @@ func TestServiceListScopesByActor(t *testing.T) {
 	require.Len(t, result.Items, 1)
 	require.Equal(t, "user-owner", result.Items[0].ActorID)
 
+	all, err := service.ListAll(context.Background(), ListRequest{Page: 1, PageSize: 10})
+	require.NoError(t, err)
+	require.Equal(t, 2, all.Total)
+	require.Equal(t, []string{"user-other", "user-owner"}, []string{all.Items[0].ActorID, all.Items[1].ActorID})
+
 	_, err = service.List(context.Background(), ListRequest{Page: 1, PageSize: 10})
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrInvalidInput))
+}
+
+// TestServiceRecordBuildsVerifiableHashChain verifies adjacent audit events are linked and tamper-detectable.
+func TestServiceRecordBuildsVerifiableHashChain(t *testing.T) {
+	service := NewService(NewMemoryStore())
+
+	first, err := service.Record(context.Background(), RecordRequest{
+		ActorID:    "user-owner",
+		Action:     ActionAuthLogin,
+		TargetType: "user",
+		TargetID:   "user-owner",
+	})
+	require.NoError(t, err)
+	second, err := service.Record(context.Background(), RecordRequest{
+		ActorID:    "user-owner",
+		Action:     ActionAuthLogout,
+		TargetType: "user",
+		TargetID:   "user-owner",
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, int64(1), first.Seq)
+	require.Equal(t, int64(2), second.Seq)
+	require.Empty(t, first.PrevHash)
+	require.Equal(t, first.Hash, second.PrevHash)
+	require.NoError(t, VerifyChain([]Event{second, first}))
+
+	second.Action = ActionAuthLoginFailed
+	require.Error(t, VerifyChain([]Event{first, second}))
+}
+
+// TestSubjectHashNormalizesSubjects verifies audit subject hashes do not preserve raw email casing.
+func TestSubjectHashNormalizesSubjects(t *testing.T) {
+	require.Equal(t, SubjectHash("Person@Example.Test "), SubjectHash("person@example.test"))
+	require.NotEmpty(t, SubjectHash("person@example.test"))
+	require.Empty(t, SubjectHash("   "))
 }

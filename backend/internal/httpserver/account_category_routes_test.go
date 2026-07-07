@@ -98,6 +98,35 @@ func TestRegisterRoutesAccountsCreateRejectsUnknownFieldsAndInvalidShares(t *tes
 	require.Equal(t, http.StatusForbidden, rec.Code)
 }
 
+// TestRegisterRoutesAccountsUnshareEnforcesManagerRoles verifies only book managers can remove account shares.
+func TestRegisterRoutesAccountsUnshareEnforcesManagerRoles(t *testing.T) {
+	router, cfg := testEntryRouter(t, ledger.NewService(), "user-admin", "user-viewer")
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/accounts/acct-shared-card/shares/book-household", nil)
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusForbidden, rec.Code)
+
+	req = httptest.NewRequest(http.MethodDelete, "/api/accounts/acct-shared-card/shares/book-household", nil)
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var response ledger.Account
+	err := json.Unmarshal(rec.Body.Bytes(), &response)
+	require.NoError(t, err)
+	require.Equal(t, "acct-shared-card", response.ID)
+	require.Empty(t, response.SharedBookIDs)
+
+	req = httptest.NewRequest(http.MethodDelete, "/api/accounts/acct-shared-card/shares/book-household", nil)
+	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
 // TestRegisterRoutesAccountGroupsRequireSession verifies group endpoints require authentication.
 func TestRegisterRoutesAccountGroupsRequireSession(t *testing.T) {
 	router, _ := testEntryRouter(t, ledger.NewService(), "user-owner")

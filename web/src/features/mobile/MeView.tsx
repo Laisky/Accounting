@@ -115,7 +115,7 @@ export function MeView({
             {activityQuery.isError ? <p className="mobileInlineError">{t('common.error.activityFailed')}</p> : null}
             {activityEvents.length ? (
               <ul className="meActivityList">
-                {activityEvents.slice(0, 8).map((event) => (
+                {activityEvents.slice(0, 12).map((event) => (
                   <li key={event.id}>
                     <span className="meActivityAction">{event.action.replace('.', ' / ')}</span>
                     <time dateTime={event.createdAt}>{formatAuditTime(event.createdAt)}</time>

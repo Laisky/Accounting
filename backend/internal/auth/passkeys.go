@@ -236,8 +236,8 @@ func (s *Service) FinishPasskeyLogin(ctx context.Context, request PasskeyLoginFi
 	if err := s.store.StoreSession(ctx, HashSessionToken(token), session); err != nil {
 		return AuthResult{}, errors.Wrap(err, "store passkey login session")
 	}
-	if err := s.store.ResetFailedLogin(ctx, authenticatedUser.Email); err != nil {
-		return AuthResult{}, errors.Wrap(err, "reset failed login")
+	if err := s.store.ResetLoginThrottle(ctx, authenticatedUser.Email); err != nil {
+		return AuthResult{}, errors.Wrap(err, "reset login throttle")
 	}
 
 	return AuthResult{

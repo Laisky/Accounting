@@ -10,6 +10,8 @@ import (
 	"github.com/Laisky/errors/v2"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
+
+	"github.com/Laisky/Accounting/backend/internal/crypto/keyring"
 )
 
 const (
@@ -67,9 +69,14 @@ func (s *Service) SetupTOTP(ctx context.Context, request TOTPSetupRequest) (TOTP
 	}
 
 	now := s.clock().UTC()
+	plaintextSecret := key.Secret()
+	storedSecret, err := s.encryptTOTPSecret(request.Actor.UserID, plaintextSecret)
+	if err != nil {
+		return TOTPSetup{}, errors.Wrap(err, "encrypt pending totp secret")
+	}
 	setup := PendingTOTPSetup{
 		UserID:    request.Actor.UserID,
-		Secret:    key.Secret(),
+		Secret:    storedSecret,
 		Otpauth:   key.URL(),
 		CreatedAt: now,
 		ExpiresAt: now.Add(totpSetupTTL).UTC(),
@@ -79,7 +86,7 @@ func (s *Service) SetupTOTP(ctx context.Context, request TOTPSetupRequest) (TOTP
 	}
 
 	return TOTPSetup{
-		Secret:    setup.Secret,
+		Secret:    plaintextSecret,
 		Otpauth:   setup.Otpauth,
 		ExpiresAt: setup.ExpiresAt,
 	}, nil
@@ -111,7 +118,11 @@ func (s *Service) ConfirmTOTP(ctx context.Context, request TOTPConfirmRequest) (
 	if failures >= totpMaxFailures {
 		return TOTPStatus{}, errors.WithStack(ErrInvalidCredentials)
 	}
-	if err := s.validateTOTPValue(setup.Secret, request.Code); err != nil {
+	plaintextSecret, err := s.decryptTOTPSecret(setup.UserID, setup.Secret)
+	if err != nil {
+		return TOTPStatus{}, errors.Wrap(err, "decrypt pending totp secret")
+	}
+	if err := s.validateTOTPValue(plaintextSecret, request.Code); err != nil {
 		if _, failErr := s.store.IncrementFailedTOTP(ctx, request.Actor.UserID); failErr != nil {
 			return TOTPStatus{}, errors.Wrap(failErr, "record failed totp setup")
 		}
@@ -123,7 +134,11 @@ func (s *Service) ConfirmTOTP(ctx context.Context, request TOTPConfirmRequest) (
 		return TOTPStatus{}, errors.Wrap(err, "load totp confirm user")
 	}
 	record.TOTPEnabled = true
-	record.TOTPSecret = setup.Secret
+	storedSecret, err := s.encryptTOTPSecret(record.ID, plaintextSecret)
+	if err != nil {
+		return TOTPStatus{}, errors.Wrap(err, "encrypt totp secret")
+	}
+	record.TOTPSecret = storedSecret
 	record.UpdatedAt = s.clock().UTC()
 	if _, err := s.store.UpdateUser(ctx, record); err != nil {
 		return TOTPStatus{}, errors.Wrap(err, "enable totp")
@@ -164,6 +179,9 @@ func (s *Service) DisableTOTP(ctx context.Context, request TOTPDisableRequest) (
 	if _, err := s.store.UpdateUser(ctx, record); err != nil {
 		return TOTPStatus{}, errors.Wrap(err, "disable totp")
 	}
+	if err := s.store.DeleteSessionsByUser(ctx, record.ID); err != nil {
+		return TOTPStatus{}, errors.Wrap(err, "revoke sessions after totp disable")
+	}
 
 	return TOTPStatus{Enabled: false}, nil
 }
@@ -189,7 +207,11 @@ func (s *Service) verifyTOTPCode(ctx context.Context, record UserRecord, code st
 		}
 		return errors.WithStack(ErrInvalidCredentials)
 	}
-	if err := s.validateTOTPValue(record.TOTPSecret, code); err != nil {
+	plaintextSecret, err := s.decryptTOTPSecret(record.ID, record.TOTPSecret)
+	if err != nil {
+		return errors.Wrap(err, "decrypt totp secret")
+	}
+	if err := s.validateTOTPValue(plaintextSecret, code); err != nil {
 		if _, failErr := s.store.IncrementFailedTOTP(ctx, record.ID); failErr != nil {
 			return errors.Wrap(failErr, "record failed totp")
 		}
@@ -212,6 +234,40 @@ func (s *Service) verifyTOTPCode(ctx context.Context, record UserRecord, code st
 	}
 
 	return nil
+}
+
+// MigrateTOTPSecrets encrypts historical plaintext TOTP secrets in the auth store.
+func (s *Service) MigrateTOTPSecrets(ctx context.Context) error {
+	if s.totpKeys == nil {
+		return nil
+	}
+	if err := s.store.MigrateTOTPSecrets(ctx, s.encryptTOTPSecret); err != nil {
+		return errors.Wrap(err, "migrate totp secrets")
+	}
+	return nil
+}
+
+func (s *Service) encryptTOTPSecret(userID string, secret string) (string, error) {
+	secret = strings.TrimSpace(secret)
+	if secret == "" || s.totpKeys == nil || keyring.IsEncrypted(secret) {
+		return secret, nil
+	}
+	return s.totpKeys.Encrypt(secret, totpSecretAAD(userID))
+}
+
+func (s *Service) decryptTOTPSecret(userID string, secret string) (string, error) {
+	secret = strings.TrimSpace(secret)
+	if secret == "" || !keyring.IsEncrypted(secret) {
+		return secret, nil
+	}
+	if s.totpKeys == nil {
+		return "", errors.WithStack(errors.New("totp keyring is not configured"))
+	}
+	return s.totpKeys.Decrypt(secret, totpSecretAAD(userID))
+}
+
+func totpSecretAAD(userID string) string {
+	return "auth.totp:" + strings.TrimSpace(userID)
 }
 
 // validateTOTPValue receives a secret and code and returns an error when the TOTP value is invalid.

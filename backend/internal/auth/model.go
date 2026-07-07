@@ -29,11 +29,12 @@ type User struct {
 	UpdatedAt     time.Time  `json:"updatedAt"`
 }
 
-// UserRecord represents a stored user with password hash material kept server-side only.
+// UserRecord represents a stored user with authentication material kept server-side only.
 type UserRecord struct {
 	User
-	PasswordHash string
-	TOTPSecret   string
+	PasswordHash       string
+	TOTPSecret         string
+	ExternalSSOSubject string
 }
 
 // Session represents a browser session with only stable identity and status metadata.
@@ -61,6 +62,14 @@ type LoginRequest struct {
 	TOTPCode       string
 	TurnstileToken string
 	RemoteIP       string
+}
+
+// LoginThrottle represents password-login failure state for one normalized email address.
+type LoginThrottle struct {
+	Email       string    `json:"email"`
+	FailedCount int       `json:"failedCount"`
+	LockedUntil time.Time `json:"lockedUntil"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 // ExternalSSOLoginRequest contains the opaque credential returned by the configured SSO provider.

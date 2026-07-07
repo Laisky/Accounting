@@ -15,7 +15,7 @@ import (
 func TestRegisterStaticSPAFallsBackForBrowserRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	distDir := t.TempDir()
-	require.NoError(t, os.Mkdir(filepath.Join(distDir, "assets"), 0o755))
+	require.NoError(t, os.Mkdir(filepath.Join(distDir, "assets"), 0o750))
 	require.NoError(t, os.WriteFile(filepath.Join(distDir, "index.html"), []byte("<!doctype html><title>Accounting</title>"), 0o600))
 
 	router := gin.New()
@@ -40,7 +40,7 @@ func TestRegisterStaticSPAFallsBackForBrowserRoutes(t *testing.T) {
 func TestRegisterStaticSPADoesNotFallbackForAPIRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	distDir := t.TempDir()
-	require.NoError(t, os.Mkdir(filepath.Join(distDir, "assets"), 0o755))
+	require.NoError(t, os.Mkdir(filepath.Join(distDir, "assets"), 0o750))
 	require.NoError(t, os.WriteFile(filepath.Join(distDir, "index.html"), []byte("<!doctype html><title>Accounting</title>"), 0o600))
 
 	router := gin.New()

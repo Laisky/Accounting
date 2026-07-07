@@ -11,6 +11,8 @@ import (
 type Store interface {
 	SaveEvent(ctx context.Context, event Event) (Event, error)
 	EventsByActor(ctx context.Context, actorID string) ([]Event, error)
+	AllEvents(ctx context.Context) ([]Event, error)
+	Tail(ctx context.Context) (Event, error)
 }
 
 // MemoryStore keeps audit events in process for local development.
@@ -75,6 +77,31 @@ func (s *MemoryStore) EventsByActor(_ context.Context, actorID string) ([]Event,
 	}
 
 	return events, nil
+}
+
+// AllEvents returns all audit events newest first.
+func (s *MemoryStore) AllEvents(_ context.Context) ([]Event, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	events := make([]Event, 0, len(s.events))
+	for index := len(s.events) - 1; index >= 0; index-- {
+		events = append(events, cloneEvent(s.events[index]))
+	}
+
+	return events, nil
+}
+
+// Tail returns the newest stored event in append order.
+func (s *MemoryStore) Tail(_ context.Context) (Event, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(s.events) == 0 {
+		return Event{}, errors.WithStack(ErrNotFound)
+	}
+
+	return cloneEvent(s.events[len(s.events)-1]), nil
 }
 
 // cloneEvent receives an event and returns a detached copy.

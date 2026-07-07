@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 // TestServiceRegisterLoginAndLogout verifies email auth creates and revokes a secure server-side session.
 func TestServiceRegisterLoginAndLogout(t *testing.T) {
 	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
-	service := NewService(Config{
+	service := NewService(Config{ //nolint:gosec // Passkey test config contains no credentials.
 		AllowedRegistrationDomains: []string{"example.test"},
 		EmailLoginEnabled:          true,
 		EmailRegisterEnabled:       true,
@@ -61,10 +62,48 @@ func TestServiceRegisterLoginAndLogout(t *testing.T) {
 	require.Contains(t, err.Error(), "load session")
 }
 
+// TestServiceLoginUpgradesLegacyPasswordHash verifies successful login transparently migrates PBKDF2 hashes.
+func TestServiceLoginUpgradesLegacyPasswordHash(t *testing.T) {
+	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	store := NewMemoryStore()
+	service := NewService(Config{ // #nosec G101 -- passkey test config contains no credentials.
+		EmailLoginEnabled:    true,
+		EmailRegisterEnabled: true,
+		SessionTTL:           time.Hour,
+	}, store, NoopTurnstileVerifier{}).WithClock(func() time.Time {
+		return now
+	})
+	user := UserRecord{
+		User: User{
+			ID:            "user_legacy",
+			Email:         "legacy@example.test",
+			Status:        UserStatusActive,
+			EmailVerified: true,
+			CreatedAt:     now,
+			UpdatedAt:     now,
+			BaseCurrency:  DefaultBaseCurrency,
+		},
+		PasswordHash: legacyPBKDF2Hash("correct horse battery staple", 600000),
+	}
+	_, err := store.CreateUser(context.Background(), user)
+	require.NoError(t, err)
+
+	result, err := service.Login(context.Background(), LoginRequest{
+		Email:    user.Email,
+		Password: "correct horse battery staple",
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, result.SessionToken)
+
+	updated, err := store.UserByEmail(context.Background(), user.Email)
+	require.NoError(t, err)
+	require.True(t, strings.HasPrefix(updated.PasswordHash, "$argon2id$"))
+}
+
 // TestServiceUserProfileUpdatesBaseCurrency verifies profile preferences persist on the user record.
 func TestServiceUserProfileUpdatesBaseCurrency(t *testing.T) {
 	now := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
-	service := NewService(Config{
+	service := NewService(Config{ // #nosec G101 -- passkey test config contains no credentials.
 		EmailRegisterEnabled:      true,
 		EmailVerificationRequired: false,
 	}, NewMemoryStore(), NoopTurnstileVerifier{}).WithClock(func() time.Time {
@@ -262,6 +301,48 @@ func TestServicePasswordResetUsesOneTimeCodes(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TestServicePasswordResetRevokesExistingSessions verifies reset closes every active session for that user.
+func TestServicePasswordResetRevokesExistingSessions(t *testing.T) {
+	sender := &fakeEmailSender{}
+	service := NewService(Config{
+		EmailLoginEnabled:         true,
+		EmailRegisterEnabled:      true,
+		EmailVerificationRequired: false,
+		SessionTTL:                time.Hour,
+		EmailVerificationTTL:      10 * time.Minute,
+	}, NewMemoryStore(), NoopTurnstileVerifier{}).WithEmailSender(sender)
+
+	_, err := service.Register(context.Background(), RegisterRequest{
+		Email:    "person@example.test",
+		Password: "correct horse battery staple",
+	})
+	require.NoError(t, err)
+	first, err := service.Login(context.Background(), LoginRequest{
+		Email:    "person@example.test",
+		Password: "correct horse battery staple",
+	})
+	require.NoError(t, err)
+	second, err := service.Login(context.Background(), LoginRequest{
+		Email:    "person@example.test",
+		Password: "correct horse battery staple",
+	})
+	require.NoError(t, err)
+
+	delivery, err := service.RequestPasswordReset(context.Background(), EmailCodeRequest{Email: "person@example.test"})
+	require.NoError(t, err)
+	_, err = service.ConfirmPasswordReset(context.Background(), ConfirmPasswordResetRequest{
+		Email:       "person@example.test",
+		Code:        delivery.Code,
+		NewPassword: "new correct horse battery staple",
+	})
+	require.NoError(t, err)
+
+	_, err = service.SessionFromToken(context.Background(), first.SessionToken)
+	require.Error(t, err)
+	_, err = service.SessionFromToken(context.Background(), second.SessionToken)
+	require.Error(t, err)
+}
+
 // TestServiceEmailCodeDeliveryPolicy verifies generic no-send cases and sender failures.
 func TestServiceEmailCodeDeliveryPolicy(t *testing.T) {
 	sender := &fakeEmailSender{}
@@ -410,6 +491,8 @@ func TestServiceTOTPSetupLoginReplayAndDisable(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.False(t, status.Enabled)
+	_, err = service.SessionFromToken(context.Background(), result.SessionToken)
+	require.Error(t, err)
 }
 
 // TestServiceTOTPSetupExpires verifies pending setup secrets expire before confirmation.

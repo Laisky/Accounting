@@ -153,7 +153,7 @@ func (s *Service) AddBookMember(ctx context.Context, request AddBookMemberReques
 	if strings.TrimSpace(request.UserID) == "" {
 		return BookMember{}, errors.Wrap(ErrInvalidInput, "member user id is required")
 	}
-	if !isSupportedMemberRole(request.Role) {
+	if !isAssignableNewMemberRole(request.Role) {
 		return BookMember{}, errors.Wrap(ErrInvalidInput, "member role is invalid")
 	}
 	if existing, err := s.store.Member(ctx, request.BookID, strings.TrimSpace(request.UserID)); err == nil {
@@ -179,6 +179,93 @@ func (s *Service) AddBookMember(ctx context.Context, request AddBookMemberReques
 	}
 
 	return created, nil
+}
+
+// UpdateBookMemberRole receives actor intent, enforces manager roles and owner invariants, and updates a member role.
+func (s *Service) UpdateBookMemberRole(ctx context.Context, request UpdateBookMemberRoleRequest) (BookMember, error) {
+	manager, book, err := s.authorizeBookMember(ctx, request.Actor, request.BookID)
+	if err != nil {
+		return BookMember{}, err
+	}
+	if manager.Role != RoleOwner && manager.Role != RoleAdministrator {
+		return BookMember{}, errors.Wrapf(ErrAccessDenied, "role %q cannot update book members", manager.Role)
+	}
+	if strings.TrimSpace(request.UserID) == "" {
+		return BookMember{}, errors.Wrap(ErrInvalidInput, "member user id is required")
+	}
+	if !isSupportedMemberRole(request.Role) {
+		return BookMember{}, errors.Wrap(ErrInvalidInput, "member role is invalid")
+	}
+
+	members, err := s.store.BookMembers(ctx, request.BookID)
+	if err != nil {
+		return BookMember{}, errors.Wrap(err, "load book members")
+	}
+	target, ok := findBookMember(members, strings.TrimSpace(request.UserID))
+	if !ok {
+		return BookMember{}, errors.Wrapf(ErrNotFound, "user %q is not a member of book %q", request.UserID, request.BookID)
+	}
+	if target.Role == RoleOwner && request.Role != RoleOwner && ownerCount(members) <= 1 {
+		return BookMember{}, errors.Wrap(ErrInvalidInput, "cannot demote the sole owner")
+	}
+
+	now := time.Now().UTC()
+	updated := target
+	updated.Role = request.Role
+	updated.UpdatedAt = now
+	updated, err = s.store.UpdateBookMember(ctx, updated)
+	if err != nil {
+		return BookMember{}, errors.Wrap(err, "update book member")
+	}
+
+	if err := s.reconcilePrimaryOwner(ctx, book, target, updated, members, now); err != nil {
+		return BookMember{}, err
+	}
+
+	return updated, nil
+}
+
+// RemoveBookMember receives actor intent, enforces manager roles and owner invariants, and deletes a member.
+func (s *Service) RemoveBookMember(ctx context.Context, request RemoveBookMemberRequest) error {
+	manager, book, err := s.authorizeBookMember(ctx, request.Actor, request.BookID)
+	if err != nil {
+		return err
+	}
+	if manager.Role != RoleOwner && manager.Role != RoleAdministrator {
+		return errors.Wrapf(ErrAccessDenied, "role %q cannot remove book members", manager.Role)
+	}
+	if strings.TrimSpace(request.UserID) == "" {
+		return errors.Wrap(ErrInvalidInput, "member user id is required")
+	}
+
+	members, err := s.store.BookMembers(ctx, request.BookID)
+	if err != nil {
+		return errors.Wrap(err, "load book members")
+	}
+	target, ok := findBookMember(members, strings.TrimSpace(request.UserID))
+	if !ok {
+		return errors.Wrapf(ErrNotFound, "user %q is not a member of book %q", request.UserID, request.BookID)
+	}
+	if target.Role == RoleOwner && ownerCount(members) <= 1 {
+		return errors.Wrap(ErrInvalidInput, "cannot remove the sole owner")
+	}
+
+	if err := s.store.DeleteBookMember(ctx, request.BookID, target.UserID); err != nil {
+		return errors.Wrap(err, "delete book member")
+	}
+	if target.Role == RoleOwner && book.OwnerUserID == target.UserID {
+		replacement, ok := firstOtherOwner(members, target.UserID)
+		if !ok {
+			return errors.Wrap(ErrInvalidInput, "cannot remove the sole owner")
+		}
+		book.OwnerUserID = replacement.UserID
+		book.UpdatedAt = time.Now().UTC()
+		if _, err := s.store.UpdateBook(ctx, book); err != nil {
+			return errors.Wrap(err, "update primary book owner")
+		}
+	}
+
+	return nil
 }
 
 // validateCreateBookRequest receives book input and returns an error when it is invalid.
@@ -220,11 +307,78 @@ func validateUpdateBookRequest(request UpdateBookRequest) error {
 // isSupportedMemberRole receives a role and reports whether it can be assigned to a book member.
 func isSupportedMemberRole(role Role) bool {
 	switch role {
+	case RoleOwner, RoleAdministrator, RoleMember, RoleViewer:
+		return true
+	default:
+		return false
+	}
+}
+
+// isAssignableNewMemberRole receives a role and reports whether new members can receive it directly.
+func isAssignableNewMemberRole(role Role) bool {
+	switch role {
 	case RoleAdministrator, RoleMember, RoleViewer:
 		return true
 	default:
 		return false
 	}
+}
+
+// findBookMember receives sorted members and user id and returns the matching member when present.
+func findBookMember(members []BookMember, userID string) (BookMember, bool) {
+	for _, member := range members {
+		if member.UserID == userID {
+			return member, true
+		}
+	}
+
+	return BookMember{}, false
+}
+
+// ownerCount receives members and returns how many have the owner role.
+func ownerCount(members []BookMember) int {
+	count := 0
+	for _, member := range members {
+		if member.Role == RoleOwner {
+			count++
+		}
+	}
+
+	return count
+}
+
+// firstOtherOwner receives members and an excluded user id and returns another owner when one exists.
+func firstOtherOwner(members []BookMember, excludedUserID string) (BookMember, bool) {
+	for _, member := range members {
+		if member.UserID != excludedUserID && member.Role == RoleOwner {
+			return member, true
+		}
+	}
+
+	return BookMember{}, false
+}
+
+// reconcilePrimaryOwner keeps Book.OwnerUserID consistent with owner-role membership changes.
+func (s *Service) reconcilePrimaryOwner(ctx context.Context, book Book, previous BookMember, updated BookMember, members []BookMember, updatedAt time.Time) error {
+	switch {
+	case updated.Role == RoleOwner && book.OwnerUserID != updated.UserID:
+		book.OwnerUserID = updated.UserID
+	case previous.Role == RoleOwner && updated.Role != RoleOwner && book.OwnerUserID == previous.UserID:
+		replacement, ok := firstOtherOwner(members, previous.UserID)
+		if !ok {
+			return errors.Wrap(ErrInvalidInput, "cannot demote the sole owner")
+		}
+		book.OwnerUserID = replacement.UserID
+	default:
+		return nil
+	}
+
+	book.UpdatedAt = updatedAt
+	if _, err := s.store.UpdateBook(ctx, book); err != nil {
+		return errors.Wrap(err, "update primary book owner")
+	}
+
+	return nil
 }
 
 // authorizeBookMember receives actor and book id and returns membership plus book after policy checks.

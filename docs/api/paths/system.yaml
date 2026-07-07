@@ -77,6 +77,26 @@
                 },
             },
         }
+      "429":
+        {
+          description: Login temporarily locked or auth rate limit exceeded,
+          headers:
+            {
+              Retry-After:
+                {
+                  description: Seconds until retry is allowed when account lockout is active,
+                  schema: { type: integer, minimum: 1 },
+                },
+            },
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "../openapi.yaml#/components/schemas/ErrorResponse" },
+                },
+            },
+        }
       default: { $ref: "../openapi.yaml#/components/responses/Error" }
 /auth/logout:
   post:
@@ -85,6 +105,25 @@
       "200":
         {
           description: Session cleared,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/StatusResponse",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/auth/logout-all:
+  post:
+    tags: [auth]
+    responses:
+      "200":
+        {
+          description: All user sessions cleared,
           content:
             {
               application/json:
@@ -354,8 +393,25 @@
       "302": { description: Redirect to external SSO provider. }
       default: { $ref: "../openapi.yaml#/components/responses/Error" }
 /auth/sso/callback:
+  post:
+    tags: [auth]
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/x-www-form-urlencoded:
+          schema:
+            type: object
+            required: [state, sso_token]
+            properties:
+              state: { type: string }
+              sso_token: { type: string }
+    responses:
+      "302": { description: Redirect to clean app URL. }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
   get:
     tags: [auth]
+    deprecated: true
     security: []
     parameters:
       - name: state
@@ -547,6 +603,31 @@
       "200":
         {
           description: Audit event list,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      $ref: "../openapi.yaml#/components/schemas/AuditEventList",
+                    },
+                },
+            },
+        }
+      default: { $ref: "../openapi.yaml#/components/responses/Error" }
+/admin/audit:
+  get:
+    tags: [audit]
+    summary: List global audit events for configured administrators.
+    parameters:
+      [
+        { $ref: "../openapi.yaml#/components/parameters/Page" },
+        { $ref: "../openapi.yaml#/components/parameters/PageSize" },
+      ]
+    responses:
+      "200":
+        {
+          description: Global audit event list,
           content:
             {
               application/json:

@@ -53,6 +53,72 @@ func TestSQLStorePersistsBookAcrossStoreInstances(t *testing.T) {
 	require.Equal(t, book.ID, members[0].BookID)
 }
 
+// TestSQLStorePersistsMemberAndAccountUpdates verifies direct mutable records survive store reopening.
+func TestSQLStorePersistsMemberAndAccountUpdates(t *testing.T) {
+	db, _, err := persistence.OpenSQL("sqlite", "", t.TempDir())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, db.Close()) })
+
+	now := time.Now().UTC()
+	store, err := NewSQLiteStore(db, SeedData{
+		Books: []Book{{
+			ID:                "book_sql_mutable",
+			OwnerUserID:       "owner",
+			Name:              "Mutable",
+			ReportingCurrency: "USD",
+			CreatedAt:         now,
+			UpdatedAt:         now,
+		}},
+		Members: []BookMember{
+			{BookID: "book_sql_mutable", UserID: "owner", Role: RoleOwner, CreatedAt: now, UpdatedAt: now},
+			{BookID: "book_sql_mutable", UserID: "member", Role: RoleMember, CreatedAt: now, UpdatedAt: now},
+		},
+		Accounts: []Account{{
+			ID:            "account_sql_mutable",
+			UserID:        "member",
+			Name:          "Shared",
+			Type:          AccountTypeCash,
+			Currency:      "USD",
+			SharedBookIDs: []string{"book_sql_mutable"},
+			CreatedAt:     now,
+			UpdatedAt:     now,
+		}},
+	})
+	require.NoError(t, err)
+
+	updatedMember, err := store.UpdateBookMember(context.Background(), BookMember{
+		BookID:    "book_sql_mutable",
+		UserID:    "member",
+		Role:      RoleAdministrator,
+		CreatedAt: now,
+		UpdatedAt: now.Add(time.Minute),
+	})
+	require.NoError(t, err)
+	require.Equal(t, RoleAdministrator, updatedMember.Role)
+	require.NoError(t, store.DeleteBookMember(context.Background(), "book_sql_mutable", "member"))
+
+	updatedAccount, err := store.UpdateAccount(context.Background(), Account{
+		ID:        "account_sql_mutable",
+		UserID:    "member",
+		Name:      "Shared",
+		Type:      AccountTypeCash,
+		Currency:  "USD",
+		CreatedAt: now,
+		UpdatedAt: now.Add(time.Minute),
+	})
+	require.NoError(t, err)
+	require.Empty(t, updatedAccount.SharedBookIDs)
+
+	reopened, err := NewSQLiteStore(db, SeedData{})
+	require.NoError(t, err)
+	_, err = reopened.Member(context.Background(), "book_sql_mutable", "member")
+	require.Error(t, err)
+	accounts, err := reopened.Accounts(context.Background())
+	require.NoError(t, err)
+	require.Len(t, accounts, 1)
+	require.Empty(t, accounts[0].SharedBookIDs)
+}
+
 // TestSQLStorePersistsEntryDelete verifies deletes are committed to SQL immediately.
 func TestSQLStorePersistsEntryDelete(t *testing.T) {
 	db, _, err := persistence.OpenSQL("sqlite", "", t.TempDir())

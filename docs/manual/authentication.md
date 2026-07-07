@@ -62,7 +62,7 @@ SMTP delivery is required when email verification, password recovery, or product
 | `ACCOUNTING_AUTH_EMAIL_SMTP_USERNAME` | empty | SMTP username. |
 | `ACCOUNTING_AUTH_EMAIL_SMTP_PASSWORD` | empty | SMTP password. |
 | `ACCOUNTING_AUTH_EMAIL_SMTP_FROM` | empty | Sender address. |
-| `ACCOUNTING_AUTH_EMAIL_FORCE_SMTP_TLS_VERIFY` | `true` | Verifies SMTP TLS certificates. |
+| `ACCOUNTING_AUTH_EMAIL_FORCE_SMTP_TLS_VERIFY` | `true` | Verifies SMTP STARTTLS certificates. |
 
 Development without SMTP:
 
@@ -87,19 +87,29 @@ ACCOUNTING_AUTH_SESSION_COOKIE_SECURE=true
 
 ## Password Recovery
 
-Password recovery uses the email verification-code infrastructure. Keep SMTP configured and `ACCOUNTING_AUTH_EMAIL_VERIFICATION_TTL` short enough to limit replay risk.
+Password recovery uses the email verification-code infrastructure. Keep SMTP configured and `ACCOUNTING_AUTH_EMAIL_VERIFICATION_TTL` short enough to limit replay risk. SMTP delivery requires STARTTLS; certificate verification is controlled by `ACCOUNTING_AUTH_EMAIL_FORCE_SMTP_TLS_VERIFY`.
 
 Public recovery endpoints return generic responses and must not reveal whether an email exists.
 
+## Login Abuse Controls
+
+Public auth routes use a fixed-window rate limiter with separate route/IP and route/subject buckets. The subject bucket stores only a normalized hash, so one source IP cannot try many subjects beyond the limit, and one subject cannot be tried across many IPs beyond the same limit.
+
+Email/password login also keeps account-oriented throttle state per normalized email. The first five consecutive password failures are not locked. The sixth consecutive failure stores a one-minute lock, and later consecutive failures double the lock duration to two minutes, four minutes, and onward up to a one-hour cap. While the lock is active, the backend rejects login with `429 Too Many Requests`, includes a `Retry-After` header, and records `auth.login_locked`. Successful password authentication, password reset confirmation, or passkey login clears the password-login throttle state.
+
+This follows OWASP Authentication Cheat Sheet and ASVS guidance to combine throttling with account lockout while using generic responses and short progressive delays to reduce brute-force risk without turning lockout into a long-lived denial-of-service control.
+
 ## TOTP
 
-TOTP is optional and enabled globally by default. Users enroll TOTP after they are signed in. Password login for a TOTP-enabled user returns a pending challenge until the user submits a valid authenticator code.
+TOTP is optional and enabled globally by default. Users enroll TOTP after they are signed in. Password login for a TOTP-enabled user returns a pending challenge until the user submits a valid authenticator code. Pending and confirmed TOTP secrets are envelope-encrypted at rest when `ACCOUNTING_SECRET_KEY` is configured; durable persistence drivers require that key while TOTP is enabled.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `ACCOUNTING_AUTH_TOTP_ENABLED` | `true` | Enables TOTP setup and password-login challenges. |
 | `ACCOUNTING_AUTH_TOTP_ISSUER` | `Accounting` | Issuer name shown by authenticator apps. |
 | `ACCOUNTING_AUTH_TOTP_REPLAY_CACHE_DURATION` | `30s` | Short replay cache window for recently used codes. |
+| `ACCOUNTING_SECRET_KEY` | empty | Active TOTP secret. Any passphrase of at least 16 characters; it is hashed into an AES-256 key, so no base64 encoding is required. |
+| `ACCOUNTING_SECRET_KEY_RETIRED` | empty | Optional comma-separated retired TOTP secrets (same passphrase form) for decrypt-only rotation. |
 
 Disable TOTP globally:
 
@@ -172,7 +182,7 @@ The frontend should not build `sso.laisky.com` URLs itself. The backend creates 
 2. The browser requests `GET /api/auth/sso/start`.
 3. Accounting redirects to `ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL` with `redirect_to` set to `ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL` plus a generated `state`.
 4. The SSO provider authenticates the user.
-5. The SSO provider redirects to Accounting's callback with `sso_token=<JWT>` and the original `state`.
+5. The SSO provider posts to Accounting's callback with form fields `sso_token=<JWT>` and the original `state`.
 6. Accounting validates the `state`, verifies the JWT locally, creates its own session cookie, and redirects to `ACCOUNTING_AUTH_EXTERNAL_SSO_SUCCESS_REDIRECT_URL`.
 
 ### `sso.laisky.com` Token Contract
@@ -188,7 +198,7 @@ Current `sso.laisky.com` tokens are EdDSA JWTs signed with an Ed25519 key. Accou
 - `sub` and `uid` are present and equal.
 - `username` is present.
 
-Accounting maps `username` to the local user email. When auto-provisioning is enabled, the local user id is the UUIDv7 carried in `sub` and `uid`.
+Accounting maps `username` to the local user email and binds the first verified SSO subject to that user record. Future logins for that email must use the same subject. When auto-provisioning is enabled, the local user id is the UUIDv7 carried in `sub` and `uid`.
 
 ### SSO Configuration
 
@@ -199,7 +209,7 @@ Accounting maps `username` to the local user email. When auto-provisioning is en
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL` | empty | Backend callback URL. Required for non-loopback hosts. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM` | empty | Static Ed25519 public key PEM for local JWT verification. Preferred for production. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_METADATA_URL` | empty | Optional runtime metadata URL for public-key discovery. Use only when static key configuration is not practical. |
-| `ACCOUNTING_AUTH_EXTERNAL_SSO_AUTO_PROVISION_ENABLED` | `true` | Creates a local active user when the SSO identity is trusted and no local user exists. |
+| `ACCOUNTING_AUTH_EXTERNAL_SSO_AUTO_PROVISION_ENABLED` | `false` | Creates a local active user when the SSO identity is trusted and no local user exists. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_STATE_COOKIE_NAME` | `accounting_sso_state` | HTTP-only anti-CSRF state cookie name. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_STATE_TTL` | `5m` | State lifetime. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_SUCCESS_REDIRECT_URL` | `/` | Clean URL after successful SSO login. |
@@ -296,7 +306,7 @@ Before release:
 - Confirm `GET /api/runtime-config` shows the intended login methods.
 - Confirm public runtime config does not expose SMTP passwords, session tokens, SSO tokens, or the SSO public key.
 - Confirm `/api/auth/sso/start` redirects to `sso.laisky.com` with a `redirect_to` callback under the Accounting domain.
-- Confirm the SSO callback creates an `ACCOUNTING_AUTH_SESSION_COOKIE_NAME` cookie and redirects to a clean URL without `sso_token`.
+- Confirm the SSO callback accepts a form-posted `sso_token`, creates an `ACCOUNTING_AUTH_SESSION_COOKIE_NAME` cookie, and redirects to a clean URL without `sso_token`. Use the deprecated GET callback only for providers that cannot form-post.
 - Confirm `ACCOUNTING_AUTH_SESSION_COOKIE_SECURE=true` in HTTPS deployments.
 - Confirm SMTP delivery works before enabling verified registration or password recovery.
 - Run `make lint`, `make test`, and `make e2e` after auth configuration or auth flow changes.

@@ -18,9 +18,9 @@ func TestSQLStoreEventsByActorPersists(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, db.Close()) })
 
 	store := NewSQLStore(persistence.NewRecordStore(db, persistence.DialectSQLite))
-	first := Event{ID: "event_1", ActorID: "user_1", Action: ActionAuthLogin, CreatedAt: time.Now().UTC()}
-	second := Event{ID: "event_2", ActorID: "user_1", Action: ActionAuthLogout, CreatedAt: first.CreatedAt.Add(time.Second)}
-	other := Event{ID: "event_3", ActorID: "user_2", Action: ActionAuthLogin, CreatedAt: second.CreatedAt.Add(time.Second)}
+	first := Event{ID: "event_1", Seq: 1, ActorID: "user_1", Action: ActionAuthLogin, CreatedAt: time.Now().UTC()}
+	second := Event{ID: "event_2", Seq: 2, ActorID: "user_1", Action: ActionAuthLogout, CreatedAt: first.CreatedAt.Add(time.Second)}
+	other := Event{ID: "event_3", Seq: 3, ActorID: "user_2", Action: ActionAuthLogin, CreatedAt: second.CreatedAt.Add(time.Second)}
 	_, err = store.SaveEvent(context.Background(), first)
 	require.NoError(t, err)
 	_, err = store.SaveEvent(context.Background(), second)
@@ -32,4 +32,10 @@ func TestSQLStoreEventsByActorPersists(t *testing.T) {
 	events, err := reopened.EventsByActor(context.Background(), "user_1")
 	require.NoError(t, err)
 	require.Equal(t, []string{"event_2", "event_1"}, []string{events[0].ID, events[1].ID})
+	all, err := reopened.AllEvents(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, []string{"event_3", "event_2", "event_1"}, []string{all[0].ID, all[1].ID, all[2].ID})
+	tail, err := reopened.Tail(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "event_3", tail.ID)
 }

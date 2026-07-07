@@ -104,6 +104,33 @@ func (s *SnapshotStore) CreateBookMember(ctx context.Context, member BookMember)
 	return created, nil
 }
 
+// UpdateBookMember receives a membership, updates it, and persists the snapshot.
+func (s *SnapshotStore) UpdateBookMember(ctx context.Context, member BookMember) (BookMember, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	updated, err := s.memory.UpdateBookMember(ctx, member)
+	if err != nil {
+		return BookMember{}, err
+	}
+	if err := s.persist(); err != nil {
+		return BookMember{}, err
+	}
+
+	return updated, nil
+}
+
+// DeleteBookMember receives membership identity, deletes it, and persists the snapshot.
+func (s *SnapshotStore) DeleteBookMember(ctx context.Context, bookID string, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.memory.DeleteBookMember(ctx, bookID, userID); err != nil {
+		return err
+	}
+	return s.persist()
+}
+
 // Member receives a book id and user id and returns the explicit membership relationship.
 func (s *SnapshotStore) Member(ctx context.Context, bookID string, userID string) (BookMember, error) {
 	return s.memory.Member(ctx, bookID, userID)
@@ -255,6 +282,22 @@ func (s *SnapshotStore) CreateAccount(ctx context.Context, account Account) (Acc
 	}
 
 	return created, nil
+}
+
+// UpdateAccount receives an account, updates it, and persists the snapshot.
+func (s *SnapshotStore) UpdateAccount(ctx context.Context, account Account) (Account, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	updated, err := s.memory.UpdateAccount(ctx, account)
+	if err != nil {
+		return Account{}, err
+	}
+	if err := s.persist(); err != nil {
+		return Account{}, err
+	}
+
+	return updated, nil
 }
 
 // ExchangeRates returns every exchange rate known to the store.

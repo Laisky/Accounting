@@ -68,7 +68,9 @@ func (f ECBExchangeRateFetcher) FetchExchangeRates(ctx context.Context) ([]Excha
 	if err != nil {
 		return nil, errors.Wrap(err, "fetch ecb exchange rates")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errors.Wrapf(ErrInvalidInput, "ecb exchange rate status %d", resp.StatusCode)
 	}

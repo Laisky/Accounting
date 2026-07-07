@@ -3,7 +3,6 @@ package ledger
 import (
 	"context"
 	"math/big"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -19,8 +18,6 @@ const (
 	maxTagLength         = 64
 	maxTagsPerEntry      = 20
 )
-
-var currencyCodePattern = regexp.MustCompile(`^[A-Z]{3}$`)
 
 // ListEntries receives an actor and pagination request, enforces membership, and returns book entries.
 func (s *Service) ListEntries(ctx context.Context, request ListEntriesRequest) (EntryList, error) {
@@ -254,7 +251,7 @@ func (s *Service) UpdateEntry(ctx context.Context, request UpdateEntryRequest) (
 func (s *Service) entryCategory(ctx context.Context, bookID string, categoryID string) (*Category, error) {
 	categoryID = strings.TrimSpace(categoryID)
 	if categoryID == "" {
-		return nil, nil
+		return nil, nil //nolint:nilnil // Category is optional on entries.
 	}
 
 	categories, err := s.store.Categories(ctx, bookID)
@@ -454,17 +451,6 @@ func validateCreateEntryRequest(request CreateEntryRequest, account Account, boo
 	}
 
 	return nil
-}
-
-// entryRequiresExchangeRate receives entry currencies and reports whether exchange metadata is required.
-func entryRequiresExchangeRate(transactionCurrency string, accountCurrency string, bookReportingCurrency string) bool {
-	transactionCurrency = strings.ToUpper(strings.TrimSpace(transactionCurrency))
-	accountCurrency = strings.ToUpper(strings.TrimSpace(accountCurrency))
-	bookReportingCurrency = strings.ToUpper(strings.TrimSpace(bookReportingCurrency))
-
-	return transactionCurrency != accountCurrency ||
-		transactionCurrency != bookReportingCurrency ||
-		accountCurrency != bookReportingCurrency
 }
 
 // validateEntryCategory receives an entry type and optional category and returns category policy errors.

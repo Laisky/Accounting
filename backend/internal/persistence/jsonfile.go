@@ -13,14 +13,16 @@ const fileMode = 0o600
 
 // LoadJSON receives a path and destination pointer and decodes JSON when the file exists.
 func LoadJSON(path string, dst any) error {
-	file, err := os.Open(path)
+	file, err := os.Open(path) //nolint:gosec // The JSON store path is trusted runtime configuration.
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return errors.Wrap(err, "open json store")
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(dst); err != nil {

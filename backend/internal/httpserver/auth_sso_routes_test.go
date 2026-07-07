@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,7 +62,11 @@ func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 	state := callbackURL.Query().Get("state")
 	require.NotEmpty(t, state)
 
-	callbackReq := httptest.NewRequest(http.MethodGet, "/api/auth/sso/callback?state="+url.QueryEscape(state)+"&sso_token=opaque-token", nil)
+	form := url.Values{}
+	form.Set("state", state)
+	form.Set("sso_token", "opaque-token")
+	callbackReq := httptest.NewRequest(http.MethodPost, "/api/auth/sso/callback", strings.NewReader(form.Encode()))
+	callbackReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	callbackReq.AddCookie(stateCookie)
 	callbackRec := httptest.NewRecorder()
 	router.ServeHTTP(callbackRec, callbackReq)
@@ -98,14 +103,20 @@ func TestRegisterRoutesExternalSSOCallbackRejectsBadState(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/api/auth/sso/callback?state=bad&sso_token=opaque-token", nil)
 	req.AddCookie(&http.Cookie{
-		Name:  cfg.Auth.External.StateCookieName,
-		Value: auth.HashSessionToken("good"),
+		Name:     cfg.Auth.External.StateCookieName,
+		Value:    auth.HashSessionToken("good"),
+		Path:     "/api/auth/sso",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	})
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	require.NotContains(t, rec.Body.String(), "opaque-token")
+	require.NotContains(t, req.URL.RawQuery, "opaque-token")
+	require.Contains(t, req.URL.Query().Get("sso_token"), "redacted")
 }
 
 type routeExternalSSOValidator struct {

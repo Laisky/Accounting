@@ -46,6 +46,67 @@ func TestRegisterRoutesAuditListReturnsUserEvents(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
+// TestRegisterRoutesAdminAuditListReturnsGlobalEvents verifies configured admins can inspect global audit events.
+func TestRegisterRoutesAdminAuditListReturnsGlobalEvents(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	log := logger.Setup(false)
+	router.Use(requestLoggerForTest(log))
+	cfg := testConfig()
+	cfg.Admin.Emails = []string{"PERSON@example.test"}
+	authService := testAuthService(cfg)
+	auditService := auditpkg.NewService(auditpkg.NewMemoryStore())
+	RegisterRoutes(router, cfg, ledger.NewService(), authService, auditService)
+
+	sessionCookie := registerAndLogin(t, router, cfg)
+	failedLoginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"victim@example.test","password":"wrong password"}`))
+	failedLoginReq.Header.Set("Content-Type", "application/json")
+	failedLoginRec := httptest.NewRecorder()
+	router.ServeHTTP(failedLoginRec, failedLoginReq)
+	require.Equal(t, http.StatusUnauthorized, failedLoginRec.Code)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/audit?page=1&page_size=50", nil)
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.NotContains(t, rec.Body.String(), "victim@example.test")
+	require.Contains(t, rec.Body.String(), auditpkg.SubjectHash("victim@example.test"))
+
+	var result auditpkg.ListResult
+	err := json.Unmarshal(rec.Body.Bytes(), &result)
+	require.NoError(t, err)
+	require.NoError(t, auditpkg.VerifyChain(result.Items))
+	requireAuditActions(t, result, auditpkg.ActionAuthRegister, auditpkg.ActionAuthLogin, auditpkg.ActionAuthLoginFailed)
+	for _, event := range result.Items {
+		require.NotZero(t, event.Seq)
+		require.NotEmpty(t, event.Hash)
+		if event.Action == auditpkg.ActionAuthLoginFailed {
+			require.Equal(t, auditpkg.SubjectHash("victim@example.test"), event.Metadata["subjectHash"])
+		}
+	}
+}
+
+// TestRegisterRoutesAdminAuditRejectsNonAdmin verifies authenticated users outside the allowlist receive 403.
+func TestRegisterRoutesAdminAuditRejectsNonAdmin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	log := logger.Setup(false)
+	router.Use(requestLoggerForTest(log))
+	cfg := testConfig()
+	cfg.Admin.Emails = []string{"admin@example.test"}
+	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg), auditpkg.NewService(auditpkg.NewMemoryStore()))
+
+	sessionCookie := registerAndLogin(t, router, cfg)
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/audit?page=1&page_size=10", nil)
+	req.AddCookie(sessionCookie)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusForbidden, rec.Code)
+}
+
 // TestRegisterRoutesAuditListIncludesRecoveryRequests verifies code requests emit non-secret audit events.
 func TestRegisterRoutesAuditListIncludesRecoveryRequests(t *testing.T) {
 	t.Run("email verification request", func(t *testing.T) {
@@ -156,6 +217,26 @@ func TestRegisterRoutesAuditListIncludesLedgerAndImportMutations(t *testing.T) {
 	router.ServeHTTP(updateBookRec, updateBookReq)
 	require.Equal(t, http.StatusOK, updateBookRec.Code)
 
+	memberReq := httptest.NewRequest(http.MethodPost, "/api/books/"+book.ID+"/members", bytes.NewBufferString(`{"userId":"audit-member","role":"member","displayName":"Audit member"}`))
+	memberReq.Header.Set("Content-Type", "application/json")
+	memberReq.AddCookie(sessionCookie)
+	memberRec := httptest.NewRecorder()
+	router.ServeHTTP(memberRec, memberReq)
+	require.Equal(t, http.StatusCreated, memberRec.Code)
+
+	updateMemberReq := httptest.NewRequest(http.MethodPatch, "/api/books/"+book.ID+"/members/audit-member", bytes.NewBufferString(`{"role":"viewer"}`))
+	updateMemberReq.Header.Set("Content-Type", "application/json")
+	updateMemberReq.AddCookie(sessionCookie)
+	updateMemberRec := httptest.NewRecorder()
+	router.ServeHTTP(updateMemberRec, updateMemberReq)
+	require.Equal(t, http.StatusOK, updateMemberRec.Code)
+
+	deleteMemberReq := httptest.NewRequest(http.MethodDelete, "/api/books/"+book.ID+"/members/audit-member", nil)
+	deleteMemberReq.AddCookie(sessionCookie)
+	deleteMemberRec := httptest.NewRecorder()
+	router.ServeHTTP(deleteMemberRec, deleteMemberReq)
+	require.Equal(t, http.StatusNoContent, deleteMemberRec.Code)
+
 	groupReq := httptest.NewRequest(http.MethodPost, "/api/accounts/groups", bytes.NewBufferString(`{"name":"Wallets","sortOrder":1}`))
 	groupReq.Header.Set("Content-Type", "application/json")
 	groupReq.AddCookie(sessionCookie)
@@ -231,6 +312,12 @@ func TestRegisterRoutesAuditListIncludesLedgerAndImportMutations(t *testing.T) {
 	router.ServeHTTP(deleteEntryRec, deleteEntryReq)
 	require.Equal(t, http.StatusOK, deleteEntryRec.Code)
 
+	unshareReq := httptest.NewRequest(http.MethodDelete, "/api/accounts/"+account.ID+"/shares/"+book.ID, nil)
+	unshareReq.AddCookie(sessionCookie)
+	unshareRec := httptest.NewRecorder()
+	router.ServeHTTP(unshareRec, unshareReq)
+	require.Equal(t, http.StatusOK, unshareRec.Code)
+
 	body, contentType := multipartImportBody(t, "wacai.csv", "date,type,amount,currency,account,category,book,tags\n2026-07-01,expense,12.30,cny,Cash,Dining,Household,food|work\n")
 	importReq := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
 	importReq.Header.Set("Content-Type", contentType)
@@ -251,9 +338,13 @@ func TestRegisterRoutesAuditListIncludesLedgerAndImportMutations(t *testing.T) {
 	requireAuditActions(t, result,
 		auditpkg.ActionBookCreated,
 		auditpkg.ActionBookUpdated,
+		auditpkg.ActionBookMemberAdded,
+		auditpkg.ActionBookMemberRoleUpdated,
+		auditpkg.ActionBookMemberRemoved,
 		auditpkg.ActionAccountGroupCreated,
 		auditpkg.ActionAccountGroupUpdated,
 		auditpkg.ActionAccountCreated,
+		auditpkg.ActionAccountUnshared,
 		auditpkg.ActionCategoryCreated,
 		auditpkg.ActionCategoryUpdated,
 		auditpkg.ActionEntryCreated,

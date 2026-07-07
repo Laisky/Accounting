@@ -60,12 +60,43 @@ func (s *SQLStore) EventsByActor(ctx context.Context, actorID string) ([]Event, 
 	if err := s.records.List(ctx, auditEventsNS, nil, &actorID, &events); err != nil {
 		return nil, errors.Wrap(err, "list audit events")
 	}
+	return newestFirst(events), nil
+}
+
+// AllEvents returns all audit events newest first.
+func (s *SQLStore) AllEvents(ctx context.Context) ([]Event, error) {
+	var events []Event
+	if err := s.records.List(ctx, auditEventsNS, nil, nil, &events); err != nil {
+		return nil, errors.Wrap(err, "list all audit events")
+	}
+	return newestFirst(events), nil
+}
+
+// Tail returns the highest-sequence audit event.
+func (s *SQLStore) Tail(ctx context.Context) (Event, error) {
+	events, err := s.AllEvents(ctx)
+	if err != nil {
+		return Event{}, err
+	}
+	if len(events) == 0 {
+		return Event{}, errors.WithStack(ErrNotFound)
+	}
+	return cloneEvent(events[0]), nil
+}
+
+func newestFirst(events []Event) []Event {
 	slices.SortFunc(events, func(left Event, right Event) int {
+		if left.Seq > right.Seq {
+			return -1
+		}
+		if left.Seq < right.Seq {
+			return 1
+		}
 		return right.CreatedAt.Compare(left.CreatedAt)
 	})
 	cloned := make([]Event, 0, len(events))
 	for _, event := range events {
 		cloned = append(cloned, cloneEvent(event))
 	}
-	return cloned, nil
+	return cloned
 }

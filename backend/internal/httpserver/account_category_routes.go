@@ -223,6 +223,40 @@ func registerAccountCategoryRoutes(api *gin.RouterGroup, ledgerService *ledger.S
 		c.JSON(http.StatusCreated, account)
 	})
 
+	api.DELETE("/accounts/:accountID/shares/:bookID", RequireSession(), func(c *gin.Context) {
+		log := gmw.GetLogger(c)
+
+		actor, ok := auth.ActorFromContext(c.Request.Context())
+		if !ok {
+			log.Debug("actor context missing")
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
+			return
+		}
+
+		account, err := ledgerService.UnshareAccount(c.Request.Context(), ledger.UnshareAccountRequest{
+			Actor:     ledger.Actor{UserID: actor.UserID},
+			AccountID: c.Param("accountID"),
+			BookID:    c.Param("bookID"),
+		})
+		if err != nil {
+			respondLedgerError(c, log, err)
+			return
+		}
+
+		log.Debug("account unshared", zap.String("user_id", actor.UserID), zap.String("account_id", account.ID), zap.String("book_id", c.Param("bookID")))
+		recordAuditEvent(c, auditService, audit.RecordRequest{
+			ActorID:    actor.UserID,
+			ActorEmail: actor.Email,
+			Action:     audit.ActionAccountUnshared,
+			TargetType: "account",
+			TargetID:   account.ID,
+			Metadata: map[string]string{
+				"book_id": c.Param("bookID"),
+			},
+		})
+		c.JSON(http.StatusOK, account)
+	})
+
 	api.GET("/books/:bookID/categories", RequireSession(), func(c *gin.Context) {
 		log := gmw.GetLogger(c)
 

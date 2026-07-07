@@ -19,6 +19,8 @@ type Store interface {
 	StoreSession(ctx context.Context, tokenHash string, session Session) error
 	SessionByTokenHash(ctx context.Context, tokenHash string) (Session, error)
 	DeleteSession(ctx context.Context, tokenHash string) error
+	DeleteSessionsByUser(ctx context.Context, userID string) error
+	MigrateTOTPSecrets(ctx context.Context, encrypt func(userID string, secret string) (string, error)) error
 	StoreEmailCode(ctx context.Context, code EmailCodeRecord) error
 	EmailCode(ctx context.Context, email string, purpose EmailCodePurpose) (EmailCodeRecord, error)
 	DeleteEmailCode(ctx context.Context, email string, purpose EmailCodePurpose) error
@@ -30,9 +32,9 @@ type Store interface {
 	IncrementFailedTOTP(ctx context.Context, userID string) (int, error)
 	ResetFailedTOTP(ctx context.Context, userID string) error
 	FailedTOTPCount(ctx context.Context, userID string) (int, error)
-	IncrementFailedLogin(ctx context.Context, email string) (int, error)
-	ResetFailedLogin(ctx context.Context, email string) error
-	FailedLoginCount(ctx context.Context, email string) (int, error)
+	LoginThrottle(ctx context.Context, email string) (LoginThrottle, error)
+	StoreLoginThrottle(ctx context.Context, throttle LoginThrottle) error
+	ResetLoginThrottle(ctx context.Context, email string) error
 	CreatePasskey(ctx context.Context, passkey PasskeyCredential) (PasskeyCredential, error)
 	UpdatePasskey(ctx context.Context, passkey PasskeyCredential) (PasskeyCredential, error)
 	DeletePasskey(ctx context.Context, userID string, passkeyID string) error
@@ -54,7 +56,7 @@ type MemoryStore struct {
 	pendingTOTP              map[string]PendingTOTPSetup
 	totpReplays              map[totpReplayKey]time.Time
 	failedTOTPs              map[string]int
-	failedLogins             map[string]int
+	loginThrottles           map[string]LoginThrottle
 	passkeysByID             map[string]PasskeyCredential
 	passkeyIDsByCredentialID map[string]string
 	passkeyCeremonies        map[string]PasskeyCeremony
@@ -80,7 +82,7 @@ func NewMemoryStore() *MemoryStore {
 		pendingTOTP:              map[string]PendingTOTPSetup{},
 		totpReplays:              map[totpReplayKey]time.Time{},
 		failedTOTPs:              map[string]int{},
-		failedLogins:             map[string]int{},
+		loginThrottles:           map[string]LoginThrottle{},
 		passkeysByID:             map[string]PasskeyCredential{},
 		passkeyIDsByCredentialID: map[string]string{},
 		passkeyCeremonies:        map[string]PasskeyCeremony{},
@@ -175,6 +177,50 @@ func (s *MemoryStore) DeleteSession(_ context.Context, tokenHash string) error {
 	defer s.mu.Unlock()
 
 	delete(s.sessions, tokenHash)
+	return nil
+}
+
+// DeleteSessionsByUser receives a user id and removes all sessions owned by that user.
+func (s *MemoryStore) DeleteSessionsByUser(_ context.Context, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for tokenHash, session := range s.sessions {
+		if session.UserID == userID {
+			delete(s.sessions, tokenHash)
+		}
+	}
+	return nil
+}
+
+// MigrateTOTPSecrets receives a secret transform and rewrites stored TOTP secrets in place.
+func (s *MemoryStore) MigrateTOTPSecrets(_ context.Context, encrypt func(userID string, secret string) (string, error)) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for userID, user := range s.usersByID {
+		if strings.TrimSpace(user.TOTPSecret) == "" {
+			continue
+		}
+		secret, err := encrypt(user.ID, user.TOTPSecret)
+		if err != nil {
+			return err
+		}
+		user.TOTPSecret = secret
+		s.usersByID[userID] = user
+	}
+	for sessionID, setup := range s.pendingTOTP {
+		if strings.TrimSpace(setup.Secret) == "" {
+			continue
+		}
+		secret, err := encrypt(setup.UserID, setup.Secret)
+		if err != nil {
+			return err
+		}
+		setup.Secret = secret
+		s.pendingTOTP[sessionID] = setup
+	}
+
 	return nil
 }
 
@@ -293,30 +339,35 @@ func (s *MemoryStore) FailedTOTPCount(_ context.Context, userID string) (int, er
 	return s.failedTOTPs[userID], nil
 }
 
-// IncrementFailedLogin receives a normalized email and increments its failed login counter.
-func (s *MemoryStore) IncrementFailedLogin(_ context.Context, email string) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.failedLogins[email]++
-	return s.failedLogins[email], nil
-}
-
-// ResetFailedLogin receives a normalized email and clears its failed login counter.
-func (s *MemoryStore) ResetFailedLogin(_ context.Context, email string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	delete(s.failedLogins, email)
-	return nil
-}
-
-// FailedLoginCount receives a normalized email and returns its current failed login counter.
-func (s *MemoryStore) FailedLoginCount(_ context.Context, email string) (int, error) {
+// LoginThrottle receives a normalized email and returns its password-login throttle state.
+func (s *MemoryStore) LoginThrottle(_ context.Context, email string) (LoginThrottle, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.failedLogins[email], nil
+	return s.loginThrottles[email], nil
+}
+
+// StoreLoginThrottle receives password-login throttle state and stores it by normalized email.
+func (s *MemoryStore) StoreLoginThrottle(_ context.Context, throttle LoginThrottle) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if strings.TrimSpace(throttle.Email) == "" {
+		return errors.WithStack(errors.New("login throttle email is required"))
+	}
+	throttle.LockedUntil = throttle.LockedUntil.UTC()
+	throttle.UpdatedAt = throttle.UpdatedAt.UTC()
+	s.loginThrottles[throttle.Email] = throttle
+	return nil
+}
+
+// ResetLoginThrottle receives a normalized email and clears its password-login throttle state.
+func (s *MemoryStore) ResetLoginThrottle(_ context.Context, email string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.loginThrottles, email)
+	return nil
 }
 
 // CreatePasskey receives a passkey credential and stores it when its ids are unique.

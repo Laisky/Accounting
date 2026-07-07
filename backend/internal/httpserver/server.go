@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/audit"
 	"github.com/Laisky/Accounting/backend/internal/auth"
 	"github.com/Laisky/Accounting/backend/internal/config"
+	"github.com/Laisky/Accounting/backend/internal/crypto/keyring"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
 	"github.com/Laisky/Accounting/backend/internal/persistence"
 )
@@ -55,7 +57,7 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 			gmw.WithLogger(log.Named("gin")),
 			gmw.WithLevel(log.Level().String()),
 		),
-		securityHeaders,
+		securityHeaders(cfg),
 	)
 	router.Use(middlewares...)
 
@@ -68,9 +70,6 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 		return nil, err
 	}
 	ledgerService := ledger.NewServiceWithStore(ledgerStore)
-	if gin.Mode() != gin.TestMode {
-		ledgerService.StartDailyExchangeRateUpdater(context.Background(), ledger.NewECBExchangeRateFetcher())
-	}
 	auditStore, err := newAuditStore(cfg, db, dialect)
 	if err != nil {
 		return nil, err
@@ -102,6 +101,13 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	cancelUpdater := func() {}
+	if gin.Mode() != gin.TestMode {
+		updaterCtx, cancel := context.WithCancel(context.Background())
+		cancelUpdater = cancel
+		ledgerService.StartDailyExchangeRateUpdater(updaterCtx, ledger.NewECBExchangeRateFetcher())
+	}
+	server.RegisterOnShutdown(cancelUpdater)
 	if db != nil {
 		server.RegisterOnShutdown(func() {
 			_ = db.Close()
@@ -235,6 +241,14 @@ func newAuthService(cfg config.Config, store auth.Store) (*auth.Service, error) 
 		}
 		verifier = httpVerifier
 	}
+	var totpKeys *keyring.Ring
+	if strings.TrimSpace(cfg.Secret.Key) != "" {
+		ring, err := keyring.New(cfg.Secret.Key, cfg.Secret.RetiredKeys)
+		if err != nil {
+			return nil, errors.Wrap(err, "create totp keyring")
+		}
+		totpKeys = ring
+	}
 
 	service := auth.NewService(auth.Config{
 		AllowedRegistrationDomains: cfg.Auth.Email.AllowedRegistrationDomains,
@@ -254,7 +268,11 @@ func newAuthService(cfg config.Config, store auth.Store) (*auth.Service, error) 
 		PasskeyRPOrigin:            cfg.Auth.Passkey.RPOrigin,
 		TurnstileEnabled:           cfg.Auth.Turnstile.Enabled,
 		TurnstileLoginMode:         cfg.Auth.Turnstile.LoginMode,
+		TOTPKeyring:                totpKeys,
 	}, store, verifier)
+	if err := service.MigrateTOTPSecrets(context.Background()); err != nil {
+		return nil, err
+	}
 	if cfg.Auth.External.Enabled {
 		validator, err := auth.NewJWTExternalSSOValidator(auth.JWTExternalSSOValidatorConfig{
 			Client:       &http.Client{Timeout: 10 * time.Second},
@@ -321,11 +339,50 @@ func isValidRequestID(id string) bool {
 	return true
 }
 
-// securityHeaders adds baseline browser security headers to each response.
-func securityHeaders(c *gin.Context) {
-	c.Header("X-Content-Type-Options", "nosniff")
-	c.Header("X-Frame-Options", "SAMEORIGIN")
-	c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-	c.Header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'")
-	c.Next()
+// securityHeaders receives runtime config and returns middleware that adds baseline browser headers.
+func securityHeaders(cfg config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "SAMEORIGIN")
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'")
+		if requestIsHTTPS(c, cfg) {
+			c.Header("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		}
+		c.Next()
+	}
+}
+
+func requestIsHTTPS(c *gin.Context, cfg config.Config) bool {
+	if c.Request.TLS != nil {
+		return true
+	}
+	return strings.EqualFold(c.Request.Header.Get("X-Forwarded-Proto"), "https") && remoteAddrTrusted(c.Request.RemoteAddr, cfg.TrustedProxies)
+}
+
+func remoteAddrTrusted(remoteAddr string, trustedProxies []string) bool {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+	ip := net.ParseIP(strings.TrimSpace(host))
+	if ip == nil {
+		return false
+	}
+	for _, trusted := range trustedProxies {
+		trusted = strings.TrimSpace(trusted)
+		if trusted == "" {
+			continue
+		}
+		if _, cidr, err := net.ParseCIDR(trusted); err == nil {
+			if cidr.Contains(ip) {
+				return true
+			}
+			continue
+		}
+		if trustedIP := net.ParseIP(trusted); trustedIP != nil && trustedIP.Equal(ip) {
+			return true
+		}
+	}
+	return false
 }

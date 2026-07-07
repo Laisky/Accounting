@@ -114,6 +114,28 @@ func (s *SnapshotStore) DeleteSession(ctx context.Context, tokenHash string) err
 	return s.persist()
 }
 
+// DeleteSessionsByUser receives a user id, deletes all owned sessions, and persists the snapshot.
+func (s *SnapshotStore) DeleteSessionsByUser(ctx context.Context, userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.memory.DeleteSessionsByUser(ctx, userID); err != nil {
+		return err
+	}
+	return s.persist()
+}
+
+// MigrateTOTPSecrets receives a secret transform, rewrites stored TOTP secrets, and persists the snapshot.
+func (s *SnapshotStore) MigrateTOTPSecrets(ctx context.Context, encrypt func(userID string, secret string) (string, error)) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.memory.MigrateTOTPSecrets(ctx, encrypt); err != nil {
+		return err
+	}
+	return s.persist()
+}
+
 // StoreEmailCode receives a one-time email code record, stores it, and persists the snapshot.
 func (s *SnapshotStore) StoreEmailCode(ctx context.Context, code EmailCodeRecord) error {
 	s.mu.Lock()
@@ -228,39 +250,34 @@ func (s *SnapshotStore) FailedTOTPCount(ctx context.Context, userID string) (int
 	return s.memory.FailedTOTPCount(ctx, userID)
 }
 
-// IncrementFailedLogin increments an email failed-login counter and persists the snapshot.
-func (s *SnapshotStore) IncrementFailedLogin(ctx context.Context, email string) (int, error) {
+// LoginThrottle receives an email and returns the password-login throttle state.
+func (s *SnapshotStore) LoginThrottle(ctx context.Context, email string) (LoginThrottle, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	count, err := s.memory.IncrementFailedLogin(ctx, email)
-	if err != nil {
-		return 0, err
-	}
-	if err := s.persist(); err != nil {
-		return 0, err
-	}
-
-	return count, nil
+	return s.memory.LoginThrottle(ctx, email)
 }
 
-// ResetFailedLogin clears an email failed-login counter and persists the snapshot.
-func (s *SnapshotStore) ResetFailedLogin(ctx context.Context, email string) error {
+// StoreLoginThrottle stores password-login throttle state and persists the snapshot.
+func (s *SnapshotStore) StoreLoginThrottle(ctx context.Context, throttle LoginThrottle) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.memory.ResetFailedLogin(ctx, email); err != nil {
+	if err := s.memory.StoreLoginThrottle(ctx, throttle); err != nil {
 		return err
 	}
 	return s.persist()
 }
 
-// FailedLoginCount receives an email and returns the failed login count.
-func (s *SnapshotStore) FailedLoginCount(ctx context.Context, email string) (int, error) {
+// ResetLoginThrottle clears password-login throttle state and persists the snapshot.
+func (s *SnapshotStore) ResetLoginThrottle(ctx context.Context, email string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.memory.FailedLoginCount(ctx, email)
+	if err := s.memory.ResetLoginThrottle(ctx, email); err != nil {
+		return err
+	}
+	return s.persist()
 }
 
 // CreatePasskey receives a passkey credential, stores it, and persists the snapshot.

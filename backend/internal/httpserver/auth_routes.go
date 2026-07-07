@@ -2,7 +2,11 @@ package httpserver
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
+	"github.com/Laisky/errors/v2"
 	gmw "github.com/Laisky/gin-middlewares/v7"
 	"github.com/Laisky/zap"
 	"github.com/gin-gonic/gin"
@@ -67,11 +71,26 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 			RemoteIP:       c.ClientIP(),
 		})
 		if err != nil {
+			var locked *auth.LoginLockedError
+			if errors.As(err, &locked) {
+				retryAfter := retryAfterSeconds(locked.RetryAfter)
+				c.Header("Retry-After", strconv.Itoa(retryAfter))
+				log.Debug("login locked", zap.Error(err))
+				metadata := authFailureMetadata("password", request.Email)
+				metadata["retry_after"] = strconv.Itoa(retryAfter)
+				recordAuditEvent(c, auditService, audit.RecordRequest{
+					Action:     audit.ActionAuthLoginLocked,
+					TargetType: "user",
+					Metadata:   metadata,
+				})
+				respondAPIMessage(c, http.StatusTooManyRequests, "login temporarily locked")
+				return
+			}
 			log.Debug("login rejected", zap.Error(err))
 			recordAuditEvent(c, auditService, audit.RecordRequest{
 				Action:     audit.ActionAuthLoginFailed,
 				TargetType: "user",
-				Metadata:   map[string]string{"method": "password"},
+				Metadata:   authFailureMetadata("password", request.Email),
 			})
 			respondAPIMessage(c, http.StatusUnauthorized, "invalid email or password")
 			return
@@ -130,6 +149,32 @@ func registerAuthRoutes(api *gin.RouterGroup, cfg config.Config, authService *au
 				TargetID:   actor.UserID,
 			})
 		}
+		clearSessionCookie(c, cfg)
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	api.POST("/auth/logout-all", RequireSession(), func(c *gin.Context) {
+		log := gmw.GetLogger(c)
+
+		actor, ok := auth.ActorFromContext(c.Request.Context())
+		if !ok {
+			log.Debug("actor context missing")
+			respondAPIMessage(c, http.StatusUnauthorized, "authentication required")
+			return
+		}
+		if err := authService.LogoutAll(c.Request.Context(), actor.UserID); err != nil {
+			log.Debug("logout all sessions failed", zap.Error(err))
+			respondAPIMessage(c, http.StatusInternalServerError, "logout failed")
+			return
+		}
+
+		recordAuditEvent(c, auditService, audit.RecordRequest{
+			ActorID:    actor.UserID,
+			ActorEmail: actor.Email,
+			Action:     audit.ActionAuthLogoutAll,
+			TargetType: "user",
+			TargetID:   actor.UserID,
+		})
 		clearSessionCookie(c, cfg)
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -457,4 +502,26 @@ func recordAuditEvent(c *gin.Context, auditService *audit.Service, request audit
 		log := gmw.GetLogger(c)
 		log.Debug("audit event record failed", zap.Error(err))
 	}
+}
+
+func authFailureMetadata(method string, subject string) map[string]string {
+	metadata := map[string]string{"method": strings.TrimSpace(method)}
+	if subjectHash := audit.SubjectHash(subject); subjectHash != "" {
+		metadata["subjectHash"] = subjectHash
+	}
+	return metadata
+}
+
+func retryAfterSeconds(duration time.Duration) int {
+	if duration <= 0 {
+		return 1
+	}
+	seconds := int(duration / time.Second)
+	if duration%time.Second != 0 {
+		seconds++
+	}
+	if seconds < 1 {
+		return 1
+	}
+	return seconds
 }

@@ -236,6 +236,21 @@ type AddBookMemberRequest struct {
 	DisplayName string
 }
 
+// UpdateBookMemberRoleRequest contains actor intent for changing a book member's role.
+type UpdateBookMemberRoleRequest struct {
+	Actor  Actor
+	BookID string
+	UserID string
+	Role   Role
+}
+
+// RemoveBookMemberRequest contains actor intent for removing a book member.
+type RemoveBookMemberRequest struct {
+	Actor  Actor
+	BookID string
+	UserID string
+}
+
 // CreateAccountRequest contains actor intent for creating a personal account.
 type CreateAccountRequest struct {
 	Actor          Actor
@@ -245,6 +260,13 @@ type CreateAccountRequest struct {
 	Currency       string
 	SharedBookIDs  []string
 	OpeningBalance int64
+}
+
+// UnshareAccountRequest contains actor intent for removing a book share from an account.
+type UnshareAccountRequest struct {
+	Actor     Actor
+	AccountID string
+	BookID    string
 }
 
 // Entry represents one user-facing bill or transaction inside a book.

@@ -12,6 +12,7 @@ func TestLoadFromEnvObservability(t *testing.T) {
 	t.Setenv("ACCOUNTING_LOG_PUSH_API", "https://alerts.example.test/push")
 	t.Setenv("ACCOUNTING_LOG_PUSH_TOKEN", "secret-token")
 	t.Setenv("ACCOUNTING_LOG_PUSH_TYPE", "telegram")
+	t.Setenv("ACCOUNTING_ADMIN_EMAILS", "owner@example.test, security@example.test")
 	t.Setenv("ACCOUNTING_AUTH_EMAIL_ALLOWED_DOMAINS", "example.com, internal.test")
 	t.Setenv("ACCOUNTING_AUTH_EMAIL_FORCE_SMTP_TLS_VERIFY", "false")
 	t.Setenv("ACCOUNTING_AUTH_EMAIL_LOGIN_ENABLED", "false")
@@ -62,11 +63,13 @@ func TestLoadFromEnvObservability(t *testing.T) {
 	t.Setenv("ACCOUNTING_OTEL_EXPORTER_OTLP_INSECURE", "false")
 	t.Setenv("ACCOUNTING_OTEL_SERVICE_NAME", "accounting-test")
 
-	cfg := LoadFromEnv()
+	cfg, err := LoadFromEnv()
 
+	require.NoError(t, err)
 	require.Equal(t, "https://alerts.example.test/push", cfg.AlertPusher.API)
 	require.Equal(t, "secret-token", cfg.AlertPusher.Token)
 	require.Equal(t, "telegram", cfg.AlertPusher.Type)
+	require.Equal(t, []string{"owner@example.test", "security@example.test"}, cfg.Admin.Emails)
 	require.Equal(t, []string{"example.com", "internal.test"}, cfg.Auth.Email.AllowedRegistrationDomains)
 	require.False(t, cfg.Auth.Email.ForceSMTPVerifyTLS)
 	require.False(t, cfg.Auth.Email.LoginEnabled)
@@ -116,4 +119,182 @@ func TestLoadFromEnvObservability(t *testing.T) {
 	require.Equal(t, "staging", cfg.Telemetry.Environment)
 	require.False(t, cfg.Telemetry.Insecure)
 	require.Equal(t, "accounting-test", cfg.Telemetry.ServiceName)
+}
+
+// TestLoadFromEnvRejectsMalformedTypedValues verifies malformed env vars do not silently fall back.
+func TestLoadFromEnvRejectsMalformedTypedValues(t *testing.T) {
+	t.Setenv("ACCOUNTING_AUTH_RATE_LIMIT_ENABLED", "definitely")
+	t.Setenv("ACCOUNTING_AUTH_RATE_LIMIT_LIMIT", "abc")
+	t.Setenv("ACCOUNTING_AUTH_RATE_LIMIT_WINDOW", "soon")
+
+	_, err := LoadFromEnv()
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ACCOUNTING_AUTH_RATE_LIMIT_ENABLED")
+	require.Contains(t, err.Error(), "ACCOUNTING_AUTH_RATE_LIMIT_LIMIT")
+	require.Contains(t, err.Error(), "ACCOUNTING_AUTH_RATE_LIMIT_WINDOW")
+}
+
+// TestConfigValidateAcceptsValidConfig verifies the default in-memory configuration is valid.
+func TestConfigValidateAcceptsValidConfig(t *testing.T) {
+	cfg, err := LoadFromEnv()
+	require.NoError(t, err)
+
+	require.NoError(t, cfg.Validate())
+}
+
+// TestLoadFromEnvDefaultsExternalSSOAutoProvisionDisabled verifies fresh deployments do not create SSO users implicitly.
+func TestLoadFromEnvDefaultsExternalSSOAutoProvisionDisabled(t *testing.T) {
+	cfg, err := LoadFromEnv()
+
+	require.NoError(t, err)
+	require.False(t, cfg.Auth.External.AutoProvisionEnabled)
+}
+
+// TestConfigValidateRejectsInvalidCrossFieldSettings verifies startup-only config dependencies fail fast.
+func TestConfigValidateRejectsInvalidCrossFieldSettings(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(*Config)
+		wantErr string
+	}{
+		{
+			name: "unsupported driver",
+			mutate: func(cfg *Config) {
+				cfg.Persistence.Driver = "oracle"
+			},
+			wantErr: "ACCOUNTING_PERSISTENCE_DRIVER",
+		},
+		{
+			name: "postgres requires database url",
+			mutate: func(cfg *Config) {
+				cfg.Persistence.Driver = "postgres"
+				cfg.Persistence.DatabaseURL = ""
+				cfg.Auth.TOTP.Enabled = false
+			},
+			wantErr: "ACCOUNTING_DATABASE_URL",
+		},
+		{
+			name: "otel requires endpoint",
+			mutate: func(cfg *Config) {
+				cfg.Telemetry.Enabled = true
+				cfg.Telemetry.Endpoint = ""
+			},
+			wantErr: "ACCOUNTING_OTEL_EXPORTER_OTLP_ENDPOINT",
+		},
+		{
+			name: "turnstile requires secret",
+			mutate: func(cfg *Config) {
+				cfg.Auth.Turnstile.Enabled = true
+				cfg.Auth.Turnstile.SecretKey = ""
+				cfg.Auth.Turnstile.SiteKey = "site"
+			},
+			wantErr: "ACCOUNTING_AUTH_TURNSTILE_SECRET_KEY",
+		},
+		{
+			name: "turnstile requires site key",
+			mutate: func(cfg *Config) {
+				cfg.Auth.Turnstile.Enabled = true
+				cfg.Auth.Turnstile.SecretKey = "secret"
+				cfg.Auth.Turnstile.SiteKey = ""
+			},
+			wantErr: "ACCOUNTING_AUTH_TURNSTILE_SITE_KEY",
+		},
+		{
+			name: "turnstile login mode enum",
+			mutate: func(cfg *Config) {
+				cfg.Auth.Turnstile.LoginMode = "sometimes"
+			},
+			wantErr: "ACCOUNTING_AUTH_TURNSTILE_LOGIN_MODE",
+		},
+		{
+			name: "sso requires trust material",
+			mutate: func(cfg *Config) {
+				cfg.Auth.External.Enabled = true
+				cfg.Auth.External.MetadataURL = ""
+				cfg.Auth.External.PublicKeyPEM = ""
+			},
+			wantErr: "ACCOUNTING_AUTH_EXTERNAL_SSO_METADATA_URL",
+		},
+		{
+			name: "durable totp requires secret key",
+			mutate: func(cfg *Config) {
+				cfg.Persistence.Driver = "sqlite"
+				cfg.Auth.TOTP.Enabled = true
+				cfg.Secret.Key = ""
+			},
+			wantErr: "ACCOUNTING_SECRET_KEY",
+		},
+		{
+			name: "smtp port range",
+			mutate: func(cfg *Config) {
+				cfg.Auth.Email.SMTPPort = 70000
+			},
+			wantErr: "ACCOUNTING_AUTH_EMAIL_SMTP_PORT",
+		},
+		{
+			name: "rate limit positive",
+			mutate: func(cfg *Config) {
+				cfg.Auth.RateLimit.Limit = 0
+			},
+			wantErr: "ACCOUNTING_AUTH_RATE_LIMIT_LIMIT",
+		},
+		{
+			name: "positive durations",
+			mutate: func(cfg *Config) {
+				cfg.Auth.Session.TTL = 0
+			},
+			wantErr: "ACCOUNTING_AUTH_SESSION_TTL",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := validConfigForValidation()
+			tt.mutate(&cfg)
+
+			err := cfg.Validate()
+
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
+// TestConfigValidateAcceptsDurableTOTPSecret verifies the durable-store TOTP key format.
+func TestConfigValidateAcceptsDurableTOTPSecret(t *testing.T) {
+	cfg := validConfigForValidation()
+	cfg.Persistence.Driver = "sqlite"
+	cfg.Secret.Key = validSecretKey("active")
+	cfg.Secret.RetiredKeys = []string{validSecretKey("retired")}
+
+	require.NoError(t, cfg.Validate())
+}
+
+func validConfigForValidation() Config {
+	cfg, err := LoadFromEnv()
+	if err != nil {
+		panic(err)
+	}
+	cfg.Persistence.Driver = "memory"
+	cfg.Persistence.DatabaseURL = ""
+	cfg.Auth.TOTP.Enabled = true
+	cfg.Auth.Turnstile.Enabled = false
+	cfg.Auth.Turnstile.LoginMode = "always"
+	cfg.Auth.External.Enabled = false
+	cfg.Auth.Email.SMTPPort = 587
+	cfg.Auth.RateLimit.Limit = 20
+	cfg.Auth.Email.VerificationTTL = 10 * time.Minute
+	cfg.Auth.External.StateTTL = 5 * time.Minute
+	cfg.Auth.RateLimit.Window = time.Minute
+	cfg.Auth.Session.TTL = 24 * time.Hour
+	cfg.Auth.TOTP.ReplayCacheDuration = 30 * time.Second
+	cfg.Shutdown.Timeout = 10 * time.Second
+	cfg.Telemetry.Enabled = false
+	cfg.Telemetry.Endpoint = ""
+	return cfg
+}
+
+func validSecretKey(id string) string {
+	return "accounting-secret-" + id + "-passphrase"
 }

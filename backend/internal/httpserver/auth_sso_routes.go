@@ -56,7 +56,8 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 		c.Redirect(http.StatusFound, redirectURL)
 	})
 
-	api.GET("/auth/sso/callback", func(c *gin.Context) {
+	callbackHandler := func(c *gin.Context) {
+		token := externalSSOCallbackToken(c)
 		log := gmw.GetLogger(c)
 		if !cfg.Auth.External.Enabled {
 			respondAPIMessage(c, http.StatusNotFound, "external sso login is disabled")
@@ -69,7 +70,6 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 			return
 		}
 
-		token := strings.TrimSpace(c.Query("sso_token"))
 		if token == "" {
 			log.Debug("external sso token missing")
 			respondAPIMessage(c, http.StatusBadRequest, "external sso callback failed")
@@ -98,7 +98,10 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 			Metadata:   map[string]string{"method": "external_sso"},
 		})
 		c.Redirect(http.StatusFound, externalSSOSuccessRedirect(cfg))
-	})
+	}
+
+	api.POST("/auth/sso/callback", callbackHandler)
+	api.GET("/auth/sso/callback", callbackHandler)
 }
 
 // buildSSOCallbackURL receives request data, config, and state and returns the backend SSO callback URL.
@@ -214,7 +217,7 @@ func setSSOStateCookie(c *gin.Context, cfg config.Config, state string) {
 	if ttl <= 0 {
 		ttl = 5 * time.Minute
 	}
-	http.SetCookie(c.Writer, &http.Cookie{
+	http.SetCookie(c.Writer, &http.Cookie{ //nolint:gosec // SSO CSRF cookies set Secure/HttpOnly/SameSite from runtime config.
 		Name:     externalSSOStateCookieName(cfg),
 		Value:    auth.HashSessionToken(state),
 		Path:     "/api/auth/sso",
@@ -228,7 +231,7 @@ func setSSOStateCookie(c *gin.Context, cfg config.Config, state string) {
 
 // clearSSOStateCookie receives a Gin context and expires the SSO state cookie.
 func clearSSOStateCookie(c *gin.Context, cfg config.Config) {
-	http.SetCookie(c.Writer, &http.Cookie{
+	http.SetCookie(c.Writer, &http.Cookie{ //nolint:gosec // Expiring SSO cookies preserves Secure/HttpOnly/SameSite from runtime config.
 		Name:     externalSSOStateCookieName(cfg),
 		Value:    "",
 		Path:     "/api/auth/sso",
@@ -242,7 +245,7 @@ func clearSSOStateCookie(c *gin.Context, cfg config.Config) {
 
 // verifySSOState receives callback request data and reports whether the state matches the state cookie.
 func verifySSOState(c *gin.Context, cfg config.Config) bool {
-	state := strings.TrimSpace(c.Query("state"))
+	state := externalSSOCallbackState(c)
 	if state == "" {
 		return false
 	}
@@ -253,6 +256,31 @@ func verifySSOState(c *gin.Context, cfg config.Config) bool {
 
 	expectedHash := auth.HashSessionToken(state)
 	return subtle.ConstantTimeCompare([]byte(expectedHash), []byte(stateCookie.Value)) == 1
+}
+
+func externalSSOCallbackState(c *gin.Context) string {
+	if c.Request.Method == http.MethodPost {
+		if state := strings.TrimSpace(c.PostForm("state")); state != "" {
+			return state
+		}
+	}
+
+	return strings.TrimSpace(c.Query("state"))
+}
+
+func externalSSOCallbackToken(c *gin.Context) string {
+	if c.Request.Method == http.MethodPost {
+		return strings.TrimSpace(c.PostForm("sso_token"))
+	}
+
+	token := strings.TrimSpace(c.Query("sso_token"))
+	if token != "" {
+		query := c.Request.URL.Query()
+		query.Set("sso_token", "redacted")
+		c.Request.URL.RawQuery = query.Encode()
+	}
+
+	return token
 }
 
 // externalSSOStateCookieName receives config and returns the configured state cookie name.

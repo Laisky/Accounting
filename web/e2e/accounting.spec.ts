@@ -511,7 +511,14 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await page.getByLabel('TOTP code').fill(generateTotpCode(otpauth, 30000));
   await page.getByRole('button', { name: 'Disable TOTP' }).click();
   await expect(page.getByText('TOTP disabled.')).toBeVisible();
-  await page.getByRole('button', { name: 'Back to Me' }).click();
+
+  const postDisableLoginResponse = await page.request.post('/api/auth/login', {
+    data: { email, password },
+  });
+  expect(postDisableLoginResponse.status()).toBe(200);
+  await page.goto('/me');
+  await expect(page.getByRole('region', { name: 'Me' })).toBeVisible();
+
   await page.getByRole('button', { name: /Profile/ }).click();
   await page.getByRole('button', { name: 'Load activity' }).click();
   await expect(page.getByText('auth / totp_disabled')).toBeVisible();
