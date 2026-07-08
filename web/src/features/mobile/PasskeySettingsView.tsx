@@ -11,7 +11,7 @@ import {
   type PasskeyList,
   type PasskeyListItem,
 } from '@/lib/api/auth';
-import { credentialCreationOptionsFromJSON, isWebAuthnAvailable, publicKeyCredentialToJSON } from '@/lib/webauthn';
+import { credentialCreationOptionsFromJSON, publicKeyCredentialToJSON, webAuthnUnavailableReason } from '@/lib/webauthn';
 import './passkey-settings.css';
 
 type PasskeySettingsViewProps = {
@@ -37,8 +37,14 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
     setError('');
     setStatus('');
     try {
-      if (!isWebAuthnAvailable()) {
-        throw new Error('WebAuthn unavailable');
+      const unavailable = webAuthnUnavailableReason();
+      if (unavailable === 'insecure') {
+        setError(t('mobile.error.passkeyInsecureContext', { origin: window.location.origin }));
+        return;
+      }
+      if (unavailable) {
+        setError(t('mobile.error.passkeyUnavailable'));
+        return;
       }
       const start = await beginPasskeyRegistration();
       const credential = await navigator.credentials.create(credentialCreationOptionsFromJSON(start.options));
@@ -56,8 +62,20 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
       setLabelDrafts((current) => withoutDraft(current, passkey.id));
       setNewLabel(t('mobile.me.defaultPasskeyLabel'));
       setStatus(t('mobile.status.passkeyRegistered'));
-    } catch {
-      setError(t('mobile.error.passkeyRegisterFailed'));
+    } catch (registerError) {
+      if (
+        registerError instanceof DOMException &&
+        (registerError.name === 'NotAllowedError' || registerError.name === 'AbortError')
+      ) {
+        setError(t('mobile.error.passkeyRegisterCancelled'));
+      } else {
+        const detail = registerError instanceof Error && registerError.message ? registerError.message : '';
+        setError(
+          detail
+            ? t('mobile.error.passkeyRegisterFailedDetail', { detail })
+            : t('mobile.error.passkeyRegisterFailed'),
+        );
+      }
     } finally {
       setIsBusy(false);
     }

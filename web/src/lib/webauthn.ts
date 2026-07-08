@@ -115,6 +115,22 @@ export function isWebAuthnAvailable(): boolean {
   return typeof window !== 'undefined' && Boolean(window.PublicKeyCredential) && Boolean(navigator.credentials);
 }
 
+// webAuthnUnavailableReason receives no parameters and returns why passkeys cannot be used, or null when usable.
+export function webAuthnUnavailableReason(): 'insecure' | 'unsupported' | null {
+  if (typeof window === 'undefined') {
+    return 'unsupported';
+  }
+  // A non-secure origin (bare IP or plain HTTP other than localhost) hides the WebAuthn API entirely,
+  // so report the insecure context first — it is the actionable cause behind a missing PublicKeyCredential.
+  if (window.isSecureContext === false) {
+    return 'insecure';
+  }
+  if (!window.PublicKeyCredential || !navigator.credentials) {
+    return 'unsupported';
+  }
+  return null;
+}
+
 // publicKeyFromOptions receives an unknown response object and returns its publicKey options.
 function publicKeyFromOptions<T>(options: unknown): T {
   const candidate = options as { publicKey?: T };

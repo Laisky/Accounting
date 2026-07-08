@@ -124,6 +124,25 @@ describe('PasskeySettingsView', () => {
 
     expect(await screen.findByText('Passkeys could not be loaded.')).toBeInTheDocument();
   });
+
+  it('explains that an insecure origin blocks passkeys instead of a generic failure', async () => {
+    const secureContext = Object.getOwnPropertyDescriptor(window, 'isSecureContext');
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: false });
+    vi.spyOn(authApi, 'fetchPasskeys').mockResolvedValue({ items: [], page: 1, pageSize: 20, total: 0 });
+    const beginSpy = vi.spyOn(authApi, 'beginPasskeyRegistration');
+
+    renderPasskeySettings();
+
+    await screen.findByText('No passkeys registered yet.');
+    fireEvent.click(screen.getByRole('button', { name: 'Register passkey' }));
+
+    expect(await screen.findByText(/Passkeys require an HTTPS address or localhost/)).toBeInTheDocument();
+    expect(beginSpy).not.toHaveBeenCalled();
+
+    if (secureContext) {
+      Object.defineProperty(window, 'isSecureContext', secureContext);
+    }
+  });
 });
 
 // renderPasskeySettings mounts PasskeySettingsView with an isolated QueryClient.
