@@ -23,9 +23,9 @@
     --app-viewport-width: 100svw;
 
     /* --- Semantic surfaces --- */
-    --surface: var(--tone-99-0p01-108);
+    --surface: var(--tone-99-0p002-180);
     --surface-raised: var(--tone-100-0-0);
-    --surface-sunken: var(--tone-98-0p014-110);
+    --surface-sunken: var(--tone-98-0p004-180);
     --surface-overlay: var(--tone-100-0-0-a76);
     --surface-inverse: var(--tone-20-0p035-235);
 
@@ -100,7 +100,7 @@
     --surface-raised: var(--tone-20-0p034-235);
     --surface-sunken: var(--tone-16-0p035-235);
     --surface-overlay: var(--tone-20-0p04-240-a55);
-    --surface-inverse: var(--tone-99-0p01-108);
+    --surface-inverse: var(--tone-99-0p002-180);
 
     --ink: var(--tone-93-0p006-185);
     --ink-muted: var(--tone-72-0p018-230);

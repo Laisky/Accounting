@@ -143,7 +143,7 @@ test('user can start external SSO from the authentication screen', async ({ page
   await expect(page.getByText('External SSO')).toBeVisible();
   await page.getByRole('link', { name: 'Use SSO' }).click();
 
-  await expect(page).toHaveURL(/\/api\/health\?redirect_to=/);
+  await expect(page).toHaveURL(/\/api\/v1\/health\?redirect_to=/);
 });
 
 test('signed-out visitors see the public landing page first', async ({ page }) => {

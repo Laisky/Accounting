@@ -115,10 +115,13 @@ export async function updateCategory(
   categoryId: string,
   input: CategoryUpdateInput,
 ): Promise<Category> {
-  return apiRequest<Category>(`/api/v1/books/${encodeURIComponent(bookId)}/categories/${encodeURIComponent(categoryId)}`, {
-    method: 'PATCH',
-    body: input,
-  });
+  return apiRequest<Category>(
+    `/api/v1/books/${encodeURIComponent(bookId)}/categories/${encodeURIComponent(categoryId)}`,
+    {
+      method: 'PATCH',
+      body: input,
+    },
+  );
 }
 
 // fetchEntries receives a book id and returns the first page of entries for transaction review.

@@ -29,7 +29,7 @@
   color: var(--tone-42-0p024-230);
 }
 
-.bottomNav span {
+.bottomNav button > span {
   display: inline-flex;
   width: 36px;
   height: 32px;
@@ -53,7 +53,7 @@
   color: var(--bottom-nav-active-ink);
 }
 
-.bottomNavActive span {
+.bottomNavActive > span {
   border-color: var(--bottom-nav-active-border);
   background: var(--bottom-nav-active-fill);
   box-shadow: 0 7px 18px var(--bottom-nav-active-shadow);
@@ -102,7 +102,7 @@
   .mobileShell {
     padding: 0;
     place-items: stretch;
-    background: var(--tone-96-0p018-112);
+    background: var(--tone-97-0p006-185);
   }
 
   .phoneFrame {
@@ -145,7 +145,7 @@
     background: var(--bottom-nav-active-fill);
   }
 
-  .bottomNavActive span {
+  .bottomNavActive > span {
     border-color: transparent;
     background: transparent;
     box-shadow: none;
@@ -246,7 +246,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .bottomNav button,
-  .bottomNav span {
+  .bottomNav button > span {
     transition: none;
   }
 }

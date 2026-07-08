@@ -370,7 +370,7 @@
   text-align: center;
   border: 1px solid var(--border, var(--tone-88-0p012-185));
   border-radius: var(--radius-sm, 8px);
-  background: var(--surface-sunken, var(--tone-98-0p014-110));
+  background: var(--surface-sunken, var(--tone-98-0p004-180));
   font-family: inherit;
   font-size: 0.85rem;
 }

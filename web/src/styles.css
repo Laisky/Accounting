@@ -1,6 +1,6 @@
 :root {
   color: var(--tone-22-0p035-238);
-  background: var(--tone-96-0p018-112);
+  background: var(--tone-97-0p006-185);
   font-family: 'Aptos', 'Segoe UI', system-ui, sans-serif;
   font-synthesis: none;
   line-height: 1.5;
@@ -76,9 +76,9 @@ button {
 .sessionTools > span {
   max-width: 260px;
   padding: 8px 10px;
-  border: 1px solid var(--tone-80-0p045-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
   color: var(--tone-29-0p04-238);
   font-size: 0.82rem;
   font-weight: 850;
@@ -87,7 +87,7 @@ button {
 
 .eyebrow {
   margin: 0 0 8px;
-  color: var(--tone-39-0p11-164);
+  color: var(--tone-42-0p13-250);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -104,10 +104,10 @@ button {
 
 .authMethods span {
   padding: 6px 9px;
-  border: 1px solid var(--tone-76-0p075-164);
+  border: 1px solid var(--tone-76-0p072-250);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
-  color: var(--tone-31-0p1-164);
+  background: var(--tone-99-0p002-180);
+  color: var(--tone-42-0p13-250);
   font-size: 0.78rem;
   font-weight: 850;
   line-height: 1.1;
@@ -117,9 +117,9 @@ button {
   display: grid;
   gap: 16px;
   padding: clamp(18px, 3vw, 26px);
-  border: 1px solid var(--tone-80-0p045-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-98-0p014-110);
+  background: var(--tone-98-0p004-180);
 }
 
 .activityPanel h2 {
@@ -141,9 +141,9 @@ button {
   align-items: center;
   min-height: 58px;
   padding: 10px 12px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
 }
 
 .activityList li div {
@@ -236,8 +236,8 @@ h4 {
 .iconButton {
   width: 44px;
   height: 44px;
-  border: 1px solid var(--tone-78-0p045-104);
-  background: var(--tone-99-0p01-108);
+  border: 1px solid var(--tone-86-0p015-185);
+  background: var(--tone-99-0p002-180);
   color: var(--tone-23-0p04-242);
 }
 
@@ -253,9 +253,9 @@ h4 {
   grid-template-columns: minmax(260px, 1.4fr) repeat(2, minmax(140px, 0.4fr));
   gap: 1px;
   overflow: hidden;
-  border: 1px solid var(--tone-80-0p045-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-80-0p045-104);
+  background: var(--tone-84-0p018-188);
 }
 
 .summaryItem {
@@ -263,7 +263,7 @@ h4 {
   gap: 8px;
   min-height: 104px;
   padding: clamp(18px, 3vw, 28px);
-  background: var(--tone-98-0p014-110);
+  background: var(--tone-98-0p004-180);
 }
 
 .summaryItem span,
@@ -277,7 +277,7 @@ dt {
 }
 
 .summaryItem strong {
-  color: var(--tone-25-0p085-158);
+  color: var(--tone-24-0p035-235);
   font-size: clamp(1.55rem, 3vw, 2.35rem);
   letter-spacing: 0;
   line-height: 1;
@@ -296,9 +296,9 @@ dt {
 
 .importMain,
 .reviewPanel {
-  border: 1px solid var(--tone-80-0p045-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-98-0p014-110);
+  background: var(--tone-98-0p004-180);
 }
 
 .importMain {
@@ -317,9 +317,9 @@ dt {
 .sourceBadge {
   flex: 0 0 auto;
   padding: 7px 10px;
-  border: 1px solid var(--tone-76-0p075-164);
+  border: 1px solid var(--tone-76-0p072-250);
   border-radius: 999px;
-  color: var(--tone-31-0p1-164);
+  color: var(--tone-42-0p13-250);
   font-size: 0.78rem;
   font-weight: 800;
   white-space: nowrap;
@@ -334,9 +334,9 @@ dt {
   width: min(100%, 360px);
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid var(--tone-76-0p055-104);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
   color: var(--tone-20-0p04-242);
   font-weight: 800;
 }
@@ -353,10 +353,10 @@ dt {
   gap: 10px;
   min-height: 238px;
   padding: 28px;
-  border: 2px dashed var(--tone-70-0p085-164);
+  border: 2px dashed var(--tone-76-0p072-250);
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--tone-99-0p01-108), var(--tone-94-0p04-152)), var(--tone-98-0p014-110);
-  color: var(--tone-30-0p095-164);
+  background: linear-gradient(135deg, var(--tone-99-0p002-180), var(--tone-94-0p04-152)), var(--tone-98-0p004-180);
+  color: var(--tone-42-0p13-250);
   text-align: center;
   cursor: pointer;
 }
@@ -385,7 +385,7 @@ dt {
 
 .dropZoneReady {
   border-style: solid;
-  background: var(--tone-97-0p035-152);
+  background: var(--tone-95-0p012-238);
 }
 
 .actionRow {
@@ -403,12 +403,12 @@ dt {
 }
 
 .primaryButton {
-  background: var(--tone-31-0p11-164);
-  color: var(--tone-98-0p014-110);
+  background: var(--tone-42-0p13-250);
+  color: var(--tone-98-0p004-180);
 }
 
 .ghostButton {
-  border: 1px solid var(--tone-76-0p055-104);
+  border: 1px solid var(--tone-86-0p015-185);
   background: transparent;
   color: var(--tone-24-0p04-242);
 }
@@ -439,8 +439,8 @@ dt {
   height: 38px;
   padding: 8px;
   border-radius: 8px;
-  background: var(--tone-91-0p045-164);
-  color: var(--tone-31-0p1-164);
+  background: var(--tone-91-0p012-250);
+  color: var(--tone-42-0p13-250);
 }
 
 .fileFacts {
@@ -449,15 +449,15 @@ dt {
   gap: 1px;
   margin: 0;
   overflow: hidden;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-82-0p035-104);
+  background: var(--tone-84-0p018-188);
 }
 
 .fileFacts div {
   min-height: 78px;
   padding: 14px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
 }
 
 dd {
@@ -483,9 +483,9 @@ dd {
 .previewSummary span {
   min-height: 38px;
   padding: 9px 10px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
   color: var(--tone-25-0p04-242);
   font-size: 0.82rem;
   font-weight: 850;
@@ -500,9 +500,9 @@ dd {
 
 .schemaNotice {
   padding: 10px 12px;
-  border: 1px solid var(--tone-78-0p055-104);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 8px;
-  background: var(--tone-96-0p02-112);
+  background: var(--tone-95-0p006-185);
   color: var(--tone-34-0p045-238);
   font-size: 0.82rem;
   font-weight: 800;
@@ -520,9 +520,9 @@ dd {
   gap: 4px;
   min-height: 54px;
   padding: 10px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
 }
 
 .detectedGrid span,
@@ -552,9 +552,9 @@ dd {
   display: grid;
   gap: 4px;
   padding: 10px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
 }
 
 .rowDiagnostics strong,
@@ -595,9 +595,9 @@ dd {
   justify-content: center;
   width: 34px;
   height: 34px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
 }
 
 .pipeline p {
@@ -605,12 +605,12 @@ dd {
 }
 
 .pipelineActive {
-  color: var(--tone-26-0p095-164);
+  color: var(--tone-24-0p035-235);
 }
 
 .pipelineActive span {
-  border-color: var(--tone-70-0p085-164);
-  background: var(--tone-91-0p045-164);
+  border-color: var(--tone-76-0p072-250);
+  background: var(--tone-91-0p012-250);
 }
 
 .quickGrid {
@@ -624,15 +624,15 @@ dd {
   gap: 10px;
   justify-content: flex-start;
   padding: 0 18px;
-  border: 1px solid var(--tone-80-0p045-104);
-  background: var(--tone-99-0p01-108);
+  border: 1px solid var(--tone-84-0p018-188);
+  background: var(--tone-99-0p002-180);
   color: var(--tone-22-0p04-242);
   font-weight: 850;
 }
 
 .quickGrid button:hover,
 .iconButton:hover {
-  border-color: var(--tone-57-0p11-164);
+  border-color: var(--tone-57-0p13-250);
 }
 
 @media (max-width: 860px) {

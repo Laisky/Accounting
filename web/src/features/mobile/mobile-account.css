@@ -13,7 +13,7 @@
   background:
     radial-gradient(circle at 95% 45%, var(--tone-84-0p18-85) 0 3rem, transparent 3.1rem),
     linear-gradient(135deg, var(--tone-69-0p21-32), var(--tone-82-0p18-74));
-  color: var(--tone-99-0p004-90);
+  color: var(--tone-99-0p002-180);
 }
 
 .accountHero::after {
@@ -41,7 +41,7 @@
 }
 
 .accountHero span {
-  color: var(--tone-98-0p01-90-a78);
+  color: var(--tone-98-0p004-185-a78);
   font-size: 0.9rem;
   font-weight: 820;
 }

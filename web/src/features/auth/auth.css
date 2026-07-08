@@ -21,9 +21,9 @@
   display: grid;
   gap: 18px;
   padding: 24px;
-  border: 1px solid var(--tone-80-0p045-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-98-0p014-110);
+  background: var(--tone-98-0p004-180);
 }
 
 .authTabs {
@@ -31,9 +31,9 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   padding: 4px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-94-0p018-112);
+  background: var(--tone-95-0p006-185);
 }
 
 .authTabs button,
@@ -57,8 +57,8 @@
 }
 
 .authTabs .authTabActive {
-  background: var(--tone-99-0p01-108);
-  color: var(--tone-24-0p095-164);
+  background: var(--tone-99-0p002-180);
+  color: var(--tone-24-0p035-235);
 }
 
 .authForm {
@@ -83,15 +83,15 @@
   width: 100%;
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--tone-76-0p055-104);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
   color: var(--tone-20-0p04-242);
 }
 
 .authForm input:focus {
-  border-color: var(--tone-57-0p11-164);
-  outline: 3px solid var(--tone-88-0p055-164);
+  border-color: var(--tone-57-0p13-250);
+  outline: 3px solid var(--tone-88-0p05-250);
 }
 
 .turnstileBox {
@@ -99,14 +99,14 @@
   place-items: center;
   min-height: 70px;
   padding: 8px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
 }
 
 .secondaryAuthButton {
-  border: 1px solid var(--tone-76-0p055-104);
-  background: var(--tone-99-0p01-108);
+  border: 1px solid var(--tone-86-0p015-185);
+  background: var(--tone-99-0p002-180);
 }
 
 .secondaryAuthButton[aria-disabled='true'] {

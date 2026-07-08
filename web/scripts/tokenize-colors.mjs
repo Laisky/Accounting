@@ -2,9 +2,17 @@
 // color token so no raw color literal remains outside the token files. Values are
 // preserved byte-for-byte, so tokenization causes zero visual change.
 //
+// Idempotency: the palette is a MERGE of the primitives already defined in
+// palette.css and any new oklch literals found in feature CSS. This matters because
+// the very first tokenization run replaces every oklch literal with var(--tone-*),
+// so a naive second run would find zero literals, regenerate an EMPTY palette, and
+// silently strip every primitive — breaking every semantic token downstream. Seeding
+// from the existing palette makes re-running a no-op instead of a wipe.
+//
 // Usage: node scripts/tokenize-colors.mjs [--check]
 //   (default) rewrites feature CSS + regenerates src/styles/palette.css
-//   --check    fails if any feature CSS still contains an oklch literal
+//   --check    fails if (a) any feature CSS still contains a raw oklch literal, or
+//              (b) any var(--tone-*) reference has no matching primitive in palette.css
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
@@ -12,6 +20,8 @@ const SRC = new URL('../src/', import.meta.url).pathname;
 const PALETTE_FILE = join(SRC, 'styles/palette.css');
 const TOKEN_FILES = new Set(['styles/tokens.css', 'styles/palette.css']);
 const OKLCH = /oklch\([^)]*\)/g;
+const PALETTE_ENTRY = /(--tone-[a-z0-9-]+):\s*(oklch\([^)]*\));/g;
+const TONE_REF = /var\((--tone-[a-z0-9-]+)\)/g;
 
 // walk returns every .css file under src.
 function walk(dir) {
@@ -40,11 +50,28 @@ function tokenName(literal) {
   return name;
 }
 
+// parseExistingPalette reads the primitives already defined in palette.css so a
+// regeneration MERGES rather than replaces (see the idempotency note at the top).
+function parseExistingPalette() {
+  let css;
+  try {
+    css = readFileSync(PALETTE_FILE, 'utf8');
+  } catch {
+    return new Map(); // no palette yet — first run
+  }
+  const existing = new Map(); // literal -> name
+  for (const match of css.matchAll(PALETTE_ENTRY)) {
+    existing.set(match[2], match[1]);
+  }
+  return existing;
+}
+
 const files = walk(SRC).filter((file) => !TOKEN_FILES.has(relative(SRC, file)));
 const isCheck = process.argv.includes('--check');
 
-// First pass: collect the distinct literal -> token map across all feature CSS.
-const map = new Map();
+// Seed the literal -> token map with primitives already in palette.css, then add any
+// new oklch literals found across feature CSS. The merge is what keeps re-runs safe.
+const map = parseExistingPalette();
 for (const file of files) {
   const css = readFileSync(file, 'utf8');
   for (const match of css.matchAll(OKLCH)) {
@@ -56,12 +83,29 @@ for (const file of files) {
 }
 
 if (isCheck) {
+  let failed = false;
   const offenders = files.filter((file) => /oklch\(/.test(readFileSync(file, 'utf8')));
   if (offenders.length) {
     console.error('Raw oklch() literals remain in:', offenders.map((f) => relative(SRC, f)).join(', '));
-    process.exit(1);
+    failed = true;
   }
-  console.log('No raw oklch() literals outside token files.');
+  // Every var(--tone-*) reference must resolve to a primitive in palette.css, else the
+  // semantic tokens that alias it collapse to invalid values and the UI loses all color.
+  const defined = new Set(parseExistingPalette().values());
+  const undefinedRefs = new Set();
+  for (const file of walk(SRC)) {
+    if (relative(SRC, file) === 'styles/palette.css') continue;
+    const css = readFileSync(file, 'utf8');
+    for (const match of css.matchAll(TONE_REF)) {
+      if (!defined.has(match[1])) undefinedRefs.add(match[1]);
+    }
+  }
+  if (undefinedRefs.size) {
+    console.error(`Undefined --tone-* references (missing from palette.css): ${[...undefinedRefs].sort().join(', ')}`);
+    failed = true;
+  }
+  if (failed) process.exit(1);
+  console.log(`No raw oklch() literals outside token files; all ${defined.size} --tone-* references resolve.`);
   process.exit(0);
 }
 

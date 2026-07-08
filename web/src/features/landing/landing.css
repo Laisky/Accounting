@@ -1,17 +1,17 @@
 .landingShell {
   --landing-ink: var(--tone-18-0p036-238);
   --landing-muted: var(--tone-39-0p045-238);
-  --landing-paper: var(--tone-97-0p019-95);
-  --landing-panel: var(--tone-99-0p013-96);
-  --landing-line: var(--tone-79-0p045-94);
-  --landing-teal: var(--tone-34-0p11-166);
+  --landing-paper: var(--tone-97-0p006-185);
+  --landing-panel: var(--tone-99-0p002-180);
+  --landing-line: var(--tone-84-0p018-188);
+  --landing-teal: var(--tone-42-0p13-250);
   --landing-clay: var(--tone-48-0p13-35);
-  --landing-gold: var(--tone-75-0p135-78);
+  --landing-gold: var(--tone-76-0p072-250);
 
   min-height: 100vh;
   color: var(--landing-ink);
   background:
-    linear-gradient(180deg, var(--tone-99-0p012-100), var(--landing-paper) 42%, var(--tone-94-0p024-105)),
+    linear-gradient(180deg, var(--tone-99-0p002-180), var(--landing-paper) 42%, var(--tone-93-0p018-175)),
     var(--landing-paper);
 }
 
@@ -116,7 +116,7 @@
   padding: 0 14px;
   border: 1px solid var(--landing-ink);
   background: var(--landing-ink);
-  color: var(--tone-98-0p012-100);
+  color: var(--tone-98-0p004-180);
   white-space: nowrap;
 }
 
@@ -163,7 +163,7 @@
   gap: 9px;
   padding: 0 18px;
   background: var(--landing-teal);
-  color: var(--tone-98-0p012-100);
+  color: var(--tone-98-0p004-180);
 }
 
 .landingSecondaryAction {
@@ -203,13 +203,13 @@
   min-height: 52px;
   padding: 0 16px;
   border-bottom: 1px solid var(--tone-33-0p045-238);
-  color: var(--tone-91-0p018-96);
+  color: var(--tone-91-0p012-230);
   font-size: 0.82rem;
   font-weight: 850;
 }
 
 .ledgerWindowBar strong {
-  color: var(--tone-87-0p105-153);
+  color: var(--tone-76-0p072-250);
   font-size: 0.75rem;
   text-transform: uppercase;
 }
@@ -224,7 +224,7 @@
 .ledgerEntryPreview,
 .ledgerAuditPreview {
   border-radius: 8px;
-  background: var(--tone-96-0p018-102);
+  background: var(--tone-95-0p006-185);
 }
 
 .ledgerBalancePreview {

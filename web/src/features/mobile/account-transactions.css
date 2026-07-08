@@ -11,7 +11,7 @@
   background:
     radial-gradient(circle at 86% 0%, var(--tone-90-0p13-78-a64), transparent 9rem),
     linear-gradient(135deg, var(--tone-66-0p2-31), var(--tone-79-0p17-74));
-  color: var(--tone-99-0p004-90);
+  color: var(--tone-99-0p002-180);
 }
 
 .accountBalanceHeroText {
@@ -21,7 +21,7 @@
 
 .accountBalanceHeroText span,
 .accountBalanceHero footer span {
-  color: var(--tone-98-0p012-90-a78);
+  color: var(--tone-98-0p004-185-a78);
   font-size: 0.86rem;
   font-weight: 820;
 }
@@ -50,7 +50,7 @@
 
 .accountBalanceLine {
   fill: none;
-  stroke: var(--tone-99-0p008-90-a92);
+  stroke: var(--tone-99-0p004-185-a92);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.4;

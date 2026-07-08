@@ -27,9 +27,9 @@
 .reportControls select {
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--tone-76-0p055-104);
+  border: 1px solid var(--tone-86-0p015-185);
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
   color: var(--tone-20-0p04-242);
   font-weight: 820;
 }
@@ -40,9 +40,9 @@
   gap: 10px;
   align-items: center;
   padding: 8px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-94-0p018-112);
+  background: var(--tone-95-0p006-185);
 }
 
 .reportFilterPanel {
@@ -50,9 +50,9 @@
   grid-template-columns: 1fr;
   gap: 8px;
   padding: 10px;
-  border: 1px solid var(--tone-82-0p035-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-97-0p012-110);
+  background: var(--tone-97-0p006-185);
 }
 
 .reportFilterPanel span {
@@ -61,7 +61,7 @@
   min-width: 0;
   padding: 8px 10px;
   border-radius: 6px;
-  background: var(--tone-99-0p01-108);
+  background: var(--tone-99-0p002-180);
   color: var(--tone-23-0p04-242);
   font-size: 0.86rem;
   font-weight: 830;
@@ -101,8 +101,8 @@
 }
 
 .reportSegmented .reportSegmentActive {
-  background: var(--tone-99-0p01-108);
-  color: var(--tone-28-0p115-164);
+  background: var(--tone-99-0p002-180);
+  color: var(--tone-42-0p13-250);
 }
 
 .periodStepper {
@@ -118,8 +118,8 @@
   justify-content: center;
   min-height: 36px;
   border-radius: 8px;
-  background: var(--tone-99-0p01-108);
-  color: var(--tone-31-0p1-164);
+  background: var(--tone-99-0p002-180);
+  color: var(--tone-42-0p13-250);
 }
 
 .periodStepper strong {
@@ -133,7 +133,7 @@
   gap: 18px;
   min-height: 52px;
   overflow-x: auto;
-  border-bottom: 1px solid var(--tone-82-0p035-104);
+  border-bottom: 1px solid var(--tone-84-0p018-188);
   scrollbar-width: thin;
 }
 
@@ -149,7 +149,7 @@
 }
 
 .reportTabs .reportTabActive {
-  color: var(--tone-27-0p12-164);
+  color: var(--tone-42-0p13-250);
 }
 
 .reportTabs .reportTabActive::after {
@@ -167,9 +167,9 @@
   display: grid;
   gap: 20px;
   padding: clamp(18px, 3vw, 30px);
-  border: 1px solid var(--tone-80-0p045-104);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-98-0p014-110);
+  background: var(--tone-98-0p004-180);
 }
 
 .categorySplitPanel {
@@ -187,9 +187,9 @@
 .reportPanelHeader > span {
   flex: 0 0 auto;
   padding: 7px 10px;
-  border: 1px solid var(--tone-76-0p075-164);
+  border: 1px solid var(--tone-76-0p072-250);
   border-radius: 8px;
-  color: var(--tone-31-0p1-164);
+  color: var(--tone-42-0p13-250);
   font-size: 0.78rem;
   font-weight: 850;
 }
@@ -331,7 +331,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  color: var(--tone-99-0p01-108);
+  color: var(--tone-99-0p002-180);
   font-weight: 930;
 }
 
@@ -363,7 +363,7 @@
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--tone-90-0p018-112);
+  background: var(--tone-91-0p008-185);
 }
 
 .rankBar span {
@@ -430,9 +430,9 @@
   gap: 7px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid var(--tone-83-0p034-108);
+  border: 1px solid var(--tone-84-0p018-188);
   border-radius: 8px;
-  background: var(--tone-99-0p008-110);
+  background: var(--tone-99-0p002-180);
 }
 
 .trendMetric span {
@@ -589,7 +589,7 @@
 }
 
 .trendGridLine {
-  stroke: var(--tone-88-0p018-112);
+  stroke: var(--tone-88-0p012-185);
   stroke-dasharray: 4 8;
   stroke-width: 1;
 }
