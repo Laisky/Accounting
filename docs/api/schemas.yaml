@@ -1,9 +1,32 @@
-ErrorResponse:
+ProblemDetail:
   type: object
-  required: [code, message]
+  description: RFC 9457 problem document with governed `code` and `requestId` extension members.
+  required: [type, title, status, code]
   properties:
-    code: { type: string }
-    message: { type: string }
+    type: { type: string }
+    title: { type: string }
+    status: { type: integer }
+    detail: { type: string }
+    instance: { type: string }
+    code:
+      type: string
+      enum:
+        - invalid_request_body
+        - validation_failed
+        - invalid_ledger_input
+        - authentication_required
+        - invalid_credentials
+        - totp_required
+        - access_denied
+        - ledger_access_denied
+        - not_found
+        - ledger_not_found
+        - conflict
+        - payload_too_large
+        - rate_limited
+        - import_failed
+        - exchange_rates_unavailable
+        - internal_error
     requestId: { type: string }
 AcceptedResponse:
   type: object

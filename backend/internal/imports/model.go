@@ -13,6 +13,10 @@ var ErrInvalidInput = errors.New("import input is invalid")
 // ErrNotFound indicates that an import resource does not exist.
 var ErrNotFound = errors.New("import resource not found")
 
+// ErrConflict indicates an import batch is not in the state a state transition requires
+// (e.g. a concurrent apply already claimed it, or it is already applied).
+var ErrConflict = errors.New("import batch state conflict")
+
 // PreviewRequest contains actor and uploaded source file data for a Wacai preview.
 type PreviewRequest struct {
 	Actor       Actor
@@ -50,6 +54,10 @@ const (
 
 	// BatchStatusApplied identifies an import batch that has already been committed to a book.
 	BatchStatusApplied BatchStatus = "applied"
+
+	// BatchStatusApplying identifies an import batch whose apply has been claimed and is in
+	// flight. The preview→applying claim is the CAS that serializes concurrent applies.
+	BatchStatusApplying BatchStatus = "applying"
 )
 
 // Batch contains stored import batch metadata and preview rows.

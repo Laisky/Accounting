@@ -31,14 +31,14 @@ func TestRegisterRoutesAuthTOTPFlow(t *testing.T) {
 
 	sessionCookie := registerAndLogin(t, router, cfg)
 
-	statusReq := httptest.NewRequest(http.MethodGet, "/api/auth/totp/status", nil)
+	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/totp/status", nil)
 	statusReq.AddCookie(sessionCookie)
 	statusRec := httptest.NewRecorder()
 	router.ServeHTTP(statusRec, statusReq)
 	require.Equal(t, http.StatusOK, statusRec.Code)
 	require.Contains(t, statusRec.Body.String(), `"enabled":false`)
 
-	setupReq := httptest.NewRequest(http.MethodPost, "/api/auth/totp/setup", nil)
+	setupReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/totp/setup", nil)
 	setupReq.AddCookie(sessionCookie)
 	setupRec := httptest.NewRecorder()
 	router.ServeHTTP(setupRec, setupReq)
@@ -56,7 +56,7 @@ func TestRegisterRoutesAuthTOTPFlow(t *testing.T) {
 	code, err := totp.GenerateCodeCustom(setup.Secret, now, routeTestTOTPValidateOpts())
 	require.NoError(t, err)
 
-	confirmReq := httptest.NewRequest(http.MethodPost, "/api/auth/totp/confirm", bytes.NewBufferString(`{"code":"`+code+`"}`))
+	confirmReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/totp/confirm", bytes.NewBufferString(`{"code":"`+code+`"}`))
 	confirmReq.Header.Set("Content-Type", "application/json")
 	confirmReq.AddCookie(sessionCookie)
 	confirmRec := httptest.NewRecorder()
@@ -64,7 +64,7 @@ func TestRegisterRoutesAuthTOTPFlow(t *testing.T) {
 	require.Equal(t, http.StatusOK, confirmRec.Code)
 	require.Contains(t, confirmRec.Body.String(), `"enabled":true`)
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)
@@ -72,7 +72,7 @@ func TestRegisterRoutesAuthTOTPFlow(t *testing.T) {
 	require.Contains(t, loginRec.Body.String(), `"totpRequired":true`)
 	require.NotContains(t, loginRec.Body.String(), `"session"`)
 
-	wrongPasswordReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"the wrong password value"}`))
+	wrongPasswordReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"the wrong password value"}`))
 	wrongPasswordReq.Header.Set("Content-Type", "application/json")
 	wrongPasswordRec := httptest.NewRecorder()
 	router.ServeHTTP(wrongPasswordRec, wrongPasswordReq)
@@ -82,7 +82,7 @@ func TestRegisterRoutesAuthTOTPFlow(t *testing.T) {
 	now = now.Add(30 * time.Second)
 	nextCode, err := totp.GenerateCodeCustom(setup.Secret, now, routeTestTOTPValidateOpts())
 	require.NoError(t, err)
-	loginReq = httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple","totp_code":"`+nextCode+`"}`))
+	loginReq = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple","totp_code":"`+nextCode+`"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec = httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)
@@ -95,7 +95,7 @@ func TestRegisterRoutesAuthTOTPFlow(t *testing.T) {
 	now = now.Add(30 * time.Second)
 	disableCode, err := totp.GenerateCodeCustom(setup.Secret, now, routeTestTOTPValidateOpts())
 	require.NoError(t, err)
-	disableReq := httptest.NewRequest(http.MethodPost, "/api/auth/totp/disable", bytes.NewBufferString(`{"code":"`+disableCode+`"}`))
+	disableReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/totp/disable", bytes.NewBufferString(`{"code":"`+disableCode+`"}`))
 	disableReq.Header.Set("Content-Type", "application/json")
 	disableReq.AddCookie(sessionCookie)
 	disableRec := httptest.NewRecorder()
@@ -117,14 +117,14 @@ func TestRegisterRoutesAuthTOTPDisabled(t *testing.T) {
 
 	sessionCookie := registerAndLogin(t, router, cfg)
 
-	statusReq := httptest.NewRequest(http.MethodGet, "/api/auth/totp/status", nil)
+	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/totp/status", nil)
 	statusReq.AddCookie(sessionCookie)
 	statusRec := httptest.NewRecorder()
 	router.ServeHTTP(statusRec, statusReq)
 	require.Equal(t, http.StatusOK, statusRec.Code)
 	require.Contains(t, statusRec.Body.String(), `"enabled":false`)
 
-	setupReq := httptest.NewRequest(http.MethodPost, "/api/auth/totp/setup", nil)
+	setupReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/totp/setup", nil)
 	setupReq.AddCookie(sessionCookie)
 	setupRec := httptest.NewRecorder()
 	router.ServeHTTP(setupRec, setupReq)

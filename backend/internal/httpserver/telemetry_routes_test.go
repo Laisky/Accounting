@@ -27,7 +27,7 @@ func newTelemetryTestRouter(t *testing.T) *gin.Engine {
 }
 
 func postTelemetry(router *gin.Engine, body string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, "/api/telemetry/client", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/telemetry/client", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

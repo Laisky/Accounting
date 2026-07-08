@@ -23,7 +23,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('New book'), { target: { value: 'Fish pond' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith('/api/books', {
+      expect(fetch).toHaveBeenCalledWith('/api/v1/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: expect.stringContaining('"name":"Fish pond"'),
@@ -51,7 +51,7 @@ describe('App', () => {
 
     expect(await screen.findByText('Imported 1 rows, skipped 0.')).toBeInTheDocument();
     expect(await screen.findByText('Import applied.')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/imports/import-batch-1/apply', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/imports/import-batch-1/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{"sourceHash":"source-hash-1","memberMappings":{"Roommate":"roommate@example.test"}}',
@@ -93,7 +93,7 @@ describe('App', () => {
 
     expect(await screen.findByText('TOTP enabled.')).toBeInTheDocument();
     expect(screen.getByRole('article', { name: 'Authenticator app' })).toHaveTextContent('Authenticator app is on.');
-    expect(fetch).toHaveBeenCalledWith('/api/auth/totp/confirm', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/auth/totp/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{"code":"123456"}',
@@ -104,7 +104,7 @@ describe('App', () => {
 
     expect(await screen.findByText('TOTP disabled.')).toBeInTheDocument();
     expect(screen.getByRole('article', { name: 'Authenticator app' })).toHaveTextContent('Authenticator app is off.');
-    expect(fetch).toHaveBeenCalledWith('/api/auth/totp/disable', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/auth/totp/disable', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{"code":"654321"}',
@@ -114,7 +114,7 @@ describe('App', () => {
     expect(await openMeProfile()).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Load activity' }));
     expect(await screen.findByText('entry / created')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/audit?page=1&page_size=20');
+    expect(fetch).toHaveBeenCalledWith('/api/v1/audit?page=1&page_size=20');
   });
 
   it('shows the account UID on the profile tab and copies it to the clipboard', async () => {
@@ -152,7 +152,7 @@ describe('App', () => {
   it('renders the zero-value budget fallback when summary loading fails', async () => {
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === '/api/auth/session') {
+      if (url === '/api/v1/auth/session') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -162,20 +162,20 @@ describe('App', () => {
             }),
         } as Response);
       }
-      if (url === '/api/runtime-config') {
+      if (url === '/api/v1/runtime-config') {
         return Promise.resolve({
           ok: false,
           status: 500,
           json: () => Promise.resolve({}),
         } as Response);
       }
-      if (url === '/api/users/me') {
+      if (url === '/api/v1/users/me') {
         return Promise.resolve(response({ user: fixtureUser }));
       }
-      if (url === '/api/ledger/summary') {
+      if (url === '/api/v1/ledger/summary') {
         return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) } as Response);
       }
-      if (url === '/api/exchange-rates') {
+      if (url === '/api/v1/exchange-rates') {
         return Promise.resolve(
           response([{ currency: 'CNY', unitsPerUsd: '7.1', source: 'test', updatedAt: '2026-07-01T00:00:00Z' }]),
         );
@@ -197,10 +197,10 @@ describe('App', () => {
   it('shows the public landing page before authentication', async () => {
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url === '/api/auth/session') {
+      if (url === '/api/v1/auth/session') {
         return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) } as Response);
       }
-      if (url === '/api/runtime-config') {
+      if (url === '/api/v1/runtime-config') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(emptyRuntimeConfig) } as Response);
       }
 
@@ -224,10 +224,10 @@ describe('App', () => {
   it('routes the landing sign-in action to SSO when password login is disabled', async () => {
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url === '/api/auth/session') {
+      if (url === '/api/v1/auth/session') {
         return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) } as Response);
       }
-      if (url === '/api/runtime-config') {
+      if (url === '/api/v1/runtime-config') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -235,7 +235,7 @@ describe('App', () => {
               ...emptyRuntimeConfig,
               auth: { ...emptyRuntimeConfig.auth, emailLoginEnabled: false },
               features: { ...emptyRuntimeConfig.features, externalSsoEnabled: true },
-              sso: { enabled: true, startPath: '/api/auth/sso/start' },
+              sso: { enabled: true, startPath: '/api/v1/auth/sso/start' },
             }),
         } as Response);
       }
@@ -247,25 +247,25 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'A ledger for every shared money story.' })).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/api/auth/sso/start'),
+      expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/api/v1/auth/sso/start'),
     );
   });
 
   it('signs in from the authentication screen', async () => {
     vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === '/api/auth/session') {
+      if (url === '/api/v1/auth/session') {
         return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) } as Response);
       }
-      if (url === '/api/runtime-config') {
+      if (url === '/api/v1/runtime-config') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(emptyRuntimeConfig) } as Response);
       }
-      if (url === '/api/exchange-rates') {
+      if (url === '/api/v1/exchange-rates') {
         return Promise.resolve(
           response([{ currency: 'CNY', unitsPerUsd: '7.1', source: 'test', updatedAt: '2026-07-01T00:00:00Z' }]),
         );
       }
-      if (url === '/api/auth/login' && init?.method === 'POST') {
+      if (url === '/api/v1/auth/login' && init?.method === 'POST') {
         return Promise.resolve({
           ok: true,
           json: () =>

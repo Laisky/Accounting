@@ -90,10 +90,10 @@
             },
           content:
             {
-              application/json:
+              application/problem+json:
                 {
                   schema:
-                    { $ref: "../openapi.yaml#/components/schemas/ErrorResponse" },
+                    { $ref: "../openapi.yaml#/components/schemas/ProblemDetail" },
                 },
             },
         }

@@ -15,7 +15,7 @@ import (
 func TestRegisterRoutesBooksRequireSession(t *testing.T) {
 	router, _ := testEntryRouter(t, ledger.NewService(), "user-owner")
 
-	req := httptest.NewRequest(http.MethodGet, "/api/books", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -27,7 +27,7 @@ func TestRegisterRoutesBooksRequireSession(t *testing.T) {
 func TestRegisterRoutesBooksListReturnsMemberships(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-member", "user-stranger")
 
-	req := httptest.NewRequest(http.MethodGet, "/api/books", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -42,7 +42,7 @@ func TestRegisterRoutesBooksListReturnsMemberships(t *testing.T) {
 	require.Equal(t, "book-household", response.Items[0].ID)
 	require.Equal(t, ledger.RoleMember, response.Items[0].Role)
 
-	req = httptest.NewRequest(http.MethodGet, "/api/books", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/books", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-stranger"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -57,7 +57,7 @@ func TestRegisterRoutesBooksCreateControlsOwner(t *testing.T) {
 	sessionCookie := loginSeededUser(t, router, cfg, "user-stranger")
 
 	body := `{"name":"Travel","reportingCurrency":"usd"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/books", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/books", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -74,7 +74,7 @@ func TestRegisterRoutesBooksCreateControlsOwner(t *testing.T) {
 	require.Equal(t, "USD", created.ReportingCurrency)
 	require.Equal(t, ledger.RoleOwner, created.Role)
 
-	req = httptest.NewRequest(http.MethodGet, "/api/books", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/books", nil)
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -95,7 +95,7 @@ func TestRegisterRoutesBooksCreateRejectsUnknownAndInvalidInput(t *testing.T) {
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
 
 	body := `{"name":"Travel","reportingCurrency":"USD","ownerUserId":"user-stranger"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/books", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/books", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -104,7 +104,7 @@ func TestRegisterRoutesBooksCreateRejectsUnknownAndInvalidInput(t *testing.T) {
 	require.Contains(t, rec.Body.String(), "invalid request body")
 
 	body = `{"name":"","reportingCurrency":"USD"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -112,7 +112,7 @@ func TestRegisterRoutesBooksCreateRejectsUnknownAndInvalidInput(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"name":"Travel","reportingCurrency":"US"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -124,7 +124,7 @@ func TestRegisterRoutesBooksCreateRejectsUnknownAndInvalidInput(t *testing.T) {
 func TestRegisterRoutesBookDetailReturnsCurrentRole(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-viewer", "user-stranger")
 
-	req := httptest.NewRequest(http.MethodGet, "/api/books/book-household", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -137,7 +137,7 @@ func TestRegisterRoutesBookDetailReturnsCurrentRole(t *testing.T) {
 	require.Equal(t, "book-household", response.ID)
 	require.Equal(t, ledger.RoleViewer, response.Role)
 
-	req = httptest.NewRequest(http.MethodGet, "/api/books/book-household", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-stranger"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -149,7 +149,7 @@ func TestRegisterRoutesBookUpdateEnforcesManagerRoles(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-admin", "user-member", "user-viewer")
 
 	body := `{"name":"Updated Household","reportingCurrency":"eur"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book-household", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
 	rec := httptest.NewRecorder()
@@ -166,7 +166,7 @@ func TestRegisterRoutesBookUpdateEnforcesManagerRoles(t *testing.T) {
 	require.Equal(t, ledger.RoleAdministrator, response.Role)
 
 	body = `{"name":"Member Edit"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
@@ -174,7 +174,7 @@ func TestRegisterRoutesBookUpdateEnforcesManagerRoles(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
 	body = `{"name":"Viewer Edit"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec = httptest.NewRecorder()
@@ -188,7 +188,7 @@ func TestRegisterRoutesBookUpdateRejectsUnknownAndInvalidInput(t *testing.T) {
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
 
 	body := `{"name":"Updated","ownerUserId":"user-stranger"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book-household", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -197,7 +197,7 @@ func TestRegisterRoutesBookUpdateRejectsUnknownAndInvalidInput(t *testing.T) {
 	require.Contains(t, rec.Body.String(), "invalid request body")
 
 	body = `{"name":""}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -205,7 +205,7 @@ func TestRegisterRoutesBookUpdateRejectsUnknownAndInvalidInput(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"reportingCurrency":"US"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -213,14 +213,14 @@ func TestRegisterRoutesBookUpdateRejectsUnknownAndInvalidInput(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"name":"Missing"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/missing-book", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/missing-book", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-stranger"))
 	rec = httptest.NewRecorder()
@@ -232,7 +232,7 @@ func TestRegisterRoutesBookUpdateRejectsUnknownAndInvalidInput(t *testing.T) {
 func TestRegisterRoutesBookMembersListEnforcesMembership(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-viewer", "user-stranger")
 
-	req := httptest.NewRequest(http.MethodGet, "/api/books/book-household/members", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/members", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -249,7 +249,7 @@ func TestRegisterRoutesBookMembersListEnforcesMembership(t *testing.T) {
 	require.Equal(t, "user-owner", response.Items[2].UserID)
 	require.Equal(t, "user-viewer", response.Items[3].UserID)
 
-	req = httptest.NewRequest(http.MethodGet, "/api/books/book-household/members", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/members", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-stranger"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -261,7 +261,7 @@ func TestRegisterRoutesBookMembersCreateEnforcesManagerRoles(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner", "user-member", "user-new")
 
 	body := `{"userId":"user-new","role":"viewer","displayName":"New viewer"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/books/book-household/members", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/members", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec := httptest.NewRecorder()
@@ -278,7 +278,7 @@ func TestRegisterRoutesBookMembersCreateEnforcesManagerRoles(t *testing.T) {
 	require.Equal(t, "New viewer", member.DisplayName)
 
 	body = `{"userId":"user-new","role":"member"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/members", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/members", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
@@ -286,7 +286,7 @@ func TestRegisterRoutesBookMembersCreateEnforcesManagerRoles(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
 	body = `{"userId":"user-new","role":"owner"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/members", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/members", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec = httptest.NewRecorder()
@@ -299,7 +299,7 @@ func TestRegisterRoutesBookMembersUpdateHandlesOwnership(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner", "user-member", "user-viewer")
 
 	body := `{"role":"administrator"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book-household/members/user-owner", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household/members/user-owner", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec := httptest.NewRecorder()
@@ -307,7 +307,7 @@ func TestRegisterRoutesBookMembersUpdateHandlesOwnership(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"role":"owner"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/members/user-member", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household/members/user-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec = httptest.NewRecorder()
@@ -319,7 +319,7 @@ func TestRegisterRoutesBookMembersUpdateHandlesOwnership(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, ledger.RoleOwner, member.Role)
 
-	req = httptest.NewRequest(http.MethodGet, "/api/books/book-household", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -332,14 +332,14 @@ func TestRegisterRoutesBookMembersUpdateHandlesOwnership(t *testing.T) {
 	require.Equal(t, ledger.RoleOwner, book.Role)
 
 	body = `{"role":"administrator"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/members/user-owner", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household/members/user-owner", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book-household/members/user-viewer", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book-household/members/user-viewer", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec = httptest.NewRecorder()
@@ -351,26 +351,26 @@ func TestRegisterRoutesBookMembersUpdateHandlesOwnership(t *testing.T) {
 func TestRegisterRoutesBookMembersDeleteEnforcesManagerRoles(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner", "user-admin", "user-member", "user-viewer")
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/books/book-household/members/user-member", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/books/book-household/members/user-member", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusNoContent, rec.Code)
 
-	req = httptest.NewRequest(http.MethodGet, "/api/books/book-household/members", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/members", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.NotContains(t, rec.Body.String(), `"userId":"user-member"`)
 
-	req = httptest.NewRequest(http.MethodDelete, "/api/books/book-household/members/user-owner", nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/books/book-household/members/user-owner", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
-	req = httptest.NewRequest(http.MethodDelete, "/api/books/book-household/members/user-admin", nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/books/book-household/members/user-admin", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

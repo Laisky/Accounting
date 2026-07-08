@@ -26,29 +26,6 @@ func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{events: []Event{}}
 }
 
-// NewMemoryStoreFromSnapshot receives durable state and returns an in-memory audit Store implementation.
-func NewMemoryStoreFromSnapshot(snapshot Snapshot) *MemoryStore {
-	events := make([]Event, 0, len(snapshot.Events))
-	for _, event := range snapshot.Events {
-		events = append(events, cloneEvent(event))
-	}
-
-	return &MemoryStore{events: events}
-}
-
-// Snapshot returns a detached durable representation of the store.
-func (s *MemoryStore) Snapshot() Snapshot {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	events := make([]Event, 0, len(s.events))
-	for _, event := range s.events {
-		events = append(events, cloneEvent(event))
-	}
-
-	return Snapshot{Events: events}
-}
-
 // SaveEvent receives an event and stores a detached copy.
 func (s *MemoryStore) SaveEvent(_ context.Context, event Event) (Event, error) {
 	s.mu.Lock()

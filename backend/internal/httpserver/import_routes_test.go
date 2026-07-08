@@ -21,7 +21,7 @@ func TestRegisterRoutesImportPreviewRequiresSession(t *testing.T) {
 	router, _ := testEntryRouter(t, ledger.NewService(), "user-owner")
 	body, contentType := multipartImportBody(t, "wacai.csv", "date,type,amount\n2026-07-01,expense,12.30\n")
 
-	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", body)
 	req.Header.Set("Content-Type", contentType)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -35,7 +35,7 @@ func TestRegisterRoutesImportPreviewParsesCSV(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner")
 	body, contentType := multipartImportBody(t, "wacai.csv", "date,type,amount,currency,account,category,book,tags\n2026-07-01,expense,12.30,cny,Cash,Dining,Household,food|work\n")
 
-	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", body)
 	req.Header.Set("Content-Type", contentType)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec := httptest.NewRecorder()
@@ -57,7 +57,7 @@ func TestRegisterRoutesImportPreviewParsesCSV(t *testing.T) {
 	require.Equal(t, []string{"food", "work"}, response.Detected.Tags)
 
 	body, contentType = multipartImportBody(t, "wacai.csv", "date,type,amount,currency,account,category,book,tags\n2026-07-01,expense,12.30,cny,Cash,Dining,Household,food|work\n")
-	req = httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", body)
 	req.Header.Set("Content-Type", contentType)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec = httptest.NewRecorder()
@@ -76,7 +76,7 @@ func TestRegisterRoutesImportPreviewRejectsInvalidInput(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-owner")
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
 
-	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", bytes.NewBufferString(""))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", bytes.NewBufferString(""))
 	req.Header.Set("Content-Type", "multipart/form-data; boundary=missing")
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -84,7 +84,7 @@ func TestRegisterRoutesImportPreviewRejectsInvalidInput(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body, contentType := multipartImportBody(t, "wacai.xlsx", "not csv")
-	req = httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", body)
 	req.Header.Set("Content-Type", contentType)
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -100,7 +100,7 @@ func TestRegisterRoutesImportApplyCreatesEntries(t *testing.T) {
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
 	body, contentType := multipartImportBody(t, "wacai.csv", "date,type,amount,currency,account,category,book,merchant,note,tags\n2026-07-01,expense,12.30,usd,Cash,Groceries,Household,Market,Import lunch,food|work\n")
 
-	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", body)
 	req.Header.Set("Content-Type", contentType)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -112,7 +112,7 @@ func TestRegisterRoutesImportApplyCreatesEntries(t *testing.T) {
 	require.NoError(t, err)
 
 	applyBody := bytes.NewBufferString(`{"sourceHash":"` + batch.SourceHash + `"}`)
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", applyBody)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/imports/"+batch.ID+"/apply", applyBody)
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -154,7 +154,7 @@ func TestRegisterRoutesImportApplyCreatesEntries(t *testing.T) {
 	require.Equal(t, 2, entries.Total)
 
 	applyBody = bytes.NewBufferString(`{"sourceHash":"` + batch.SourceHash + `"}`)
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", applyBody)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/imports/"+batch.ID+"/apply", applyBody)
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -197,7 +197,7 @@ func TestRegisterRoutesImportApplyCreatesMissingReferences(t *testing.T) {
 		"2026-07-02,transfer,5.00,cad,Source Wallet:-5.00，Target Wallet:+5.00,Transfer,Household,Move funds",
 	}, "\n")+"\n")
 
-	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", body)
 	req.Header.Set("Content-Type", contentType)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -210,7 +210,7 @@ func TestRegisterRoutesImportApplyCreatesMissingReferences(t *testing.T) {
 	require.Equal(t, []string{"New Wallet", "Source Wallet", "Target Wallet"}, batch.Detected.Accounts)
 
 	applyBody := bytes.NewBufferString(`{"sourceHash":"` + batch.SourceHash + `"}`)
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", applyBody)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/imports/"+batch.ID+"/apply", applyBody)
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -267,7 +267,7 @@ func TestRegisterRoutesImportApplyRequiresMemberMappings(t *testing.T) {
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
 	body, contentType := multipartImportBody(t, "wacai.csv", "date,type,amount,currency,account,category,book,member,note\n2026-07-01,expense,12.30,usd,Cash,Dining,Household,Roommate,Shared lunch\n")
 
-	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", body)
 	req.Header.Set("Content-Type", contentType)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -278,7 +278,7 @@ func TestRegisterRoutesImportApplyRequiresMemberMappings(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &batch)
 	require.NoError(t, err)
 
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", bytes.NewBufferString(`{"sourceHash":"`+batch.SourceHash+`"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/imports/"+batch.ID+"/apply", bytes.NewBufferString(`{"sourceHash":"`+batch.SourceHash+`"}`))
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -286,7 +286,7 @@ func TestRegisterRoutesImportApplyRequiresMemberMappings(t *testing.T) {
 	require.Contains(t, rec.Body.String(), "invalid ledger input")
 
 	applyBody := bytes.NewBufferString(`{"sourceHash":"` + batch.SourceHash + `","memberMappings":{"Roommate":"user-roommate"}}`)
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", applyBody)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/imports/"+batch.ID+"/apply", applyBody)
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -318,7 +318,7 @@ func TestRegisterRoutesImportApplyRejectsStaleHashAndUnmappedRows(t *testing.T) 
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
 	body, contentType := multipartImportBody(t, "wacai.csv", "date,type,amount,currency,account,category,book,note\n2026-07-01,unsupported,12.30,usd,Missing,Groceries,Household,Import lunch\n")
 
-	req := httptest.NewRequest(http.MethodPost, "/api/imports/wacai/preview", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/imports/wacai/preview", body)
 	req.Header.Set("Content-Type", contentType)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -329,13 +329,13 @@ func TestRegisterRoutesImportApplyRejectsStaleHashAndUnmappedRows(t *testing.T) 
 	err := json.Unmarshal(rec.Body.Bytes(), &batch)
 	require.NoError(t, err)
 
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", bytes.NewBufferString(`{"sourceHash":"stale"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/imports/"+batch.ID+"/apply", bytes.NewBufferString(`{"sourceHash":"stale"}`))
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusConflict, rec.Code)
 
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/imports/"+batch.ID+"/apply", bytes.NewBufferString(`{"sourceHash":"`+batch.SourceHash+`"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/imports/"+batch.ID+"/apply", bytes.NewBufferString(`{"sourceHash":"`+batch.SourceHash+`"}`))
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

@@ -39,7 +39,7 @@ func main() {
 		log.Fatal("initialize telemetry", zap.Error(err))
 	}
 
-	server, err := httpserver.NewServer(cfg, log)
+	server, err := httpserver.NewServer(cfg, log, telemetryProviders.MetricsHandler())
 	if err != nil {
 		log.Fatal("create http server", zap.Error(err))
 	}

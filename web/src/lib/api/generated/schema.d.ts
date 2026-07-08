@@ -224,7 +224,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['ErrorResponse'];
+            'application/problem+json': components['schemas']['ProblemDetail'];
           };
         };
         default: components['responses']['Error'];
@@ -1979,9 +1979,31 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    ErrorResponse: {
-      code: string;
-      message: string;
+    /** @description RFC 9457 problem document with governed `code` and `requestId` extension members. */
+    ProblemDetail: {
+      type: string;
+      title: string;
+      status: number;
+      detail?: string;
+      instance?: string;
+      /** @enum {string} */
+      code:
+        | 'invalid_request_body'
+        | 'validation_failed'
+        | 'invalid_ledger_input'
+        | 'authentication_required'
+        | 'invalid_credentials'
+        | 'totp_required'
+        | 'access_denied'
+        | 'ledger_access_denied'
+        | 'not_found'
+        | 'ledger_not_found'
+        | 'conflict'
+        | 'payload_too_large'
+        | 'rate_limited'
+        | 'import_failed'
+        | 'exchange_rates_unavailable'
+        | 'internal_error';
       requestId?: string;
     };
     AcceptedResponse: {
@@ -2450,13 +2472,13 @@ export interface components {
         'application/json': components['schemas']['AcceptedResponse'];
       };
     };
-    /** @description Error response. */
+    /** @description RFC 9457 problem response. */
     Error: {
       headers: {
         [name: string]: unknown;
       };
       content: {
-        'application/json': components['schemas']['ErrorResponse'];
+        'application/problem+json': components['schemas']['ProblemDetail'];
       };
     };
   };

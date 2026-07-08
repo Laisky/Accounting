@@ -25,7 +25,7 @@ func TestRegisterRoutesBookLedgerSummaryRequiresSession(t *testing.T) {
 	cfg := testConfig()
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/books/book-household/ledger/summary", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/ledger/summary", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -54,7 +54,7 @@ func TestRegisterRoutesBookLedgerSummaryAllowsBookRoles(t *testing.T) {
 			RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
 			sessionCookie := loginSeededUser(t, router, cfg, tc.userID)
-			req := httptest.NewRequest(http.MethodGet, "/api/books/book-household/ledger/summary", nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/ledger/summary", nil)
 			req.AddCookie(sessionCookie)
 			rec := httptest.NewRecorder()
 			router.ServeHTTP(rec, req)
@@ -83,7 +83,7 @@ func TestRegisterRoutesBookLedgerSummaryRejectsNonMember(t *testing.T) {
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
 	sessionCookie := loginSeededUser(t, router, cfg, "user-stranger")
-	req := httptest.NewRequest(http.MethodGet, "/api/books/book-household/ledger/summary", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/ledger/summary", nil)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -103,7 +103,7 @@ func TestRegisterRoutesBookLedgerSummaryValidatesDateFilters(t *testing.T) {
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
-	req := httptest.NewRequest(http.MethodGet, "/api/books/book-household/ledger/summary?start_date=not-a-date", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/ledger/summary?start_date=not-a-date", nil)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -123,7 +123,7 @@ func TestRegisterRoutesBookLedgerSummaryFiltersThroughFinalDay(t *testing.T) {
 	RegisterRoutes(router, cfg, testLedgerService(), authService)
 
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
-	req := httptest.NewRequest(http.MethodGet, "/api/books/book/ledger/summary?start_date=2026-07-01&end_date=2026-07-01", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book/ledger/summary?start_date=2026-07-01&end_date=2026-07-01", nil)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -181,7 +181,7 @@ func loginSeededUser(t *testing.T, router *gin.Engine, cfg config.Config, userID
 	t.Helper()
 
 	body := `{"email":"` + userID + `@example.test","password":"correct horse battery staple"}`
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(body))
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(body))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)

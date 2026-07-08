@@ -40,7 +40,7 @@ export default defineConfig({
         ACCOUNTING_ADDR: `127.0.0.1:${backendPort}`,
         ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED: 'false',
         ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED: 'true',
-        ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL: `${backendURL}/api/health`,
+        ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL: `${backendURL}/api/v1/health`,
         ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM:
           '-----BEGIN PUBLIC KEY-----\\nMCowBQYDK2VwAyEAT/VbE7clg/e/9I6dt05hOTw+P/95Xqm0DH3MAN1e7oc=\\n-----END PUBLIC KEY-----',
         ACCOUNTING_AUTH_PASSKEY_RP_ID: 'localhost',
@@ -48,7 +48,7 @@ export default defineConfig({
         ACCOUNTING_AUTH_SESSION_COOKIE_SECURE: 'false',
         ACCOUNTING_WEB_DIST_DIR: './missing-web-dist',
       },
-      url: `${backendURL}/api/health`,
+      url: `${backendURL}/api/v1/health`,
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
       stdout: 'ignore',

@@ -56,7 +56,7 @@ describe('AuthWorkspace', () => {
           },
           sso: {
             enabled: true,
-            startPath: '/api/auth/sso/start',
+            startPath: '/api/v1/auth/sso/start',
           },
         }}
         onAuthenticated={vi.fn()}
@@ -64,7 +64,7 @@ describe('AuthWorkspace', () => {
     );
 
     expect(screen.getByText('External SSO')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Use SSO' })).toHaveAttribute('href', '/api/auth/sso/start');
+    expect(screen.getByRole('link', { name: 'Use SSO' })).toHaveAttribute('href', '/api/v1/auth/sso/start');
   });
 
   it('hides external SSO when runtime config disables it', () => {

@@ -18,7 +18,7 @@ export async function previewWacaiImport(file: File, signal?: AbortSignal): Prom
   const form = new FormData();
   form.append('file', file);
 
-  return apiRequest<ImportPreviewBatch>('/api/imports/wacai/preview', { method: 'POST', body: form, signal });
+  return apiRequest<ImportPreviewBatch>('/api/v1/imports/wacai/preview', { method: 'POST', body: form, signal });
 }
 
 // applyWacaiImport receives a book and preview batch fingerprint, then commits mapped rows into ledger entries.
@@ -29,7 +29,7 @@ export async function applyWacaiImport(options: ImportApplyOptions): Promise<Imp
   }
 
   return apiRequest<ImportApplyResponse>(
-    `/api/books/${encodeURIComponent(options.bookId)}/imports/${encodeURIComponent(options.batch.id)}/apply`,
+    `/api/v1/books/${encodeURIComponent(options.bookId)}/imports/${encodeURIComponent(options.batch.id)}/apply`,
     {
       method: 'POST',
       body,

@@ -163,12 +163,12 @@ test('record entry fits the phone viewport', async ({ isMobile, page }) => {
   const email = `record-layout-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
   const password = 'correct horse battery staple';
 
-  const registerResponse = await page.request.post('/api/auth/register', {
+  const registerResponse = await page.request.post('/api/v1/auth/register', {
     data: { email, password },
   });
   expect(registerResponse.status()).toBe(201);
 
-  const loginResponse = await page.request.post('/api/auth/login', {
+  const loginResponse = await page.request.post('/api/v1/auth/login', {
     data: { email, password },
   });
   expect(loginResponse.status()).toBe(200);
@@ -236,12 +236,12 @@ test.describe('passkeys', () => {
     const password = 'correct horse battery staple';
 
     try {
-      const registerResponse = await page.request.post('/api/auth/register', {
+      const registerResponse = await page.request.post('/api/v1/auth/register', {
         data: { email, password },
       });
       expect(registerResponse.status()).toBe(201);
 
-      const loginResponse = await page.request.post('/api/auth/login', {
+      const loginResponse = await page.request.post('/api/v1/auth/login', {
         data: { email, password },
       });
       expect(loginResponse.status()).toBe(200);
@@ -295,7 +295,7 @@ test('user signs in through the authentication screen', async ({ page }) => {
   const email = `ui-login-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
   const password = 'correct horse battery staple';
 
-  const registerResponse = await page.request.post('/api/auth/register', {
+  const registerResponse = await page.request.post('/api/v1/auth/register', {
     data: { email, password },
   });
   expect(registerResponse.status()).toBe(201);
@@ -316,17 +316,17 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   const email = `mobile-tabs-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
   const password = 'correct horse battery staple';
 
-  const registerResponse = await page.request.post('/api/auth/register', {
+  const registerResponse = await page.request.post('/api/v1/auth/register', {
     data: { email, password },
   });
   expect(registerResponse.status()).toBe(201);
 
-  const loginResponse = await page.request.post('/api/auth/login', {
+  const loginResponse = await page.request.post('/api/v1/auth/login', {
     data: { email, password },
   });
   expect(loginResponse.status()).toBe(200);
 
-  const auditResponse = await page.request.get('/api/audit?page=1&page_size=10');
+  const auditResponse = await page.request.get('/api/v1/audit?page=1&page_size=10');
   expect(auditResponse.status()).toBe(200);
   const auditBody = await auditResponse.json();
   const auditActions = auditBody.items.map((item: { action: string }) => item.action);
@@ -512,7 +512,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await page.getByRole('button', { name: 'Disable TOTP' }).click();
   await expect(page.getByText('TOTP disabled.')).toBeVisible();
 
-  const postDisableLoginResponse = await page.request.post('/api/auth/login', {
+  const postDisableLoginResponse = await page.request.post('/api/v1/auth/login', {
     data: { email, password },
   });
   expect(postDisableLoginResponse.status()).toBe(200);
@@ -530,7 +530,7 @@ test('authenticated user uses the mobile accounting tabs', async ({ page }) => {
   await expect(page.getByText(password)).toHaveCount(0);
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { name: 'A ledger for every shared money story.' })).toBeVisible();
-  const sessionResponse = await page.request.get('/api/auth/session');
+  const sessionResponse = await page.request.get('/api/v1/auth/session');
   expect(sessionResponse.status()).toBe(401);
 });
 
@@ -538,18 +538,18 @@ test('auth recovery endpoints return generic non-secret responses', async ({ req
   const email = `recovery-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
   const password = 'correct horse battery staple';
 
-  const registerResponse = await request.post('/api/auth/register', {
+  const registerResponse = await request.post('/api/v1/auth/register', {
     data: { email, password },
   });
   expect(registerResponse.status()).toBe(201);
 
-  const verificationResponse = await request.get(`/api/auth/email/verification?email=${encodeURIComponent(email)}`);
+  const verificationResponse = await request.get(`/api/v1/auth/email/verification?email=${encodeURIComponent(email)}`);
   expect(verificationResponse.status()).toBe(202);
   const verificationBody = await verificationResponse.json();
   expect(verificationBody.status).toBe('sent');
   expect(verificationBody.code).toBeUndefined();
 
-  const resetResponse = await request.post('/api/auth/password-reset/request', {
+  const resetResponse = await request.post('/api/v1/auth/password-reset/request', {
     data: { email },
   });
   expect(resetResponse.status()).toBe(202);
@@ -557,7 +557,7 @@ test('auth recovery endpoints return generic non-secret responses', async ({ req
   expect(resetBody.status).toBe('sent');
   expect(resetBody.code).toBeUndefined();
 
-  const unknownResetResponse = await request.post('/api/auth/password-reset/request', {
+  const unknownResetResponse = await request.post('/api/v1/auth/password-reset/request', {
     data: { email: `missing-${email}` },
   });
   expect(unknownResetResponse.status()).toBe(202);

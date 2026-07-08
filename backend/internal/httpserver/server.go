@@ -4,11 +4,9 @@ package httpserver
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"encoding/hex"
 	"net"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,12 +21,14 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/auth"
 	"github.com/Laisky/Accounting/backend/internal/config"
 	"github.com/Laisky/Accounting/backend/internal/crypto/keyring"
+	"github.com/Laisky/Accounting/backend/internal/imports"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
-	"github.com/Laisky/Accounting/backend/internal/persistence"
+	"github.com/Laisky/Accounting/backend/internal/storage"
 )
 
-// NewServer builds an HTTP server with API routes, middleware, and SPA fallback.
-func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
+// NewServer builds an HTTP server with API routes, middleware, and SPA fallback. metricsHandler is
+// the Prometheus /metrics handler returned by telemetry.Init (nil when metrics are disabled).
+func NewServer(cfg config.Config, log glog.Logger, metricsHandler http.Handler) (*http.Server, error) {
 	if log == nil {
 		return nil, errors.WithStack(errors.New("logger is nil"))
 	}
@@ -61,21 +61,21 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	)
 	router.Use(middlewares...)
 
-	db, dialect, err := openPersistenceDB(cfg)
+	db, err := openStorage(context.Background(), cfg)
 	if err != nil {
 		return nil, err
 	}
-	ledgerStore, err := newLedgerStore(cfg, db, dialect)
+	ledgerStore, err := newLedgerStore(db)
 	if err != nil {
 		return nil, err
 	}
 	ledgerService := ledger.NewServiceWithStore(ledgerStore)
-	auditStore, err := newAuditStore(cfg, db, dialect)
+	auditStore, err := newAuditStore(db)
 	if err != nil {
 		return nil, err
 	}
 	auditService := audit.NewService(auditStore)
-	authStore, err := newAuthStore(cfg, db, dialect)
+	authStore, err := newAuthStore(db)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +83,11 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	importService, err := newDefaultImportService(cfg, db, dialect)
+	importService, err := newDefaultImportService(db)
 	if err != nil {
 		return nil, err
 	}
-	RegisterRoutesWithServices(router, cfg, ledgerService, authService, auditService, importService)
+	RegisterRoutesWithServices(router, cfg, ledgerService, authService, auditService, importService, db, metricsHandler)
 
 	if err := RegisterSPA(router, cfg.Frontend); err != nil {
 		log.Info("spa disabled", zap.Error(err))
@@ -106,6 +106,7 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 		updaterCtx, cancel := context.WithCancel(context.Background())
 		cancelUpdater = cancel
 		ledgerService.StartDailyExchangeRateUpdater(updaterCtx, ledger.NewECBExchangeRateFetcher())
+		ledgerService.StartPeriodicReconciliation(updaterCtx, cfg.Ledger.ReconcileInterval)
 	}
 	server.RegisterOnShutdown(cancelUpdater)
 	if db != nil {
@@ -116,116 +117,63 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 	return server, nil
 }
 
-// openPersistenceDB opens the shared database pool when a SQL driver is selected,
-// or returns (nil, "") for the in-memory and file drivers.
-func openPersistenceDB(cfg config.Config) (*sql.DB, string, error) {
-	driver := strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver))
-	switch driver {
-	case "", "memory", "file":
-		return nil, "", nil
+// openStorage opens and migrates the relational database when a SQL driver is selected,
+// or returns nil for the in-memory driver. It is the single point where the persistence
+// driver string is interpreted.
+func openStorage(ctx context.Context, cfg config.Config) (*storage.DB, error) {
+	switch strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver)) {
+	case "", "memory":
+		return nil, nil //nolint:nilnil // the in-memory driver intentionally runs without a database
 	case "postgres", "postgresql", "sqlite":
 	default:
-		return nil, "", errors.Errorf("unsupported persistence driver %q", cfg.Persistence.Driver)
+		return nil, errors.Errorf("unsupported persistence driver %q", cfg.Persistence.Driver)
 	}
-	db, dialect, err := persistence.OpenSQL(driver, cfg.Persistence.DatabaseURL, cfg.Persistence.Dir)
+	db, err := storage.Open(ctx, cfg.Persistence.Driver, cfg.Persistence.DatabaseURL, cfg.Persistence.Dir)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "open persistence database")
+		return nil, errors.Wrap(err, "open storage database")
 	}
-
-	return db, dialect, nil
+	if err := db.Migrate(ctx); err != nil {
+		_ = db.Close()
+		return nil, errors.Wrap(err, "run storage migrations")
+	}
+	return db, nil
 }
 
-// newLedgerStore receives runtime config and returns the selected ledger store.
-func newLedgerStore(cfg config.Config, db *sql.DB, dialect string) (ledger.Store, error) {
-	switch strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver)) {
-	case "", "memory":
+// newLedgerStore returns the in-memory ledger store when db is nil, otherwise the relational repository.
+func newLedgerStore(db *storage.DB) (ledger.Store, error) {
+	if db == nil {
 		return ledger.NewMemoryStore(ledger.DemoSeedData()), nil
-	case "file":
-		store, err := ledger.NewFileStore(filepath.Join(cfg.Persistence.Dir, "ledger.json"), ledger.DemoSeedData())
-		if err != nil {
-			return nil, errors.Wrap(err, "create ledger file store")
-		}
-		return store, nil
-	case "postgres", "postgresql":
-		store, err := ledger.NewPostgresStore(db, ledger.DemoSeedData())
-		if err != nil {
-			return nil, errors.Wrap(err, "create ledger postgres store")
-		}
-		return store, nil
-	case "sqlite":
-		if dialect != persistence.DialectSQLite {
-			return nil, errors.Errorf("unexpected sqlite dialect %q", dialect)
-		}
-		store, err := ledger.NewSQLiteStore(db, ledger.DemoSeedData())
-		if err != nil {
-			return nil, errors.Wrap(err, "create ledger sqlite store")
-		}
-		return store, nil
-	default:
-		return nil, errors.Errorf("unsupported persistence driver %q", cfg.Persistence.Driver)
 	}
+	return ledger.NewSQLRepository(db)
 }
 
-// newAuditStore receives runtime config and returns the selected audit store.
-func newAuditStore(cfg config.Config, db *sql.DB, dialect string) (audit.Store, error) {
-	switch strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver)) {
-	case "", "memory":
+// newAuditStore returns the in-memory audit store when db is nil, otherwise the relational repository.
+func newAuditStore(db *storage.DB) (audit.Store, error) {
+	if db == nil {
 		return audit.NewMemoryStore(), nil
-	case "file":
-		store, err := audit.NewFileStore(filepath.Join(cfg.Persistence.Dir, "audit.json"))
-		if err != nil {
-			return nil, errors.Wrap(err, "create audit file store")
-		}
-		return store, nil
-	case "postgres", "postgresql":
-		store, err := audit.NewPostgresStore(db)
-		if err != nil {
-			return nil, errors.Wrap(err, "create audit postgres store")
-		}
-		return store, nil
-	case "sqlite":
-		if dialect != persistence.DialectSQLite {
-			return nil, errors.Errorf("unexpected sqlite dialect %q", dialect)
-		}
-		store, err := audit.NewSQLiteStore(db)
-		if err != nil {
-			return nil, errors.Wrap(err, "create audit sqlite store")
-		}
-		return store, nil
-	default:
-		return nil, errors.Errorf("unsupported persistence driver %q", cfg.Persistence.Driver)
 	}
+	return audit.NewSQLRepository(db)
 }
 
-// newAuthStore receives runtime config and returns the selected auth store.
-func newAuthStore(cfg config.Config, db *sql.DB, dialect string) (auth.Store, error) {
-	switch strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver)) {
-	case "", "memory":
+// newAuthStore returns the in-memory auth store when db is nil, otherwise the relational repository.
+func newAuthStore(db *storage.DB) (auth.Store, error) {
+	if db == nil {
 		return auth.NewMemoryStore(), nil
-	case "file":
-		store, err := auth.NewFileStore(filepath.Join(cfg.Persistence.Dir, "auth.json"))
-		if err != nil {
-			return nil, errors.Wrap(err, "create auth file store")
-		}
-		return store, nil
-	case "postgres", "postgresql":
-		store, err := auth.NewPostgresStore(db)
-		if err != nil {
-			return nil, errors.Wrap(err, "create auth postgres store")
-		}
-		return store, nil
-	case "sqlite":
-		if dialect != persistence.DialectSQLite {
-			return nil, errors.Errorf("unexpected sqlite dialect %q", dialect)
-		}
-		store, err := auth.NewSQLiteStore(db)
-		if err != nil {
-			return nil, errors.Wrap(err, "create auth sqlite store")
-		}
-		return store, nil
-	default:
-		return nil, errors.Errorf("unsupported persistence driver %q", cfg.Persistence.Driver)
 	}
+	return auth.NewSQLRepository(db)
+}
+
+// newDefaultImportService returns the import service backed by the in-memory store when db is nil,
+// otherwise the relational repository.
+func newDefaultImportService(db *storage.DB) (*imports.Service, error) {
+	if db == nil {
+		return imports.NewService(imports.NewMemoryStore()), nil
+	}
+	store, err := imports.NewSQLRepository(db)
+	if err != nil {
+		return nil, errors.Wrap(err, "create imports sql repository")
+	}
+	return imports.NewService(store), nil
 }
 
 // newAuthService receives runtime config and store and returns the authentication service for HTTP routes.

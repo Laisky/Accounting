@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"math/big"
+	"strings"
 	"time"
 
 	"github.com/Laisky/errors/v2"
@@ -214,7 +216,8 @@ func (s *SQLRepository) Entries(ctx context.Context, bookID string) ([]Entry, er
 	return s.scanEntries(rows)
 }
 
-// CreateEntry receives an entry and stores it when its id is unique.
+// CreateEntry receives an entry and stores it together with its balanced double-entry postings
+// in one transaction, so a posting failure rolls back the entry and the external result is unchanged.
 func (s *SQLRepository) CreateEntry(ctx context.Context, entry Entry) (Entry, error) {
 	entryID, err := normalizeEntryID(entry.ID)
 	if err != nil {
@@ -222,45 +225,65 @@ func (s *SQLRepository) CreateEntry(ctx context.Context, entry Entry) (Entry, er
 	}
 	entry.ID = entryID
 	entry = cloneEntry(entry)
-	if err := s.insertEntry(ctx, s.db.SQLDB(), entry); err != nil {
+	if err := s.db.WithTx(ctx, func(tx storage.DBTX) error {
+		if err := s.insertEntry(ctx, tx, entry); err != nil {
+			return err
+		}
+		return s.writeEntryPostings(ctx, tx, entry)
+	}); err != nil {
 		return Entry{}, err
 	}
 	return cloneEntry(entry), nil
 }
 
-// UpdateEntry receives an entry and replaces the matching existing entry.
+// UpdateEntry receives an entry and replaces the matching existing entry, rebuilding its
+// postings (delete-then-insert) inside the same transaction.
 func (s *SQLRepository) UpdateEntry(ctx context.Context, entry Entry) (Entry, error) {
 	entry = cloneEntry(entry)
 	tags, err := json.Marshal(entry.Tags)
 	if err != nil {
 		return Entry{}, errors.Wrap(err, "encode entry tags")
 	}
-	result, err := s.db.SQLDB().ExecContext(ctx, storage.Rebind(s.dialect, `
-		UPDATE entries SET type = ?, account_id = ?, destination_account_id = ?, category_id = ?,
-			amount_cents = ?, transaction_currency = ?, account_currency = ?, book_reporting_currency = ?,
-			exchange_rate = ?, occurred_at = ?, note = ?, merchant = ?, tags = ?, raw_source = ?, updated_at = ?
-		WHERE id = ? AND book_id = ?`),
-		entry.Type, nullString(entry.AccountID), nullString(entry.DestinationAccountID), nullString(entry.CategoryID),
-		entry.AmountCents, entry.TransactionCurrency, entry.AccountCurrency, entry.BookReportingCurrency,
-		entry.ExchangeRate, entry.OccurredAt, entry.Note, entry.Merchant, string(tags), entry.RawSource, entry.UpdatedAt,
-		entry.ID, entry.BookID)
-	if err != nil {
-		return Entry{}, errors.Wrap(err, "update entry")
-	}
-	if err := requireRowsAffected(result, ErrNotFound, "entry %q not found", entry.ID); err != nil {
+	if err := s.db.WithTx(ctx, func(tx storage.DBTX) error {
+		result, err := tx.ExecContext(ctx, storage.Rebind(s.dialect, `
+			UPDATE entries SET type = ?, account_id = ?, destination_account_id = ?, category_id = ?,
+				amount_cents = ?, transaction_currency = ?, account_currency = ?, book_reporting_currency = ?,
+				exchange_rate = ?, occurred_at = ?, note = ?, merchant = ?, tags = ?, raw_source = ?, updated_at = ?
+			WHERE id = ? AND book_id = ?`),
+			entry.Type, nullString(entry.AccountID), nullString(entry.DestinationAccountID), nullString(entry.CategoryID),
+			entry.AmountCents, entry.TransactionCurrency, entry.AccountCurrency, entry.BookReportingCurrency,
+			entry.ExchangeRate, entry.OccurredAt, entry.Note, entry.Merchant, string(tags), entry.RawSource, entry.UpdatedAt,
+			entry.ID, entry.BookID)
+		if err != nil {
+			return errors.Wrap(err, "update entry")
+		}
+		if err := requireRowsAffected(result, ErrNotFound, "entry %q not found", entry.ID); err != nil {
+			return err
+		}
+		if err := s.deleteEntryPostings(ctx, tx, entry.ID); err != nil {
+			return err
+		}
+		return s.writeEntryPostings(ctx, tx, entry)
+	}); err != nil {
 		return Entry{}, err
 	}
 	return cloneEntry(entry), nil
 }
 
-// DeleteEntry receives a book id and entry id and removes the matching entry.
+// DeleteEntry receives a book id and entry id and removes the matching entry and its postings
+// in one transaction. Postings are deleted explicitly rather than relying on FK cascade ordering.
 func (s *SQLRepository) DeleteEntry(ctx context.Context, bookID string, entryID string) error {
-	result, err := s.db.SQLDB().ExecContext(ctx, storage.Rebind(s.dialect, `
-		DELETE FROM entries WHERE id = ? AND book_id = ?`), entryID, bookID)
-	if err != nil {
-		return errors.Wrap(err, "delete entry")
-	}
-	return requireRowsAffected(result, ErrNotFound, "entry %q not found", entryID)
+	return s.db.WithTx(ctx, func(tx storage.DBTX) error {
+		if err := s.deleteEntryPostings(ctx, tx, entryID); err != nil {
+			return err
+		}
+		result, err := tx.ExecContext(ctx, storage.Rebind(s.dialect, `
+			DELETE FROM entries WHERE id = ? AND book_id = ?`), entryID, bookID)
+		if err != nil {
+			return errors.Wrap(err, "delete entry")
+		}
+		return requireRowsAffected(result, ErrNotFound, "entry %q not found", entryID)
+	})
 }
 
 // Categories receives a book id and returns active and archived categories for that book.
@@ -526,6 +549,94 @@ func (s *SQLRepository) insertEntry(ctx context.Context, tx storage.DBTX, entry 
 		return errors.Wrap(err, "insert entry")
 	}
 	return nil
+}
+
+// writeEntryPostings builds the entry's balanced journal and inserts one journal_entries row
+// plus its posting legs on the supplied transaction. A build or insert failure aborts the tx.
+func (s *SQLRepository) writeEntryPostings(ctx context.Context, tx storage.DBTX, entry Entry) error {
+	rates, err := s.postingRates(ctx, tx)
+	if err != nil {
+		return err
+	}
+	postings, err := buildPostings(entry, rates)
+	if err != nil {
+		return err
+	}
+
+	journalID, err := newJournalID()
+	if err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, storage.Rebind(s.dialect, `
+		INSERT INTO journal_entries (id, entry_id, book_id, occurred_at)
+		VALUES (?, ?, ?, ?)`), journalID, entry.ID, entry.BookID, entry.OccurredAt); err != nil {
+		return errors.Wrap(err, "insert journal entry")
+	}
+
+	for _, posting := range postings {
+		postingID, err := newPostingID()
+		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, storage.Rebind(s.dialect, `
+			INSERT INTO postings (id, journal_id, entry_id, book_id, account_id, direction, amount_cents, currency, reporting_cents, occurred_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+			postingID, journalID, entry.ID, entry.BookID, posting.AccountID, string(posting.Direction),
+			posting.AmountCents, posting.Currency, posting.ReportingCents, entry.OccurredAt); err != nil {
+			return errors.Wrap(err, "insert posting")
+		}
+		recordPostingWritten(ctx, posting.Direction)
+	}
+	return nil
+}
+
+// deleteEntryPostings removes an entry's postings and its journal on the supplied transaction.
+func (s *SQLRepository) deleteEntryPostings(ctx context.Context, tx storage.DBTX, entryID string) error {
+	if _, err := tx.ExecContext(ctx, storage.Rebind(s.dialect, `DELETE FROM postings WHERE entry_id = ?`), entryID); err != nil {
+		return errors.Wrap(err, "delete postings")
+	}
+	if _, err := tx.ExecContext(ctx, storage.Rebind(s.dialect, `DELETE FROM journal_entries WHERE entry_id = ?`), entryID); err != nil {
+		return errors.Wrap(err, "delete journal entry")
+	}
+	return nil
+}
+
+// postingRates loads the supported exchange rates indexed by currency for posting conversion,
+// falling back to the built-in defaults when the rate table is empty. Same-currency entries
+// never consult the map, so an empty table still works for the common case.
+func (s *SQLRepository) postingRates(ctx context.Context, tx storage.DBTX) (map[string]*big.Rat, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT currency, units_per_usd FROM exchange_rates`)
+	if err != nil {
+		return nil, errors.Wrap(err, "load posting exchange rates")
+	}
+	defer func() { _ = rows.Close() }()
+
+	index := map[string]*big.Rat{}
+	for rows.Next() {
+		var currency string
+		var unitsPerUSD string
+		if err := rows.Scan(&currency, &unitsPerUSD); err != nil {
+			return nil, errors.Wrap(err, "scan posting exchange rate")
+		}
+		parsed, ok := new(big.Rat).SetString(unitsPerUSD)
+		if !ok || parsed.Sign() <= 0 {
+			continue
+		}
+		index[strings.ToUpper(strings.TrimSpace(currency))] = parsed
+	}
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrap(err, "iterate posting exchange rates")
+	}
+
+	if len(index) == 0 {
+		for _, rate := range defaultExchangeRates(time.Now().UTC()) {
+			parsed, ok := new(big.Rat).SetString(rate.UnitsPerUSD)
+			if ok && parsed.Sign() > 0 {
+				index[strings.ToUpper(strings.TrimSpace(rate.Currency))] = parsed
+			}
+		}
+	}
+	return index, nil
 }
 
 func (s *SQLRepository) entryByID(ctx context.Context, entryID string) (Entry, error) {

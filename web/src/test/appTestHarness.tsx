@@ -175,10 +175,10 @@ const fixtureImportBatch = {
 
 // ledgerResponse receives a URL and request init and returns a mocked ledger API response when matched.
 export function ledgerResponse(url: string, init?: RequestInit): Response | null {
-  if (url === '/api/books' || url === '/api/books?page=1&page_size=50') {
+  if (url === '/api/v1/books' || url === '/api/v1/books?page=1&page_size=50') {
     return response(init?.method === 'POST' ? currentBook : { items: [currentBook], page: 1, pageSize: 50, total: 1 });
   }
-  if (url === '/api/books/book-1' && init?.method === 'PATCH') {
+  if (url === '/api/v1/books/book-1' && init?.method === 'PATCH') {
     const body = JSON.parse(String(init.body ?? '{}')) as Partial<typeof fixtureBook>;
     currentBook = {
       ...currentBook,
@@ -188,15 +188,15 @@ export function ledgerResponse(url: string, init?: RequestInit): Response | null
     };
     return response(currentBook);
   }
-  if (url === '/api/books/book-1/members?page=1&page_size=50') {
+  if (url === '/api/v1/books/book-1/members?page=1&page_size=50') {
     return response({ items: [fixtureBookMember], page: 1, pageSize: 50, total: 1 });
   }
-  if (url === '/api/accounts/groups' || url === '/api/accounts/groups?page=1&page_size=50') {
+  if (url === '/api/v1/accounts/groups' || url === '/api/v1/accounts/groups?page=1&page_size=50') {
     return response(
       init?.method === 'POST' ? currentGroup : { items: [currentGroup], page: 1, pageSize: 50, total: 1 },
     );
   }
-  if (url === '/api/accounts/groups/group-1' && init?.method === 'PATCH') {
+  if (url === '/api/v1/accounts/groups/group-1' && init?.method === 'PATCH') {
     const body = JSON.parse(String(init.body ?? '{}')) as Partial<typeof fixtureGroup>;
     currentGroup = {
       ...currentGroup,
@@ -206,7 +206,7 @@ export function ledgerResponse(url: string, init?: RequestInit): Response | null
     };
     return response(currentGroup);
   }
-  if (url === '/api/accounts' || url === '/api/accounts?page=1&page_size=50') {
+  if (url === '/api/v1/accounts' || url === '/api/v1/accounts?page=1&page_size=50') {
     if (init?.method === 'POST') {
       const body = JSON.parse(String(init.body ?? '{}')) as Partial<typeof fixtureAccount>;
       const account = {
@@ -224,7 +224,7 @@ export function ledgerResponse(url: string, init?: RequestInit): Response | null
     const accounts = [fixtureAccount, ...fixtureCreditAccounts, ...createdAccounts];
     return response({ items: accounts, page: 1, pageSize: 50, total: accounts.length });
   }
-  if (url === '/api/books/book-1/categories' || url === '/api/books/book-1/categories?page=1&page_size=50') {
+  if (url === '/api/v1/books/book-1/categories' || url === '/api/v1/books/book-1/categories?page=1&page_size=50') {
     if (init?.method === 'POST') {
       const body = JSON.parse(String(init.body ?? '{}')) as Partial<typeof fixtureCategory>;
       const category = {
@@ -240,7 +240,7 @@ export function ledgerResponse(url: string, init?: RequestInit): Response | null
 
     return response({ items: currentCategories, page: 1, pageSize: 50, total: currentCategories.length });
   }
-  if (url.startsWith('/api/books/book-1/categories/') && init?.method === 'PATCH') {
+  if (url.startsWith('/api/v1/books/book-1/categories/') && init?.method === 'PATCH') {
     const categoryId = url.split('/').pop();
     const body = JSON.parse(String(init.body ?? '{}')) as Partial<typeof fixtureCategory>;
     const category = {
@@ -251,7 +251,7 @@ export function ledgerResponse(url: string, init?: RequestInit): Response | null
     currentCategories = currentCategories.map((item) => (item.id === category.id ? category : item));
     return response(category);
   }
-  if (url === '/api/books/book-1/imports/import-batch-1/apply' && init?.method === 'POST') {
+  if (url === '/api/v1/books/book-1/imports/import-batch-1/apply' && init?.method === 'POST') {
     const importedEntry = {
       ...fixtureEntry,
       id: 'entry-imported',
@@ -269,7 +269,7 @@ export function ledgerResponse(url: string, init?: RequestInit): Response | null
       entries: [importedEntry],
     });
   }
-  if (url.startsWith('/api/books/book-1/entries')) {
+  if (url.startsWith('/api/v1/books/book-1/entries')) {
     if (init?.method === 'POST') {
       const body = JSON.parse(String(init.body ?? '{}')) as Partial<typeof fixtureEntry>;
       const createdEntry = { ...fixtureEntry, ...body, id: 'entry-created', note: body.note ?? 'Team lunch' };
@@ -364,13 +364,13 @@ export function installAppTestFetchMock() {
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string, init?: RequestInit) => {
-      if (url === '/api/runtime-config') {
+      if (url === '/api/v1/runtime-config') {
         return Promise.resolve({
           ok: true,
           json: () =>
             Promise.resolve({
               serverName: 'test',
-              apiBase: '/api',
+              apiBase: '/api/v1',
               auth: {
                 emailLoginEnabled: true,
                 emailRegisterEnabled: false,
@@ -395,7 +395,7 @@ export function installAppTestFetchMock() {
             }),
         });
       }
-      if (url === '/api/auth/session') {
+      if (url === '/api/v1/auth/session') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -416,13 +416,13 @@ export function installAppTestFetchMock() {
             }),
         });
       }
-      if (url === '/api/users/me') {
+      if (url === '/api/v1/users/me') {
         return Promise.resolve(response({ user: fixtureUser }));
       }
-      if (url === '/api/auth/totp/status') {
+      if (url === '/api/v1/auth/totp/status') {
         return Promise.resolve(response({ enabled: currentTotpEnabled }));
       }
-      if (url === '/api/auth/totp/setup' && init?.method === 'POST') {
+      if (url === '/api/v1/auth/totp/setup' && init?.method === 'POST') {
         return Promise.resolve(
           response({
             otpauth: 'otpauth://totp/Accounting:person@example.test?secret=JBSWY3DPEHPK3PXP&issuer=Accounting',
@@ -430,23 +430,23 @@ export function installAppTestFetchMock() {
           }),
         );
       }
-      if (url === '/api/auth/totp/confirm' && init?.method === 'POST') {
+      if (url === '/api/v1/auth/totp/confirm' && init?.method === 'POST') {
         currentTotpEnabled = true;
         return Promise.resolve(response({ enabled: currentTotpEnabled }));
       }
-      if (url === '/api/auth/totp/disable' && init?.method === 'POST') {
+      if (url === '/api/v1/auth/totp/disable' && init?.method === 'POST') {
         currentTotpEnabled = false;
         return Promise.resolve(response({ enabled: currentTotpEnabled }));
       }
-      if (url === '/api/audit?page=1&page_size=20') {
+      if (url === '/api/v1/audit?page=1&page_size=20') {
         return Promise.resolve(response({ items: [fixtureAuditEvent], page: 1, pageSize: 20, total: 1 }));
       }
-      if (url === '/api/exchange-rates') {
+      if (url === '/api/v1/exchange-rates') {
         return Promise.resolve(
           response([{ currency: 'CNY', unitsPerUsd: '7.1', source: 'test', updatedAt: '2026-07-01T00:00:00Z' }]),
         );
       }
-      if (url === '/api/imports/wacai/preview' && init?.method === 'POST') {
+      if (url === '/api/v1/imports/wacai/preview' && init?.method === 'POST') {
         return Promise.resolve(response(fixtureImportBatch));
       }
       const ledger = ledgerResponse(url, init);

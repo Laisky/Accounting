@@ -5,7 +5,7 @@ export type RuntimeConfig = components['schemas']['RuntimeConfig'];
 
 export const emptyRuntimeConfig: RuntimeConfig = {
   serverName: 'accounting',
-  apiBase: '/api',
+  apiBase: '/api/v1',
   auth: {
     emailLoginEnabled: true,
     emailRegisterEnabled: true,
@@ -34,5 +34,5 @@ export const emptyRuntimeConfig: RuntimeConfig = {
 
 // fetchRuntimeConfig receives an AbortSignal, loads public runtime config, and returns parsed settings.
 export async function fetchRuntimeConfig(signal: AbortSignal): Promise<RuntimeConfig> {
-  return apiRequest<RuntimeConfig>('/api/runtime-config', { signal });
+  return apiRequest<RuntimeConfig>('/api/v1/runtime-config', { signal });
 }

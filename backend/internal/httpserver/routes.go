@@ -19,6 +19,7 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/config"
 	importsvc "github.com/Laisky/Accounting/backend/internal/imports"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
+	"github.com/Laisky/Accounting/backend/internal/storage"
 	"github.com/Laisky/Accounting/backend/internal/telemetry"
 )
 
@@ -78,32 +79,41 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 	if len(auditServices) > 0 && auditServices[0] != nil {
 		auditService = auditServices[0]
 	}
-	importService, err := newDefaultImportService(cfg, nil, "")
+	importService, err := newDefaultImportService(nil)
 	if err != nil {
 		panic(err)
 	}
-	registerRoutes(router, cfg, ledgerService, authService, auditService, importService)
+	registerRoutes(router, cfg, ledgerService, authService, auditService, importService, nil, nil)
 }
 
-// RegisterRoutesWithServices binds API endpoints with explicitly constructed domain services.
-func RegisterRoutesWithServices(router *gin.Engine, cfg config.Config, ledgerService *ledger.Service, authService *auth.Service, auditService *audit.Service, importService *importsvc.Service) {
+// RegisterRoutesWithServices binds API endpoints with explicitly constructed domain services, the
+// storage handle (nil for the in-memory driver) that backs DB-pool metrics and the /readyz probe,
+// and the Prometheus /metrics handler (nil when metrics are disabled).
+func RegisterRoutesWithServices(router *gin.Engine, cfg config.Config, ledgerService *ledger.Service, authService *auth.Service, auditService *audit.Service, importService *importsvc.Service, db *storage.DB, metricsHandler http.Handler) {
 	if auditService == nil {
 		auditService = audit.NewService(audit.NewMemoryStore())
 	}
 	if importService == nil {
 		var err error
-		importService, err = newDefaultImportService(cfg, nil, "")
+		importService, err = newDefaultImportService(nil)
 		if err != nil {
 			panic(err)
 		}
 	}
-	registerRoutes(router, cfg, ledgerService, authService, auditService, importService)
+	registerRoutes(router, cfg, ledgerService, authService, auditService, importService, db, metricsHandler)
 }
 
 // registerRoutes binds API endpoints to the provided Gin router and fully constructed services.
-func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger.Service, authService *auth.Service, auditService *audit.Service, importService *importsvc.Service) {
-	api := router.Group("/api")
+func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger.Service, authService *auth.Service, auditService *audit.Service, importService *importsvc.Service, db *storage.DB, metricsHandler http.Handler) {
 	metrics := telemetry.NewMetrics()
+	if db != nil {
+		metrics.RegisterDBStats(db.SQLDB())
+	}
+	// Operational endpoints live on the ROOT engine, outside the /api/v1 group's session and
+	// rate-limiter middleware.
+	registerOpsRoutes(router, db, metricsHandler)
+
+	api := router.Group("/api/v1")
 	api.Use(metricsMiddleware(metrics))
 	api.Use(AttachSession(cfg, authService))
 
@@ -125,6 +135,10 @@ func registerRoutes(router *gin.Engine, cfg config.Config, ledgerService *ledger
 	})
 
 	authLimiter := newAuthRateLimiter(cfg.Auth.RateLimit)
+
+	// NOTE: the unauthenticated demo summary endpoint is retained until the home dashboard
+	// (HomeRoute) is reworked to consume the authenticated book-scoped
+	// /books/:bookID/ledger/summary. It exposes only seeded demo data. See proposal P2-2.
 	api.GET("/ledger/summary", func(c *gin.Context) {
 		log := gmw.GetLogger(c)
 		summary := ledgerService.Summary(c.Request.Context())
@@ -412,7 +426,7 @@ type entryUpdateRequest struct {
 func buildRuntimeConfigResponse(cfg config.Config) RuntimeConfigResponse {
 	return RuntimeConfigResponse{
 		ServerName: cfg.ServerName,
-		APIBase:    "/api",
+		APIBase:    "/api/v1",
 		Auth: PublicAuthConfig{
 			EmailLoginEnabled:          cfg.Auth.Email.LoginEnabled,
 			EmailRegisterEnabled:       cfg.Auth.Email.RegisterEnabled,

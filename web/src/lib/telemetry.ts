@@ -3,7 +3,7 @@ import { onCLS, onINP, onLCP, type Metric } from 'web-vitals';
 // telemetry.ts is the ONLY frontend module (besides apiClient) allowed to talk to the
 // network directly. It ships a strict, sanitized payload to POST /api/telemetry/client:
 // no amounts, notes, account names, emails, tokens, or raw messages ever leave the client.
-const ENDPOINT = '/api/telemetry/client';
+const ENDPOINT = '/api/v1/telemetry/client';
 const VITALS_SAMPLE_RATE = 0.2;
 
 type ErrorReport = {

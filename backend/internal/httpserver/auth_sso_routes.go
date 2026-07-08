@@ -18,8 +18,8 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/config"
 )
 
-const ssoCallbackPath = "/api/auth/sso/callback"
-const ssoStartPath = "/api/auth/sso/start"
+const ssoCallbackPath = "/api/v1/auth/sso/callback"
+const ssoStartPath = "/api/v1/auth/sso/start"
 
 // registerExternalSSORoutes receives auth dependencies and registers external SSO entry and callback endpoints.
 func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authService *auth.Service, auditService *audit.Service, limiter *authRateLimiter) {
@@ -220,7 +220,7 @@ func setSSOStateCookie(c *gin.Context, cfg config.Config, state string) {
 	http.SetCookie(c.Writer, &http.Cookie{ //nolint:gosec // SSO CSRF cookies set Secure/HttpOnly/SameSite from runtime config.
 		Name:     externalSSOStateCookieName(cfg),
 		Value:    auth.HashSessionToken(state),
-		Path:     "/api/auth/sso",
+		Path:     "/api/v1/auth/sso",
 		MaxAge:   int(ttl.Seconds()),
 		Secure:   cfg.Auth.Session.CookieSecure,
 		HttpOnly: true,
@@ -234,7 +234,7 @@ func clearSSOStateCookie(c *gin.Context, cfg config.Config) {
 	http.SetCookie(c.Writer, &http.Cookie{ //nolint:gosec // Expiring SSO cookies preserves Secure/HttpOnly/SameSite from runtime config.
 		Name:     externalSSOStateCookieName(cfg),
 		Value:    "",
-		Path:     "/api/auth/sso",
+		Path:     "/api/v1/auth/sso",
 		MaxAge:   -1,
 		Secure:   cfg.Auth.Session.CookieSecure,
 		HttpOnly: true,

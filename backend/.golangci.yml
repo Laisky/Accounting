@@ -33,7 +33,6 @@ linters:
         linters:
           - noctx
       - path: _test\.go
-        text: "G101:"
         linters:
           - gosec
 

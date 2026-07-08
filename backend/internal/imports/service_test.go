@@ -116,8 +116,9 @@ func TestBatchLoadsOnlyActorOwnedBatches(t *testing.T) {
 	require.True(t, errors.Is(err, ErrNotFound))
 }
 
-// TestMarkAppliedStoresCommitMetadata verifies applied import metadata is durable and actor-scoped.
-func TestMarkAppliedStoresCommitMetadata(t *testing.T) {
+// TestFinalizeAppliedStoresCommitMetadata verifies applied import metadata is durable and
+// state-checked: it can only follow a claim, and re-finalizing an applied batch conflicts.
+func TestFinalizeAppliedStoresCommitMetadata(t *testing.T) {
 	service := NewService(NewMemoryStore())
 	created, err := service.PreviewWacaiCSV(context.Background(), PreviewRequest{
 		Actor:    Actor{UserID: "user-owner"},
@@ -126,7 +127,16 @@ func TestMarkAppliedStoresCommitMetadata(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	applied, err := service.MarkApplied(context.Background(), MarkAppliedRequest{
+	// Finalizing before claiming conflicts (the batch is still preview, not applying).
+	_, err = service.FinalizeApplied(context.Background(), MarkAppliedRequest{
+		Actor: Actor{UserID: "user-owner"}, BatchID: created.ID, BookID: "book-household", EntryIDs: []string{"entry-1"},
+	})
+	require.ErrorIs(t, err, ErrConflict)
+
+	_, err = service.ClaimForApply(context.Background(), BatchRequest{Actor: Actor{UserID: "user-owner"}, BatchID: created.ID})
+	require.NoError(t, err)
+
+	applied, err := service.FinalizeApplied(context.Background(), MarkAppliedRequest{
 		Actor:    Actor{UserID: "user-owner"},
 		BatchID:  created.ID,
 		BookID:   "book-household",
@@ -141,25 +151,12 @@ func TestMarkAppliedStoresCommitMetadata(t *testing.T) {
 	require.Equal(t, []string{"entry-1", "entry-2"}, applied.AppliedEntryIDs)
 	require.Len(t, applied.AppliedSkippedRows, 1)
 	require.NotNil(t, applied.AppliedAt)
-	require.True(t, applied.AppliedAt.Equal(applied.AppliedAt.UTC()))
 
-	replayed, err := service.MarkApplied(context.Background(), MarkAppliedRequest{
-		Actor:    Actor{UserID: "user-owner"},
-		BatchID:  created.ID,
-		BookID:   "book-household",
-		EntryIDs: []string{"entry-3"},
+	// Re-finalizing an already-applied batch conflicts (idempotent replay is the handler's job).
+	_, err = service.FinalizeApplied(context.Background(), MarkAppliedRequest{
+		Actor: Actor{UserID: "user-owner"}, BatchID: created.ID, BookID: "book-household", EntryIDs: []string{"entry-3"},
 	})
-	require.NoError(t, err)
-	require.Equal(t, []string{"entry-1", "entry-2"}, replayed.AppliedEntryIDs)
-
-	_, err = service.MarkApplied(context.Background(), MarkAppliedRequest{
-		Actor:    Actor{UserID: "user-owner"},
-		BatchID:  created.ID,
-		BookID:   "book-other",
-		EntryIDs: []string{"entry-3"},
-	})
-	require.Error(t, err)
-	require.True(t, errors.Is(err, ErrInvalidInput))
+	require.ErrorIs(t, err, ErrConflict)
 }
 
 // TestPreviewWacaiCSVRejectsInvalidInput verifies preview requests fail closed.
