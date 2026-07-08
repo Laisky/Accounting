@@ -62,6 +62,30 @@ describe('App', () => {
     expect(screen.getByLabelText('Book name')).toHaveValue('Household');
   });
 
+  it('dismisses the workspace menu on outside pointer press or Escape, but not from inside', async () => {
+    renderApp('/home');
+
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
+    const trigger = screen.getByRole('button', { name: 'More options' });
+
+    // A pointer press inside the open menu keeps it open.
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.pointerDown(screen.getByText('Theme'));
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+    // Pressing outside the menu dismisses it.
+    fireEvent.pointerDown(document.body);
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
+    expect(screen.queryByText('Theme')).not.toBeInTheDocument();
+
+    // Escape dismisses it too.
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
+  });
+
   it.each([
     ['/home', 'Home', 'Home'],
     ['/accounts', 'Accounts', 'Accounts'],
@@ -303,6 +327,33 @@ describe('App', () => {
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"name":"Meals"'),
     });
+  });
+
+  it('dismisses the category sheet on backdrop click or Escape, but not on in-sheet clicks', async () => {
+    renderApp();
+
+    expect(await openRecordTab()).toBeInTheDocument();
+    const shortcuts = await screen.findByRole('group', { name: 'Category shortcuts' });
+
+    // A pointer press inside the sheet must not dismiss it.
+    fireEvent.click(within(shortcuts).getByRole('button', { name: 'All' }));
+    const sheet = await screen.findByRole('region', { name: 'Select category' });
+    fireEvent.mouseDown(within(sheet).getByRole('button', { name: /Dining/ }));
+    expect(screen.getByRole('region', { name: 'Select category' })).toBeInTheDocument();
+
+    // Pressing on the dimmed backdrop dismisses it.
+    fireEvent.mouseDown(sheet.parentElement as HTMLElement);
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Select category' })).not.toBeInTheDocument(),
+    );
+
+    // Escape dismisses it.
+    fireEvent.click(within(shortcuts).getByRole('button', { name: 'All' }));
+    expect(await screen.findByRole('region', { name: 'Select category' })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Select category' })).not.toBeInTheDocument(),
+    );
   });
 
   it('creates, renames, and archives a category from the record tab', async () => {

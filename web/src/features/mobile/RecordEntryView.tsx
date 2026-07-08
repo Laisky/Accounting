@@ -480,8 +480,29 @@ function CategorySheet({
     : categories;
   const groups = buildCategoryGroups(visibleCategories, sourceCategories, t);
 
+  // Dismiss on Escape so the sheet obeys the same close affordances as the shared Sheet primitive.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="categorySheetOverlay" role="presentation">
+    <div
+      className="categorySheetOverlay"
+      role="presentation"
+      // Clicking the dimmed backdrop (never the sheet itself) closes, matching common bottom-sheet UX.
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <section className="categorySheet" aria-label={t('mobile.record.categorySheetTitle')}>
         <header className="categorySheetHeader">
           <button type="button" aria-label={t('mobile.record.closeCategories')} onClick={onClose}>

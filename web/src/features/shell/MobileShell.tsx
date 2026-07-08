@@ -148,6 +148,7 @@ function ShellFrame() {
             closeMenu();
             navigate('/home');
           }}
+          onCloseWorkspaceMenu={closeMenu}
           onEditContext={handleEditContext}
           onOpenAccounts={() => openTab('accounts')}
           onOpenSearch={handleOpenSearch}

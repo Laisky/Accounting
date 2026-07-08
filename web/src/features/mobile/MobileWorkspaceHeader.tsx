@@ -11,12 +11,13 @@ import {
   Shirt,
   Sun,
 } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useBook } from '@/contexts/BookContext';
 import { useThemeContext } from '@/contexts/ThemeContext';
 import { useShellChrome } from '@/features/shell/useShellChrome';
+import { useDismiss } from '@/hooks/useDismiss';
 import { type BookListItem } from '@/lib/api/ledger';
 import { formatShortDate, type ThemeMode } from './mobile-workspace-utils';
 
@@ -28,6 +29,7 @@ type MobileWorkspaceHeaderProps = {
   isWorkspaceMenuOpen: boolean;
   onBackAccount: () => void;
   onBackEntry: () => void;
+  onCloseWorkspaceMenu: () => void;
   onEditContext: () => void;
   onOpenAccounts: () => void;
   onOpenSearch: () => void;
@@ -44,6 +46,7 @@ export function MobileWorkspaceHeader({
   isWorkspaceMenuOpen,
   onBackAccount,
   onBackEntry,
+  onCloseWorkspaceMenu,
   onEditContext,
   onOpenAccounts,
   onOpenSearch,
@@ -59,6 +62,7 @@ export function MobileWorkspaceHeader({
       canEditContext={canEditContext}
       editTargetLabel={editTargetLabel}
       isOpen={isWorkspaceMenuOpen}
+      onClose={onCloseWorkspaceMenu}
       onEditContext={onEditContext}
       onThemeModeChange={setThemeMode}
       onToggle={onToggleWorkspaceMenu}
@@ -193,6 +197,7 @@ function WorkspaceMenu({
   canEditContext,
   editTargetLabel,
   isOpen,
+  onClose,
   onEditContext,
   onThemeModeChange,
   onToggle,
@@ -201,14 +206,18 @@ function WorkspaceMenu({
   canEditContext: boolean;
   editTargetLabel: string;
   isOpen: boolean;
+  onClose: () => void;
   onEditContext: () => void;
   onThemeModeChange: (mode: ThemeMode) => void;
   onToggle: () => void;
   themeMode: ThemeMode;
 }) {
   const { t } = useTranslation();
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Close when the user points outside the menu or presses Escape, matching common popover UX.
+  useDismiss(isOpen, rootRef, onClose);
   return (
-    <div className="workspaceMenuRoot">
+    <div className="workspaceMenuRoot" ref={rootRef}>
       <button
         type="button"
         aria-controls="workspace-menu"
