@@ -7,7 +7,7 @@ require (
 	github.com/Laisky/gin-middlewares/v7 v7.0.3-0.20260320133617-ccf155d4ffea
 	github.com/Laisky/go-utils/v6 v6.3.0
 	github.com/Laisky/zap v1.27.1-0.20260318034917-6e5a9fb2b3d1
-	github.com/getkin/kin-openapi v0.140.0
+	github.com/getkin/kin-openapi v0.144.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-webauthn/webauthn v0.17.4
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -205,8 +205,8 @@ require (
 	github.com/nishanths/exhaustive v0.12.0 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.23.0 // indirect
-	github.com/oasdiff/yaml v0.1.0 // indirect
-	github.com/oasdiff/yaml3 v0.0.13 // indirect
+	github.com/oasdiff/yaml v0.1.1 // indirect
+	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.2 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
