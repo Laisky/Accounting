@@ -1,0 +1,97 @@
+name: Resolve and validate one-api Modern dependencies
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+concurrency:
+  group: one-api-modern-upgrade-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  resolve-and-validate:
+    if: github.event.pull_request.head.ref == 'agent/one-api-modern-upgrade-runner-20260819'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CI: 'true'
+      YARN_NETWORK_TIMEOUT: '600000'
+    steps:
+      - name: Checkout one-api upgrade branch
+        uses: actions/checkout@v4
+        with:
+          repository: Laisky/one-api
+          ref: agent/modern-latest-stable-20260819
+          path: one-api
+          fetch-depth: 0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Yarn Classic
+        run: npm install --global yarn@1.22.22
+
+      - name: Resolve latest stable dependency graph
+        working-directory: one-api/web/modern
+        run: |
+          set -euo pipefail
+          npx --yes npm-check-updates@latest --upgrade --target latest --packageManager yarn
+          rm -f package-lock.json
+          rm -rf node_modules
+          yarn install --non-interactive --network-timeout "${YARN_NETWORK_TIMEOUT}"
+
+      - name: Run compatibility gates and preserve every result
+        working-directory: one-api
+        shell: bash
+        run: |
+          set -uo pipefail
+          logs="$GITHUB_WORKSPACE/validation-logs"
+          mkdir -p "$logs"
+          : > "$logs/status.txt"
+
+          run_gate() {
+            local name="$1"
+            shift
+            set +e
+            "$@" >"$logs/${name}.log" 2>&1
+            local rc=$?
+            set -e
+            echo "${name}=${rc}" | tee -a "$logs/status.txt"
+            return 0
+          }
+
+          cd web/modern
+          run_gate direct-dependencies-current npx --yes npm-check-updates@latest --target latest --errorLevel 2
+          run_gate type-check yarn type-check
+          run_gate lint yarn lint
+          run_gate i18n yarn check:i18n
+          run_gate unit-tests yarn test --run --passWithNoTests
+          run_gate production-build yarn build:prod
+          run_gate react-graph yarn why react
+          run_gate react-dom-graph yarn why react-dom
+          rm -rf node_modules
+          run_gate frozen-install yarn install --frozen-lockfile --non-interactive --network-timeout "${YARN_NETWORK_TIMEOUT}"
+          cd ../..
+          run_gate diff-check git diff --check
+
+          cp web/modern/package.json "$logs/package.json"
+          cp web/modern/yarn.lock "$logs/yarn.lock"
+          git diff -- web/modern > "$logs/modern-upgrade.patch"
+
+      - name: Upload resolved graph and diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-api-modern-upgrade
+          path: validation-logs
+          if-no-files-found: error
+          retention-days: 7
