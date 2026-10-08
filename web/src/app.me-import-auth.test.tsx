@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { emptyRuntimeConfig } from './lib/api/runtimeConfig';
 import {
   fixtureUser,
@@ -13,6 +13,10 @@ import {
 } from './test/appTestHarness';
 
 describe('App', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(installAppTestFetchMock);
 
   it('stages and applies a Wacai import from the import tab', async () => {
@@ -59,6 +63,9 @@ describe('App', () => {
   });
 
   it('opens the reports tab with existing report drilldowns', async () => {
+    // The report uses the current month, matching the shared July ledger fixtures.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-04T12:00:00Z'));
     renderApp();
 
     const nav = await screen.findByRole('navigation', { name: 'Main navigation' });

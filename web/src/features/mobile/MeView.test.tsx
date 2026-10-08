@@ -16,6 +16,8 @@ const runtimeConfig: RuntimeConfig = {
 const activityEvents = [
   {
     id: 'audit-1',
+    seq: 1,
+    hash: 'hash-1',
     action: 'entry.created',
     targetType: 'entry',
     createdAt: '2026-07-01T00:00:00Z',

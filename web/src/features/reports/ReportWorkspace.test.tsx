@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Navigate, Route, Routes, useParams } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReportWorkspace } from './ReportWorkspace';
 import { isReportTab, reportTabPath } from './reportWorkspaceModel';
 import type { Account, BookListItem, BookMember, Category, Entry } from '@/lib/api/ledger';
@@ -175,6 +175,16 @@ function RoutedReportWorkspace() {
 }
 
 describe('ReportWorkspace', () => {
+  beforeEach(() => {
+    // Reports select the current month; these entries belong to July 2026.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-04T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('shows category expense, income, and balance sections by default', async () => {
     renderReport();
 
