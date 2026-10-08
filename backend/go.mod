@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/Laisky/errors/v2 v2.0.1
 	github.com/Laisky/gin-middlewares/v7 v7.0.3-0.20260320133617-ccf155d4ffea
-	github.com/Laisky/go-utils/v6 v6.3.2-0.20261008143735-d465b5cfdaa2
+	github.com/Laisky/go-utils/v6 v6.3.2-0.20261008165128-506ec9758d5f
 	github.com/Laisky/zap v1.27.1-0.20261006114731-55f41c2b5061
 	github.com/getkin/kin-openapi v0.140.0
 	github.com/gin-gonic/gin v1.12.0
