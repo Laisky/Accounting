@@ -116,7 +116,7 @@ belong in those source-of-truth documents and locale bundles.
   `queryKeys.audit.list({ page: 1, pageSize: 20 })`; `MobileWorkspace` must not own audit event
   arrays or activity loading state.
 - Passkey metadata is loaded by `usePasskeysQuery` with `queryKeys.auth.passkeys({ page: 1,
-  pageSize: 20 })`. Passkey registration, rename, and delete flows update that Query cache through
+pageSize: 20 })`. Passkey registration, rename, and delete flows update that Query cache through
   the shared key instead of keeping a parallel component-owned passkey list.
 - TOTP status is loaded by `useTotpStatusQuery` with `queryKeys.auth.totpStatus()`. Setup remains
   local pending UI state, while confirm and disable mutations write the returned status into the
@@ -187,3 +187,13 @@ belong in those source-of-truth documents and locale bundles.
   `sendBeacon` to `POST /api/telemetry/client`, plus sampled LCP/INP/CLS (`web-vitals`).
 - Tests: web unit coverage thresholds in `vite.config.ts` (`test:coverage`); `e2e/a11y.spec.ts`
   runs axe over five authenticated views in light + dark; shared `e2e/helpers.ts` for auth setup.
+
+## Deterministic report test data
+
+Reports initialize their selected month from the current date. Tests with fixed July 2026
+entries must select that same month explicitly or pin the test date to July, then restore it.
+The report fixtures use Date-only fake timers so asynchronous query notifications and
+Testing Library waits keep their real timers. See the [Vitest timer API](https://vitest.dev/api/vi#vi-usefaketimers)
+and [system-time API](https://vitest.dev/api/vi#vi-setsystemtime), verified on 2026-10-08.
+Account tests must wait for account-query data rather than treating a mounted region as
+confirmation that every independent query has finished.

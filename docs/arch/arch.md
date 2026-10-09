@@ -250,6 +250,14 @@ contract workflow verifies that frontend generated API types are current with `d
 backend Go tests validate representative httptest responses against the same contract with
 `github.com/getkin/kin-openapi`.
 
+The contract-test dependency is pinned to kin-openapi v0.144.0 or later to include the
+[authentication default fix](https://github.com/getkin/kin-openapi/security/advisories/GHSA-r277-6w6q-xmqw)
+and the [schema-less parameter fix](https://github.com/getkin/kin-openapi/security/advisories/GHSA-jpcw-4wr7-c3vq).
+Retained dependency regressions require protected operations to reject requests without a
+verifier, allow verified credentials and public operations, and return a validation error
+without panicking for a schema-less content parameter. These guard the test dependency;
+Accounting's production authentication is enforced by its own middleware.
+
 ## API Contract
 
 The first persistent API description lives in `docs/api/openapi.yaml` with shared schemas split into

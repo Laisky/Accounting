@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fixtureCategory,
   installAppTestFetchMock,
@@ -135,6 +135,17 @@ describe('App', () => {
   });
 
   it('shows accounts and can prepare starter account data', async () => {
+    let releaseAccounts: () => void = () => undefined;
+    const accountsReady = new Promise<void>((resolve) => {
+      releaseAccounts = resolve;
+    });
+    const fetchImplementation = vi.mocked(fetch).getMockImplementation() as typeof fetch;
+    vi.mocked(fetch).mockImplementation(async (...args) => {
+      if (String(args[0]).split('?')[0]?.endsWith('/accounts') && !args[1]?.method) {
+        await accountsReady;
+      }
+      return fetchImplementation(...args);
+    });
     renderApp();
 
     const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
@@ -146,7 +157,9 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: 'Net assets' })).toBeInTheDocument();
     expect(screen.getByText('Credit cards')).toBeInTheDocument();
     expect(screen.getByText('Savings and IOUs')).toBeInTheDocument();
-    expect(screen.getByText('cash / USD')).toBeInTheDocument();
+    expect(screen.queryByText('cash / USD')).not.toBeInTheDocument();
+    releaseAccounts();
+    expect(await screen.findByText('cash / USD')).toBeInTheDocument();
     const creditCardsButton = screen.getByRole('button', { name: /Credit cards/ });
     expect(creditCardsButton).toHaveTextContent('(4)');
     expect(screen.getByRole('button', { name: /Stored-value cards/ })).toHaveTextContent('(0)');
