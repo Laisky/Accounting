@@ -29,7 +29,7 @@ func TestUtilsLoggingCompatibility(t *testing.T) {
 			want = glog.LevelDebug
 		}
 		require.Equal(t, want, log.Level())
-		require.Same(t, log, FromContext(nil))
+		require.Same(t, log, FromContext(nil)) //nolint:staticcheck // Exercise the supported nil-context fallback explicitly.
 		request := log.Named("request")
 		require.Same(t, request, FromContext(gmw.SetLogger(context.Background(), request)))
 	}
