@@ -533,7 +533,7 @@ Accounting follows the `one-api` operational pattern for backend observability:
 
 ## Engineering Standards
 
-- Go code targets Go 1.26.4.
+- Go code targets Go 1.26.10. Builds must use a patched toolchain; Go 1.27 requires 1.27.3 or later for [GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809).
 - Manually written code files must stay under 800 lines. Go files should stay under 600 lines when feasible and should split by responsibility before they become hard to review.
 - Every function and interface must have a comment that starts with its name and describes purpose, parameters, and return values in complete sentences.
 - Tests should use `github.com/stretchr/testify/require` for assertions.
