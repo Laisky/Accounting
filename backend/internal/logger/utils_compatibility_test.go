@@ -66,7 +66,7 @@ func TestUtilsAlertCompatibility(t *testing.T) {
 	cfg.AlertPusher.Type = "synthetic"
 	cfg.AlertPusher.Token = "synthetic-only"
 	Setup(false)
-	log := SetupEnhanced(ctx, cfg)
+	log := SetupEnhanced(ctx, cfg).With(zap.String("bound_field", "synthetic-bound"))
 	var localSecret string
 	log = log.WithOptions(zap.HooksWithFields(func(_ zapcore.Entry, fields []zapcore.Field) error {
 		for _, field := range fields {
@@ -85,6 +85,8 @@ func TestUtilsAlertCompatibility(t *testing.T) {
 		require.NotContains(t, message, "info control")
 		require.NotContains(t, message, "synthetic-secret")
 		require.NotContains(t, message, "session_token")
+		require.NotContains(t, message, "bound_field")
+		require.NotContains(t, message, "synthetic-bound")
 	case <-time.After(3 * time.Second):
 		t.Fatal("configured error alert was not delivered")
 	}
