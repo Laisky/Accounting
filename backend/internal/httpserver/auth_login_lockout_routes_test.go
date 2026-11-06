@@ -22,21 +22,21 @@ func TestRegisterRoutesLoginLockoutReturnsRetryAfter(t *testing.T) {
 	cfg := testConfig()
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerRec := httptest.NewRecorder()
 	router.ServeHTTP(registerRec, registerReq)
 	require.Equal(t, http.StatusCreated, registerRec.Code)
 
 	for range 6 {
-		req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"wrong password"}`))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"wrong password"}`))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusUnauthorized, rec.Code)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -45,6 +45,7 @@ func TestRegisterRoutesLoginLockoutReturnsRetryAfter(t *testing.T) {
 	retryAfter, err := strconv.Atoi(rec.Header().Get("Retry-After"))
 	require.NoError(t, err)
 	require.Positive(t, retryAfter)
-	require.JSONEq(t, `{"code":"login_temporarily_locked","message":"login temporarily locked"}`, rec.Body.String())
+	require.Equal(t, problemContentType, rec.Header().Get("Content-Type"))
+	require.JSONEq(t, `{"type":"about:blank","title":"Too many requests","status":429,"detail":"login temporarily locked","code":"rate_limited"}`, rec.Body.String())
 	require.NotContains(t, rec.Body.String(), "person@example.test")
 }

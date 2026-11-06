@@ -27,7 +27,7 @@ func TestRunVersion(t *testing.T) {
 func TestRunHealth(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodGet, r.Method)
-		require.Equal(t, "/api/health", r.URL.Path)
+		require.Equal(t, "/api/v1/health", r.URL.Path)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -50,7 +50,7 @@ func TestRunWacaiPreview(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPost, r.Method)
-		require.Equal(t, "/api/imports/wacai/preview", r.URL.Path)
+		require.Equal(t, "/api/v1/imports/wacai/preview", r.URL.Path)
 		require.Equal(t, "accounting_session=session-1", r.Header.Get("Cookie"))
 
 		err := r.ParseMultipartForm(maxPreviewUploadBytes)

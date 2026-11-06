@@ -3,6 +3,7 @@ package imports
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/Laisky/errors/v2"
 )
@@ -13,6 +14,17 @@ type Store interface {
 	SaveBatchIfAbsent(ctx context.Context, batch Batch) (Batch, bool, error)
 	Batch(ctx context.Context, userID string, batchID string) (Batch, error)
 	BatchByHash(ctx context.Context, userID string, source string, sourceHash string) (Batch, error)
+	// ClaimForApply atomically transitions a batch from preview to applying, returning the
+	// claimed batch. It returns ErrNotFound when the batch is absent or not owned by userID,
+	// and ErrConflict when the batch is not in preview (already applying or applied). This CAS
+	// is the single guard that serializes concurrent applies and closes the double-write window.
+	ClaimForApply(ctx context.Context, userID string, batchID string) (Batch, error)
+	// FinalizeApplied atomically transitions a claimed (applying) batch to applied, recording
+	// the commit metadata. It returns ErrConflict when the batch is not in the applying state.
+	FinalizeApplied(ctx context.Context, request MarkAppliedRequest) (Batch, error)
+	// RevertToPreview atomically transitions an applying batch back to preview as the
+	// compensating action for a failed apply. It is idempotent (a no-op when not applying).
+	RevertToPreview(ctx context.Context, userID string, batchID string) error
 }
 
 // MemoryStore keeps import batches in process for the initial preview implementation.
@@ -28,31 +40,6 @@ func NewMemoryStore() *MemoryStore {
 		batches: map[string]Batch{},
 		byHash:  map[string]string{},
 	}
-}
-
-// NewMemoryStoreFromSnapshot receives durable state and returns an in-memory import Store implementation.
-func NewMemoryStoreFromSnapshot(snapshot Snapshot) *MemoryStore {
-	store := NewMemoryStore()
-	for _, batch := range snapshot.Batches {
-		batch = cloneBatch(batch)
-		store.batches[batch.ID] = batch
-		store.byHash[batchHashKey(batch.UserID, batch.Source, batch.SourceHash)] = batch.ID
-	}
-
-	return store
-}
-
-// Snapshot returns a detached durable representation of the store.
-func (s *MemoryStore) Snapshot() Snapshot {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	batches := make([]Batch, 0, len(s.batches))
-	for _, batch := range s.batches {
-		batches = append(batches, cloneBatch(batch))
-	}
-
-	return Snapshot{Batches: batches}
 }
 
 // SaveBatch receives an import batch and stores it by id and source hash.
@@ -110,6 +97,68 @@ func (s *MemoryStore) BatchByHash(_ context.Context, userID string, source strin
 	}
 
 	return cloneBatch(s.batches[id]), nil
+}
+
+// ClaimForApply atomically transitions a batch from preview to applying under the store mutex.
+func (s *MemoryStore) ClaimForApply(_ context.Context, userID string, batchID string) (Batch, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	batch, ok := s.batches[batchID]
+	if !ok || batch.UserID != userID {
+		return Batch{}, errors.Wrap(ErrNotFound, "import batch not found")
+	}
+	if batch.Status != BatchStatusPreview {
+		return Batch{}, errors.Wrapf(ErrConflict, "import batch is %s", batch.Status)
+	}
+	batch.Status = BatchStatusApplying
+	batch.UpdatedAt = time.Now().UTC()
+	s.batches[batchID] = cloneBatch(batch)
+
+	return cloneBatch(batch), nil
+}
+
+// FinalizeApplied atomically transitions a claimed batch to applied, recording commit metadata.
+func (s *MemoryStore) FinalizeApplied(_ context.Context, request MarkAppliedRequest) (Batch, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	batch, ok := s.batches[request.BatchID]
+	if !ok || batch.UserID != request.Actor.UserID {
+		return Batch{}, errors.Wrap(ErrNotFound, "import batch not found")
+	}
+	if batch.Status != BatchStatusApplying {
+		return Batch{}, errors.Wrapf(ErrConflict, "import batch is %s", batch.Status)
+	}
+	now := time.Now().UTC()
+	batch.Status = BatchStatusApplied
+	batch.AppliedBookID = request.BookID
+	batch.AppliedEntryIDs = append([]string(nil), request.EntryIDs...)
+	batch.AppliedSkippedRows = cloneAppliedSkippedRows(request.SkippedRows)
+	batch.AppliedAt = &now
+	batch.UpdatedAt = now
+	s.batches[request.BatchID] = cloneBatch(batch)
+
+	return cloneBatch(batch), nil
+}
+
+// RevertToPreview atomically returns an applying batch to preview; it is a no-op otherwise.
+func (s *MemoryStore) RevertToPreview(_ context.Context, userID string, batchID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	batch, ok := s.batches[batchID]
+	if !ok || batch.UserID != userID {
+		return errors.Wrap(ErrNotFound, "import batch not found")
+	}
+	if batch.Status != BatchStatusApplying {
+		return nil
+	}
+	batch.Status = BatchStatusPreview
+	batch.UpdatedAt = time.Now().UTC()
+	s.batches[batchID] = cloneBatch(batch)
+
+	return nil
 }
 
 // batchHashKey receives batch identity fields and returns a stable lookup key.

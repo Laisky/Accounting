@@ -32,7 +32,7 @@ func TestRegisterRoutesHealth(t *testing.T) {
 	cfg := testConfig()
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -114,32 +114,43 @@ func TestSecurityHeadersIgnoresSpoofedForwardedHTTPS(t *testing.T) {
 	require.Empty(t, rec.Header().Get("Strict-Transport-Security"))
 }
 
-// TestNewServerFilePersistenceDriverWritesSnapshots verifies file-backed stores are wired through server startup.
-func TestNewServerFilePersistenceDriverWritesSnapshots(t *testing.T) {
+// TestNewServerSQLitePersistenceDriverPersists verifies the relational storage layer is wired
+// through server startup: a sqlite-backed server migrates its schema, persists a registered
+// account, and a second server instance opened on the same database can still authenticate it.
+func TestNewServerSQLitePersistenceDriverPersists(t *testing.T) {
 	cfg := testConfig()
-	cfg.Persistence.Driver = "file"
+	cfg.Persistence.Driver = "sqlite"
 	cfg.Persistence.Dir = t.TempDir()
 	log := logger.Setup(false)
 
-	server, err := NewServer(cfg, log)
+	server, err := NewServer(cfg, log, nil)
 	require.NoError(t, err)
 
-	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerRec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(registerRec, registerReq)
 	require.Equal(t, http.StatusCreated, registerRec.Code)
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(loginRec, loginReq)
 	require.Equal(t, http.StatusOK, loginRec.Code)
 
-	_, err = os.Stat(filepath.Join(cfg.Persistence.Dir, "auth.json"))
+	// The relational schema is materialized as a real sqlite database file.
+	_, err = os.Stat(filepath.Join(cfg.Persistence.Dir, "accounting.sqlite3"))
 	require.NoError(t, err)
-	_, err = os.Stat(filepath.Join(cfg.Persistence.Dir, "audit.json"))
+
+	// A fresh server on the same database re-runs migrations idempotently and authenticates the
+	// previously registered account, proving durable relational persistence across instances.
+	server2, err := NewServer(cfg, log, nil)
 	require.NoError(t, err)
+	login2 := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	login2.Header.Set("Content-Type", "application/json")
+	login2Rec := httptest.NewRecorder()
+	server2.Handler.ServeHTTP(login2Rec, login2)
+	require.Equal(t, http.StatusOK, login2Rec.Code)
 }
 
 // TestRegisterRoutesRuntimeConfigExposesOnlyPublicValues verifies frontend config omits backend secrets.
@@ -186,7 +197,7 @@ func TestRegisterRoutesRuntimeConfigExposesOnlyPublicValues(t *testing.T) {
 	}
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/runtime-config", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runtime-config", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -201,7 +212,7 @@ func TestRegisterRoutesRuntimeConfigExposesOnlyPublicValues(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	require.NoError(t, err)
 	require.Equal(t, "test", response.ServerName)
-	require.Equal(t, "/api", response.APIBase)
+	require.Equal(t, "/api/v1", response.APIBase)
 	require.True(t, response.Auth.EmailLoginEnabled)
 	require.False(t, response.Auth.EmailRegisterEnabled)
 	require.True(t, response.Auth.EmailVerificationRequired)
@@ -211,7 +222,7 @@ func TestRegisterRoutesRuntimeConfigExposesOnlyPublicValues(t *testing.T) {
 	require.True(t, response.Features.TurnstileEnabled)
 	require.True(t, response.Features.ExternalSSOEnabled)
 	require.True(t, response.SSO.Enabled)
-	require.Equal(t, "/api/auth/sso/start", response.SSO.StartPath)
+	require.Equal(t, "/api/v1/auth/sso/start", response.SSO.StartPath)
 	require.Equal(t, "Accounting Test", response.Passkey.RPDisplayName)
 	require.Equal(t, "accounts.example.test", response.Passkey.RPID)
 	require.Equal(t, "https://accounts.example.test", response.Passkey.RPOrigin)
@@ -230,7 +241,7 @@ func TestRegisterRoutesRejectsOversizedJSONBody(t *testing.T) {
 
 	body := `{"email":"person@example.test","password":"correct horse battery staple","padding":"` +
 		strings.Repeat("x", int(maxJSONBodyBytes)+1) + `"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -248,7 +259,7 @@ func TestRegisterRoutesLedgerSummary(t *testing.T) {
 	cfg := testConfig()
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/ledger/summary", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/ledger/summary", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -276,7 +287,7 @@ func TestRegisterRoutesExchangeRates(t *testing.T) {
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
-	req := httptest.NewRequest(http.MethodGet, "/api/exchange-rates", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/exchange-rates", nil)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -301,7 +312,7 @@ func TestRegisterRoutesAuthSessionFlow(t *testing.T) {
 	})
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
-	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerRec := httptest.NewRecorder()
 	router.ServeHTTP(registerRec, registerReq)
@@ -315,7 +326,7 @@ func TestRegisterRoutesAuthSessionFlow(t *testing.T) {
 	require.Equal(t, now, registerResponse.User.CreatedAt)
 	require.Equal(t, now, registerResponse.User.UpdatedAt)
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)
@@ -334,7 +345,7 @@ func TestRegisterRoutesAuthSessionFlow(t *testing.T) {
 	_, err = authService.SessionFromToken(t.Context(), sessionCookie.Value)
 	require.NoError(t, err)
 
-	logoutReq := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+	logoutReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
 	logoutReq.AddCookie(sessionCookie)
 	logoutRec := httptest.NewRecorder()
 	router.ServeHTTP(logoutRec, logoutReq)
@@ -361,7 +372,7 @@ func TestRegisterRoutesAuthLogoutAllRevokesUserSessions(t *testing.T) {
 	auditService := auditpkg.NewService(auditpkg.NewMemoryStore())
 	RegisterRoutes(router, cfg, ledger.NewService(), authService, auditService)
 
-	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerRec := httptest.NewRecorder()
 	router.ServeHTTP(registerRec, registerReq)
@@ -376,7 +387,7 @@ func TestRegisterRoutesAuthLogoutAllRevokesUserSessions(t *testing.T) {
 	secondCookie := loginForTest(t, router, cfg, "person@example.test", "correct horse battery staple")
 	require.NotEqual(t, firstCookie.Value, secondCookie.Value)
 
-	logoutReq := httptest.NewRequest(http.MethodPost, "/api/auth/logout-all", nil)
+	logoutReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout-all", nil)
 	logoutReq.AddCookie(firstCookie)
 	logoutRec := httptest.NewRecorder()
 	router.ServeHTTP(logoutRec, logoutReq)
@@ -411,7 +422,7 @@ func TestRegisterRoutesAuthRejectsUnknownJSONFields(t *testing.T) {
 	cfg := testConfig()
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple","role":"admin"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple","role":"admin"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -432,13 +443,13 @@ func TestRegisterRoutesAuthEmailVerificationFlow(t *testing.T) {
 	authService := testAuthService(cfg).WithEmailSender(sender)
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
-	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerRec := httptest.NewRecorder()
 	router.ServeHTTP(registerRec, registerReq)
 	require.Equal(t, http.StatusCreated, registerRec.Code)
 
-	sendReq := httptest.NewRequest(http.MethodGet, "/api/auth/email/verification?email=person@example.test", nil)
+	sendReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/email/verification?email=person@example.test", nil)
 	sendRec := httptest.NewRecorder()
 	router.ServeHTTP(sendRec, sendReq)
 	require.Equal(t, http.StatusAccepted, sendRec.Code)
@@ -447,14 +458,14 @@ func TestRegisterRoutesAuthEmailVerificationFlow(t *testing.T) {
 	require.Len(t, sender.deliveries, 1)
 	require.Equal(t, auth.EmailCodePurposeVerification, sender.deliveries[0].purpose)
 
-	confirmReq := httptest.NewRequest(http.MethodPost, "/api/auth/email/verification", bytes.NewBufferString(`{"email":"person@example.test","code":"`+sender.deliveries[0].delivery.Code+`"}`))
+	confirmReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/email/verification", bytes.NewBufferString(`{"email":"person@example.test","code":"`+sender.deliveries[0].delivery.Code+`"}`))
 	confirmReq.Header.Set("Content-Type", "application/json")
 	confirmRec := httptest.NewRecorder()
 	router.ServeHTTP(confirmRec, confirmReq)
 	require.Equal(t, http.StatusOK, confirmRec.Code)
 	require.Contains(t, confirmRec.Body.String(), `"status":"active"`)
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)
@@ -472,13 +483,13 @@ func TestRegisterRoutesAuthPasswordResetFlow(t *testing.T) {
 	authService := testAuthService(cfg).WithEmailSender(sender)
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
-	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerRec := httptest.NewRecorder()
 	router.ServeHTTP(registerRec, registerReq)
 	require.Equal(t, http.StatusCreated, registerRec.Code)
 
-	resetReq := httptest.NewRequest(http.MethodPost, "/api/auth/password-reset/request", bytes.NewBufferString(`{"email":"person@example.test"}`))
+	resetReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password-reset/request", bytes.NewBufferString(`{"email":"person@example.test"}`))
 	resetReq.Header.Set("Content-Type", "application/json")
 	resetRec := httptest.NewRecorder()
 	router.ServeHTTP(resetRec, resetReq)
@@ -489,14 +500,14 @@ func TestRegisterRoutesAuthPasswordResetFlow(t *testing.T) {
 	require.Len(t, sender.deliveries, 1)
 	require.Equal(t, auth.EmailCodePurposePasswordReset, sender.deliveries[0].purpose)
 
-	confirmReq := httptest.NewRequest(http.MethodPost, "/api/auth/password-reset/confirm", bytes.NewBufferString(`{"email":"person@example.test","code":"`+sender.deliveries[0].delivery.Code+`","newPassword":"new correct horse battery staple"}`))
+	confirmReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password-reset/confirm", bytes.NewBufferString(`{"email":"person@example.test","code":"`+sender.deliveries[0].delivery.Code+`","newPassword":"new correct horse battery staple"}`))
 	confirmReq.Header.Set("Content-Type", "application/json")
 	confirmRec := httptest.NewRecorder()
 	router.ServeHTTP(confirmRec, confirmReq)
 	require.Equal(t, http.StatusOK, confirmRec.Code)
 	require.NotContains(t, confirmRec.Body.String(), "new correct horse battery staple")
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"new correct horse battery staple"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"new correct horse battery staple"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)
@@ -512,7 +523,7 @@ func TestRegisterRoutesAuthSessionRequiresCookie(t *testing.T) {
 	cfg := testConfig()
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/session", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -529,7 +540,7 @@ func TestRegisterRoutesPublicEndpointsContinueWithoutCookie(t *testing.T) {
 	cfg := testConfig()
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/runtime-config", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runtime-config", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -548,7 +559,7 @@ func TestRegisterRoutesAuthSessionReturnsActor(t *testing.T) {
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
 	sessionCookie := registerAndLogin(t, router, cfg)
-	req := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/session", nil)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -572,7 +583,7 @@ func TestRegisterRoutesAuthSessionRejectsRevokedCookie(t *testing.T) {
 	sessionCookie := registerAndLogin(t, router, cfg)
 	require.NoError(t, authService.Logout(t.Context(), sessionCookie.Value))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/session", nil)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -599,7 +610,7 @@ func TestRegisterRoutesAuthSessionRejectsExpiredCookie(t *testing.T) {
 		return now.Add(2 * time.Hour)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/session", nil)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -626,7 +637,7 @@ func TestRegisterRoutesPublicEndpointsContinueWithExpiredCookie(t *testing.T) {
 		return now.Add(2 * time.Hour)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/runtime-config", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runtime-config", nil)
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -639,13 +650,13 @@ func TestRegisterRoutesPublicEndpointsContinueWithExpiredCookie(t *testing.T) {
 func registerAndLogin(t *testing.T, router *gin.Engine, cfg config.Config) *http.Cookie {
 	t.Helper()
 
-	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerRec := httptest.NewRecorder()
 	router.ServeHTTP(registerRec, registerReq)
 	require.Equal(t, http.StatusCreated, registerRec.Code)
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)
@@ -692,7 +703,7 @@ func testConfig() config.Config {
 func loginForTest(t *testing.T, router *gin.Engine, cfg config.Config, email string, password string) *http.Cookie {
 	t.Helper()
 
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"`+email+`","password":"`+password+`"}`))
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"`+email+`","password":"`+password+`"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginRec, loginReq)

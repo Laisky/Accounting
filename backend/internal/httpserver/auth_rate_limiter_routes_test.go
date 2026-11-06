@@ -18,29 +18,30 @@ import (
 func TestRegisterRoutesAuthRateLimitLogin(t *testing.T) {
 	router := testAuthRateLimitRouter(t)
 
-	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"person@example.test","password":"correct horse battery staple"}`))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerRec := httptest.NewRecorder()
 	router.ServeHTTP(registerRec, registerReq)
 	require.Equal(t, http.StatusCreated, registerRec.Code)
 
 	for range 2 {
-		req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"wrong password"}`))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"person@example.test","password":"wrong password"}`))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusUnauthorized, rec.Code)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"PERSON@example.test","password":"wrong password"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"PERSON@example.test","password":"wrong password"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusTooManyRequests, rec.Code)
-	require.JSONEq(t, `{"code":"rate_limit_exceeded","message":"rate limit exceeded"}`, rec.Body.String())
+	require.Equal(t, problemContentType, rec.Header().Get("Content-Type"))
+	require.JSONEq(t, `{"type":"about:blank","title":"Too many requests","status":429,"detail":"rate limit exceeded","code":"rate_limited"}`, rec.Body.String())
 	require.NotContains(t, rec.Body.String(), "person@example.test")
 
-	req = httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"other@example.test","password":"wrong password"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"other@example.test","password":"wrong password"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -78,14 +79,14 @@ func TestRegisterRoutesAuthRateLimitRegister(t *testing.T) {
 	router := testAuthRateLimitRouter(t)
 
 	for range 2 {
-		req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"limited@example.test","password":"correct horse battery staple"}`))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"limited@example.test","password":"correct horse battery staple"}`))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		require.NotEqual(t, http.StatusTooManyRequests, rec.Code)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"email":"limited@example.test","password":"correct horse battery staple"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBufferString(`{"email":"limited@example.test","password":"correct horse battery staple"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -98,14 +99,14 @@ func TestRegisterRoutesAuthRateLimitPasswordReset(t *testing.T) {
 	router := testAuthRateLimitRouter(t)
 
 	for range 2 {
-		req := httptest.NewRequest(http.MethodPost, "/api/auth/password-reset/request", bytes.NewBufferString(`{"email":"missing@example.test"}`))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password-reset/request", bytes.NewBufferString(`{"email":"missing@example.test"}`))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusAccepted, rec.Code)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/password-reset/request", bytes.NewBufferString(`{"email":"missing@example.test"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password-reset/request", bytes.NewBufferString(`{"email":"missing@example.test"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -118,26 +119,26 @@ func TestRegisterRoutesAuthRateLimitPasskeyLogin(t *testing.T) {
 	router := testAuthRateLimitRouter(t)
 
 	for range 2 {
-		req := httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/login/begin", nil)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/passkeys/login/begin", nil)
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusCreated, rec.Code)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/login/begin", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/passkeys/login/begin", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusTooManyRequests, rec.Code)
 
 	for range 2 {
-		req = httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/login/finish", bytes.NewBufferString(`{"flowId":"flow-1","credential":{}}`))
+		req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/passkeys/login/finish", bytes.NewBufferString(`{"flowId":"flow-1","credential":{}}`))
 		req.Header.Set("Content-Type", "application/json")
 		rec = httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusUnauthorized, rec.Code)
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/login/finish", bytes.NewBufferString(`{"flowId":"flow-1","credential":{}}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/passkeys/login/finish", bytes.NewBufferString(`{"flowId":"flow-1","credential":{}}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

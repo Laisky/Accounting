@@ -20,7 +20,7 @@ Supporting auth features:
 - Cloudflare Turnstile on public auth routes.
 - Local session cookies with configurable name, TTL, and Secure flag.
 
-The frontend discovers enabled methods from `GET /api/runtime-config`. Runtime config exposes only public method availability and public browser settings such as Turnstile site key and passkey relying-party metadata.
+The frontend discovers enabled methods from `GET /api/v1/runtime-config`. Runtime config exposes only public method availability and public browser settings such as Turnstile site key and passkey relying-party metadata.
 
 ## Shared Session Configuration
 
@@ -171,7 +171,7 @@ External SSO delegates identity proof to another login page and still creates a 
 Accounting's browser entry point is always:
 
 ```text
-/api/auth/sso/start
+/api/v1/auth/sso/start
 ```
 
 The frontend should not build `sso.laisky.com` URLs itself. The backend creates a short-lived anti-CSRF `state`, stores only its hash in an HTTP-only cookie, and redirects to the configured SSO login URL with `redirect_to=<callback-url>`.
@@ -179,7 +179,7 @@ The frontend should not build `sso.laisky.com` URLs itself. The backend creates 
 ### SSO Flow
 
 1. The user clicks the SSO button in Accounting.
-2. The browser requests `GET /api/auth/sso/start`.
+2. The browser requests `GET /api/v1/auth/sso/start`.
 3. Accounting redirects to `ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL` with `redirect_to` set to `ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL` plus a generated `state`.
 4. The SSO provider authenticates the user.
 5. The SSO provider posts to Accounting's callback with form fields `sso_token=<JWT>` and the original `state`.
@@ -206,7 +206,7 @@ Accounting maps `username` to the local user email and binds the first verified 
 | --- | --- | --- |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED` | `false` | Enables external SSO login. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL` | `https://sso.laisky.com/` | SSO login entry page. |
-| `ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL` | empty | Backend callback URL. Required for non-loopback hosts. |
+| `ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL` | empty | Backend callback URL. Required for non-loopback hosts. Must use the versioned path `/api/v1/auth/sso/callback`; the unversioned `/api/auth/sso/callback` path was retired and now returns `404`. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM` | empty | Static Ed25519 public key PEM for local JWT verification. Preferred for production. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_METADATA_URL` | empty | Optional runtime metadata URL for public-key discovery. Use only when static key configuration is not practical. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_AUTO_PROVISION_ENABLED` | `false` | Creates a local active user when the SSO identity is trusted and no local user exists. |
@@ -219,7 +219,7 @@ Recommended `sso.laisky.com` production configuration:
 ```bash
 ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED=true
 ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL=https://sso.laisky.com/
-ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.example.com/api/auth/sso/callback
+ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.example.com/api/v1/auth/sso/callback
 ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\n<base64>\n-----END PUBLIC KEY-----"
 ACCOUNTING_AUTH_EXTERNAL_SSO_AUTO_PROVISION_ENABLED=true
 ACCOUNTING_AUTH_EXTERNAL_SSO_SUCCESS_REDIRECT_URL=/
@@ -233,7 +233,7 @@ ACCOUNTING_AUTH_EMAIL_LOGIN_ENABLED=false
 ACCOUNTING_AUTH_EMAIL_REGISTER_ENABLED=false
 ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED=true
 ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL=https://sso.laisky.com/
-ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.example.com/api/auth/sso/callback
+ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.example.com/api/v1/auth/sso/callback
 ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\n<base64>\n-----END PUBLIC KEY-----"
 ACCOUNTING_AUTH_SESSION_COOKIE_SECURE=true
 ```
@@ -243,7 +243,7 @@ Metadata fallback deployment:
 ```bash
 ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED=true
 ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL=https://sso.laisky.com/
-ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.example.com/api/auth/sso/callback
+ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.example.com/api/v1/auth/sso/callback
 ACCOUNTING_AUTH_EXTERNAL_SSO_METADATA_URL=https://sso.laisky.com/runtime-config.json
 ACCOUNTING_AUTH_SESSION_COOKIE_SECURE=true
 ```
@@ -274,7 +274,7 @@ ACCOUNTING_AUTH_EMAIL_LOGIN_ENABLED=false
 ACCOUNTING_AUTH_EMAIL_REGISTER_ENABLED=false
 ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED=true
 ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL=https://sso.laisky.com/
-ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.laisky.com/api/auth/sso/callback
+ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.laisky.com/api/v1/auth/sso/callback
 ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\n<base64>\n-----END PUBLIC KEY-----"
 ACCOUNTING_AUTH_EXTERNAL_SSO_AUTO_PROVISION_ENABLED=true
 ACCOUNTING_AUTH_SESSION_COOKIE_SECURE=true
@@ -292,7 +292,7 @@ ACCOUNTING_AUTH_EMAIL_REGISTER_ENABLED=true
 ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED=true
 ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED=true
 ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL=https://sso.laisky.com/
-ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.example.com/api/auth/sso/callback
+ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL=https://accounting.example.com/api/v1/auth/sso/callback
 ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\n<base64>\n-----END PUBLIC KEY-----"
 ACCOUNTING_AUTH_TURNSTILE_ENABLED=true
 ACCOUNTING_AUTH_TURNSTILE_LOGIN_MODE=after_failure
@@ -303,9 +303,9 @@ ACCOUNTING_AUTH_SESSION_COOKIE_SECURE=true
 
 Before release:
 
-- Confirm `GET /api/runtime-config` shows the intended login methods.
+- Confirm `GET /api/v1/runtime-config` shows the intended login methods.
 - Confirm public runtime config does not expose SMTP passwords, session tokens, SSO tokens, or the SSO public key.
-- Confirm `/api/auth/sso/start` redirects to `sso.laisky.com` with a `redirect_to` callback under the Accounting domain.
+- Confirm `/api/v1/auth/sso/start` redirects to `sso.laisky.com` with a `redirect_to` callback under the Accounting domain.
 - Confirm the SSO callback accepts a form-posted `sso_token`, creates an `ACCOUNTING_AUTH_SESSION_COOKIE_NAME` cookie, and redirects to a clean URL without `sso_token`. Use the deprecated GET callback only for providers that cannot form-post.
 - Confirm `ACCOUNTING_AUTH_SESSION_COOKIE_SECURE=true` in HTTPS deployments.
 - Confirm SMTP delivery works before enabling verified registration or password recovery.

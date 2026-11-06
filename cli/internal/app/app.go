@@ -66,7 +66,7 @@ func runHealth(ctx context.Context, args []string, out io.Writer) error {
 	requestCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, baseURL+"/api/health", nil)
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, baseURL+"/api/v1/health", nil)
 	if err != nil {
 		return errors.Wrap(err, "create health request")
 	}
@@ -104,7 +104,7 @@ func runWacaiPreview(ctx context.Context, args []string, out io.Writer) error {
 	requestCtx, cancel := context.WithTimeout(ctx, options.timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(requestCtx, http.MethodPost, options.baseURL+"/api/imports/wacai/preview", body)
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodPost, options.baseURL+"/api/v1/imports/wacai/preview", body)
 	if err != nil {
 		return errors.Wrap(err, "create wacai preview request")
 	}

@@ -29,7 +29,7 @@ func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 	cfg.Auth.External.Enabled = true
 	cfg.Auth.External.AutoProvisionEnabled = true
 	cfg.Auth.External.LoginURL = "https://sso.example.test/login"
-	cfg.Auth.External.CallbackURL = "https://app.example.test/api/auth/sso/callback"
+	cfg.Auth.External.CallbackURL = "https://app.example.test/api/v1/auth/sso/callback"
 	cfg.Auth.External.StateCookieName = "accounting_test_sso_state"
 	cfg.Auth.External.StateTTL = 5 * time.Minute
 	cfg.Auth.External.SuccessRedirectURL = "/"
@@ -41,7 +41,7 @@ func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 	})
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
-	startReq := httptest.NewRequest(http.MethodGet, "/api/auth/sso/start", nil)
+	startReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/sso/start", nil)
 	startRec := httptest.NewRecorder()
 	router.ServeHTTP(startRec, startReq)
 	require.Equal(t, http.StatusFound, startRec.Code)
@@ -58,14 +58,14 @@ func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 
 	callbackURL, err := url.Parse(loginURL.Query().Get("redirect_to"))
 	require.NoError(t, err)
-	require.Equal(t, "https://app.example.test/api/auth/sso/callback", callbackURL.Scheme+"://"+callbackURL.Host+callbackURL.Path)
+	require.Equal(t, "https://app.example.test/api/v1/auth/sso/callback", callbackURL.Scheme+"://"+callbackURL.Host+callbackURL.Path)
 	state := callbackURL.Query().Get("state")
 	require.NotEmpty(t, state)
 
 	form := url.Values{}
 	form.Set("state", state)
 	form.Set("sso_token", "opaque-token")
-	callbackReq := httptest.NewRequest(http.MethodPost, "/api/auth/sso/callback", strings.NewReader(form.Encode()))
+	callbackReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sso/callback", strings.NewReader(form.Encode()))
 	callbackReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	callbackReq.AddCookie(stateCookie)
 	callbackRec := httptest.NewRecorder()
@@ -101,11 +101,11 @@ func TestRegisterRoutesExternalSSOCallbackRejectsBadState(t *testing.T) {
 	})
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/auth/sso/callback?state=bad&sso_token=opaque-token", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/sso/callback?state=bad&sso_token=opaque-token", nil)
 	req.AddCookie(&http.Cookie{
 		Name:     cfg.Auth.External.StateCookieName,
 		Value:    auth.HashSessionToken("good"),
-		Path:     "/api/auth/sso",
+		Path:     "/api/v1/auth/sso",
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,

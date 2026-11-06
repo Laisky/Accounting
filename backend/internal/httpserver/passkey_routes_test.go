@@ -26,7 +26,7 @@ func TestRegisterRoutesPasskeyCeremonies(t *testing.T) {
 	auditService := auditpkg.NewService(auditpkg.NewMemoryStore())
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg), auditService)
 
-	loginBeginReq := httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/login/begin", nil)
+	loginBeginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/passkeys/login/begin", nil)
 	loginBeginRec := httptest.NewRecorder()
 	router.ServeHTTP(loginBeginRec, loginBeginReq)
 	require.Equal(t, http.StatusCreated, loginBeginRec.Code)
@@ -38,14 +38,14 @@ func TestRegisterRoutesPasskeyCeremonies(t *testing.T) {
 	require.NotContains(t, loginBeginRec.Body.String(), "private")
 	require.Contains(t, loginBeginRec.Body.String(), `"rpId":"example.test"`)
 
-	loginFinishReq := httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/login/finish", bytes.NewBufferString(`{"flowId":"`+loginStart.FlowID+`","credential":{"id":"bad","rawId":"bad","type":"public-key","response":{}}}`))
+	loginFinishReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/passkeys/login/finish", bytes.NewBufferString(`{"flowId":"`+loginStart.FlowID+`","credential":{"id":"bad","rawId":"bad","type":"public-key","response":{}}}`))
 	loginFinishReq.Header.Set("Content-Type", "application/json")
 	loginFinishRec := httptest.NewRecorder()
 	router.ServeHTTP(loginFinishRec, loginFinishReq)
 	require.Equal(t, http.StatusUnauthorized, loginFinishRec.Code)
 
 	sessionCookie := registerAndLogin(t, router, cfg)
-	registerBeginReq := httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/register/begin", nil)
+	registerBeginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/passkeys/register/begin", nil)
 	registerBeginReq.AddCookie(sessionCookie)
 	registerBeginRec := httptest.NewRecorder()
 	router.ServeHTTP(registerBeginRec, registerBeginReq)
@@ -58,7 +58,7 @@ func TestRegisterRoutesPasskeyCeremonies(t *testing.T) {
 	require.Contains(t, registerBeginRec.Body.String(), `"residentKey":"required"`)
 	require.Contains(t, registerBeginRec.Body.String(), `"userVerification":"required"`)
 
-	auditReq := httptest.NewRequest(http.MethodGet, "/api/audit?page=1&page_size=20", nil)
+	auditReq := httptest.NewRequest(http.MethodGet, "/api/v1/audit?page=1&page_size=20", nil)
 	auditReq.AddCookie(sessionCookie)
 	auditRec := httptest.NewRecorder()
 	router.ServeHTTP(auditRec, auditReq)
@@ -117,7 +117,7 @@ func TestRegisterRoutesPasskeyManagement(t *testing.T) {
 	require.NoError(t, err)
 
 	sessionCookie := loginSeededUser(t, router, cfg, "user-owner")
-	listReq := httptest.NewRequest(http.MethodGet, "/api/auth/passkeys", nil)
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/passkeys", nil)
 	listReq.AddCookie(sessionCookie)
 	listRec := httptest.NewRecorder()
 	router.ServeHTTP(listRec, listReq)
@@ -127,7 +127,7 @@ func TestRegisterRoutesPasskeyManagement(t *testing.T) {
 	require.NotContains(t, listRec.Body.String(), "public-key")
 	require.NotContains(t, listRec.Body.String(), "credential-1")
 
-	updateReq := httptest.NewRequest(http.MethodPut, "/api/auth/passkeys/passkey-1", bytes.NewBufferString(`{"label":"Work laptop"}`))
+	updateReq := httptest.NewRequest(http.MethodPut, "/api/v1/auth/passkeys/passkey-1", bytes.NewBufferString(`{"label":"Work laptop"}`))
 	updateReq.Header.Set("Content-Type", "application/json")
 	updateReq.AddCookie(sessionCookie)
 	updateRec := httptest.NewRecorder()
@@ -135,13 +135,13 @@ func TestRegisterRoutesPasskeyManagement(t *testing.T) {
 	require.Equal(t, http.StatusOK, updateRec.Code)
 	require.Contains(t, updateRec.Body.String(), `"label":"Work laptop"`)
 
-	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/auth/passkeys/passkey-1", nil)
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/v1/auth/passkeys/passkey-1", nil)
 	deleteReq.AddCookie(sessionCookie)
 	deleteRec := httptest.NewRecorder()
 	router.ServeHTTP(deleteRec, deleteReq)
 	require.Equal(t, http.StatusOK, deleteRec.Code)
 
-	listReq = httptest.NewRequest(http.MethodGet, "/api/auth/passkeys", nil)
+	listReq = httptest.NewRequest(http.MethodGet, "/api/v1/auth/passkeys", nil)
 	listReq.AddCookie(sessionCookie)
 	listRec = httptest.NewRecorder()
 	router.ServeHTTP(listRec, listReq)
@@ -159,7 +159,7 @@ func TestRegisterRoutesPasskeysCanBeDisabled(t *testing.T) {
 	cfg.Auth.Passkey.Enabled = false
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/passkeys/login/begin", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/passkeys/login/begin", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusBadRequest, rec.Code)

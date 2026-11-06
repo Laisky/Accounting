@@ -20,15 +20,20 @@ import (
 func metricsMiddleware(metrics *telemetry.Metrics) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		c.Next()
+		// c.FullPath() is the matched route template and is already populated before the
+		// handler chain runs, so the active-requests gauge is labelled low-cardinality.
 		route := c.FullPath()
 		if route == "" {
 			route = "unmatched"
 		}
-		status := c.Writer.Status()
+		method := c.Request.Method
 		ctx := c.Request.Context()
-		metrics.RecordHTTP(ctx, c.Request.Method, route, status, time.Since(start).Seconds())
-		recordDomainMetric(metrics, ctx, c.Request.Method, route, status)
+		metrics.IncActiveRequests(ctx, method, route)
+		defer metrics.DecActiveRequests(ctx, method, route)
+		c.Next()
+		status := c.Writer.Status()
+		metrics.RecordHTTP(ctx, method, route, status, time.Since(start).Seconds())
+		recordDomainMetric(metrics, ctx, method, route, status)
 	}
 }
 
@@ -36,7 +41,7 @@ func metricsMiddleware(metrics *telemetry.Metrics) gin.HandlerFunc {
 func recordDomainMetric(metrics *telemetry.Metrics, ctx context.Context, method, route string, status int) {
 	ok := status < http.StatusBadRequest
 	switch {
-	case method == http.MethodPost && route == "/api/auth/login":
+	case method == http.MethodPost && route == "/api/v1/auth/login":
 		if status == http.StatusUnauthorized {
 			metrics.RecordLoginOutcome(ctx, "failure")
 		} else if ok {
@@ -57,7 +62,7 @@ func recordDomainMetric(metrics *telemetry.Metrics, ctx context.Context, method,
 	}
 }
 
-// clientTelemetryPayload is the STRICT allowlist for POST /api/telemetry/client. Decoding
+// clientTelemetryPayload is the STRICT allowlist for POST /api/v1/telemetry/client. Decoding
 // rejects unknown fields, so no amount, note, account name, email, token, OTP/TOTP secret,
 // WebAuthn material, or SSO token can ever be accepted. See handbook Phase 6 allowlist.
 type clientTelemetryPayload struct {

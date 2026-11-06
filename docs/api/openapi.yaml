@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   summary: Browser-first personal and shared bookkeeping API.
 servers:
-  - url: /api
+  - url: /api/v1
 security:
   - sessionCookie: []
 tags:
@@ -86,13 +86,13 @@ components:
           schema:
             $ref: "#/components/schemas/AcceptedResponse"
     Error:
-      description: Error response.
+      description: RFC 9457 problem response.
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: "#/components/schemas/ErrorResponse"
+            $ref: "#/components/schemas/ProblemDetail"
   schemas:
-    ErrorResponse: { $ref: "./schemas.yaml#/ErrorResponse" }
+    ProblemDetail: { $ref: "./schemas.yaml#/ProblemDetail" }
     AcceptedResponse: { $ref: "./schemas.yaml#/AcceptedResponse" }
     StatusResponse: { $ref: "./schemas.yaml#/StatusResponse" }
     ClientTelemetry: { $ref: "./schemas.yaml#/ClientTelemetry" }

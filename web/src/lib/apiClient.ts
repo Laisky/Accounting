@@ -1,6 +1,6 @@
 import type { components } from '@/lib/api/generated/schema';
 
-type ApiErrorBody = components['schemas']['ErrorResponse'];
+type ApiErrorBody = components['schemas']['ProblemDetail'];
 
 type ApiClientOptions = Omit<RequestInit, 'body' | 'headers'> & {
   body?: BodyInit | object;
@@ -29,7 +29,8 @@ export async function apiRequest<T>(path: string, options: ApiClientOptions = {}
   const requestId = response.headers?.get('X-Request-ID') ?? undefined;
   if (!response.ok) {
     const body = await readJson<ApiErrorBody>(response);
-    throw new ApiError(body?.message ?? `API request failed: ${response.status}`, response.status, body, requestId);
+    const detail = body?.detail ?? body?.title ?? `API request failed: ${response.status}`;
+    throw new ApiError(detail, response.status, body, requestId);
   }
   if (response.status === 204) {
     return undefined as T;

@@ -40,7 +40,7 @@ describe('App', () => {
     fireEvent.click(within(nav).getByRole('button', { name: 'Home' }));
     expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
-    expect(fetch).toHaveBeenCalledWith('/api/ledger/summary', { signal: expect.any(AbortSignal) });
+    expect(fetch).toHaveBeenCalledWith('/api/v1/ledger/summary', { signal: expect.any(AbortSignal) });
   });
 
   it('uses the header book switcher and workspace menu actions', async () => {
@@ -60,6 +60,30 @@ describe('App', () => {
     expect(await screen.findByRole('region', { name: 'Accounts' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Accounts' })).toBeInTheDocument();
     expect(screen.getByLabelText('Book name')).toHaveValue('Household');
+  });
+
+  it('dismisses the workspace menu on outside pointer press or Escape, but not from inside', async () => {
+    renderApp('/home');
+
+    expect(await screen.findByRole('region', { name: 'Home' })).toBeInTheDocument();
+    const trigger = screen.getByRole('button', { name: 'More options' });
+
+    // A pointer press inside the open menu keeps it open.
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.pointerDown(screen.getByText('Theme'));
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+    // Pressing outside the menu dismisses it.
+    fireEvent.pointerDown(document.body);
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
+    expect(screen.queryByText('Theme')).not.toBeInTheDocument();
+
+    // Escape dismisses it too.
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
   });
 
   it.each([
@@ -101,7 +125,7 @@ describe('App', () => {
     fireEvent.click(within(editor).getByRole('button', { name: 'Save details' }));
 
     expect(await screen.findByText('Entry updated.')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries/entry-1', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/entries/entry-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"note":"Dinner"'),
@@ -117,7 +141,7 @@ describe('App', () => {
     expect(await screen.findByRole('region', { name: 'Bill detail for Converted lunch' })).toBeInTheDocument();
     expect(screen.getByText('-CN¥100.00')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Source' })).toHaveTextContent('Manual entry');
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries?page=1&page_size=100');
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/entries?page=1&page_size=100');
   });
 
   it.each([
@@ -170,14 +194,14 @@ describe('App', () => {
     const membersPanel = await screen.findByRole('article', { name: 'Book members' });
     await waitFor(() => expect(membersPanel).toHaveTextContent('Person'));
     expect(membersPanel).toHaveTextContent('owner');
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/members?page=1&page_size=50');
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/members?page=1&page_size=50');
 
     fireEvent.change(screen.getByLabelText('Book name'), { target: { value: 'Household 2026' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save book' }));
 
     expect(await screen.findByText('Book updated.')).toBeInTheDocument();
     expect(await screen.findByLabelText('Book name')).toHaveValue('Household 2026');
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"name":"Household 2026"'),
@@ -188,7 +212,7 @@ describe('App', () => {
 
     expect(await screen.findByText('Account group updated.')).toBeInTheDocument();
     expect(await screen.findByLabelText('Account group name')).toHaveValue('Daily Wallets');
-    expect(fetch).toHaveBeenCalledWith('/api/accounts/groups/group-1', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/accounts/groups/group-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"name":"Daily Wallets"'),
@@ -205,17 +229,17 @@ describe('App', () => {
 
     expect(await screen.findByText('Account created.')).toBeInTheDocument();
     expect(await screen.findByText('Travel wallet')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/accounts', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"name":"Travel wallet"'),
     });
-    expect(fetch).toHaveBeenCalledWith('/api/accounts', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"type":"credit_card"'),
     });
-    expect(fetch).toHaveBeenCalledWith('/api/accounts', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"openingBalanceCents":12345'),
@@ -237,22 +261,22 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('Entry posted.')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"note":"Team lunch"'),
     });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"type":"expense"'),
     });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"amountCents":3000'),
     });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"transactionCurrency":"USD"'),
@@ -311,11 +335,34 @@ describe('App', () => {
     fireEvent.click(within(diningRow).getByRole('button', { name: 'Save category' }));
 
     expect(await screen.findByText('Category updated.')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/categories/category-1', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/categories/category-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"name":"Meals"'),
     });
+  });
+
+  it('dismisses the category sheet on backdrop click or Escape, but not on in-sheet clicks', async () => {
+    renderApp();
+
+    expect(await openRecordTab()).toBeInTheDocument();
+    const shortcuts = await screen.findByRole('group', { name: 'Category shortcuts' });
+
+    // A pointer press inside the sheet must not dismiss it.
+    fireEvent.click(within(shortcuts).getByRole('button', { name: 'All' }));
+    const sheet = await screen.findByRole('region', { name: 'Select category' });
+    fireEvent.mouseDown(within(sheet).getByRole('button', { name: /Dining/ }));
+    expect(screen.getByRole('region', { name: 'Select category' })).toBeInTheDocument();
+
+    // Pressing on the dimmed backdrop dismisses it.
+    fireEvent.mouseDown(sheet.parentElement as HTMLElement);
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Select category' })).not.toBeInTheDocument());
+
+    // Escape dismisses it.
+    fireEvent.click(within(shortcuts).getByRole('button', { name: 'All' }));
+    expect(await screen.findByRole('region', { name: 'Select category' })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Select category' })).not.toBeInTheDocument());
   });
 
   it('creates, renames, and archives a category from the record tab', async () => {
@@ -328,12 +375,12 @@ describe('App', () => {
 
     expect(await screen.findByText('Category created.')).toBeInTheDocument();
     expect(await screen.findByLabelText('Name for Fuel')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/categories', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"name":"Fuel"'),
     });
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/categories', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"direction":"expense"'),
@@ -344,7 +391,7 @@ describe('App', () => {
     fireEvent.click(within(fuelRow).getByRole('button', { name: 'Save category' }));
 
     expect(await screen.findByText('Category updated.')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/categories/category-created', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/categories/category-created', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"name":"Road fuel"'),
@@ -357,7 +404,7 @@ describe('App', () => {
 
     expect(await screen.findByText('Category updated.')).toBeInTheDocument();
     expect(within(row).getByRole('button', { name: 'Restore' })).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/books/book-1/categories/category-created', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/categories/category-created', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: expect.stringContaining('"archived":true'),
@@ -382,7 +429,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Search transactions' }));
 
     expect(await screen.findByRole('region', { name: 'Search transactions' })).toBeInTheDocument();
-    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/books/book-1/entries?page=1&page_size=100'));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/v1/books/book-1/entries?page=1&page_size=100'));
     fireEvent.change(screen.getByRole('textbox', { name: 'Search transactions' }), { target: { value: 'Converted' } });
 
     expect(await screen.findByRole('list', { name: 'Search results' })).toHaveTextContent('Converted lunch');

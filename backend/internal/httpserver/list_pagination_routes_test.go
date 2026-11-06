@@ -15,12 +15,12 @@ func TestRegisterRoutesListPagination(t *testing.T) {
 	sessionCookie := loginSeededUser(t, router, cfg, "user-member")
 
 	endpoints := []string{
-		"/api/books",
-		"/api/books/book-household/members",
-		"/api/accounts/groups",
-		"/api/accounts",
-		"/api/books/book-household/categories",
-		"/api/auth/passkeys",
+		"/api/v1/books",
+		"/api/v1/books/book-household/members",
+		"/api/v1/accounts/groups",
+		"/api/v1/accounts",
+		"/api/v1/books/book-household/categories",
+		"/api/v1/auth/passkeys",
 	}
 	for _, endpoint := range endpoints {
 		req := httptest.NewRequest(http.MethodGet, endpoint+"?page=1&page_size=1", nil)

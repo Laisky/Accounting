@@ -138,19 +138,52 @@ func registerImportRoutes(api *gin.RouterGroup, importService *importsvc.Service
 			return
 		}
 
+		// Claim the batch (preview -> applying) so exactly one of any concurrent applies proceeds.
+		// The loser sees ErrConflict and either replays (if the winner already finished) or 409s.
+		if _, err := importService.ClaimForApply(c.Request.Context(), importsvc.BatchRequest{
+			Actor:   importsvc.Actor{UserID: actor.UserID},
+			BatchID: batch.ID,
+		}); err != nil {
+			if errors.Is(err, importsvc.ErrConflict) {
+				latest, lookupErr := importService.Batch(c.Request.Context(), importsvc.BatchRequest{
+					Actor:   importsvc.Actor{UserID: actor.UserID},
+					BatchID: batch.ID,
+				})
+				if lookupErr == nil && latest.Status == importsvc.BatchStatusApplied {
+					response, replayErr := appliedWacaiBatch(c.Request.Context(), ledgerService, ledger.Actor{UserID: actor.UserID}, c.Param("bookID"), latest)
+					if replayErr != nil {
+						respondLedgerError(c, log, replayErr)
+						return
+					}
+					c.JSON(http.StatusOK, response)
+					return
+				}
+				respondAPIMessage(c, http.StatusConflict, "import apply already in progress")
+				return
+			}
+			respondImportError(c, log, err)
+			return
+		}
+
 		response, err := commitWacaiBatch(c.Request.Context(), ledgerService, authService, ledger.Actor{UserID: actor.UserID}, actor.Email, c.Param("bookID"), batch, request.MemberMappings)
 		if err != nil {
+			// Compensate: return the batch to preview so the failed apply can be retried.
+			if revertErr := importService.RevertToPreview(c.Request.Context(), importsvc.BatchRequest{
+				Actor:   importsvc.Actor{UserID: actor.UserID},
+				BatchID: batch.ID,
+			}); revertErr != nil {
+				log.Error("revert import batch after failed apply", zap.Error(revertErr))
+			}
 			respondLedgerError(c, log, err)
 			return
 		}
-		_, err = importService.MarkApplied(c.Request.Context(), importsvc.MarkAppliedRequest{
+		if _, err := importService.FinalizeApplied(c.Request.Context(), importsvc.MarkAppliedRequest{
 			Actor:       importsvc.Actor{UserID: actor.UserID},
 			BatchID:     batch.ID,
 			BookID:      response.BookID,
 			EntryIDs:    entryIDsForImportResponse(response.Entries),
 			SkippedRows: importSkippedRowsForService(response.SkippedRows),
-		})
-		if err != nil {
+		}); err != nil {
 			respondImportError(c, log, err)
 			return
 		}

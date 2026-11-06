@@ -3,13 +3,17 @@ package telemetry
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/Laisky/errors/v2"
 	"github.com/Laisky/zap"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
@@ -23,15 +27,19 @@ import (
 type ProviderBundle struct {
 	tracerProvider *sdktrace.TracerProvider
 	meterProvider  *sdkmetric.MeterProvider
+	metricsHandler http.Handler
 }
 
-// Init receives runtime config, initializes OpenTelemetry tracing when enabled, and returns providers for shutdown.
+// Init receives runtime config, initializes OpenTelemetry tracing and metrics, and returns
+// providers for shutdown. Tracing plus OTLP metric push are gated on cfg.Enabled; the Prometheus
+// /metrics reader is gated independently on cfg.MetricsEnabled, so a MeterProvider is built (and
+// registered as the global provider) whenever either export path is enabled.
 func Init(ctx context.Context, cfg config.TelemetryConfig) (*ProviderBundle, error) {
-	if !cfg.Enabled {
+	if !cfg.Enabled && !cfg.MetricsEnabled {
 		return nil, nil //nolint:nilnil // Disabled telemetry intentionally returns no providers and no error.
 	}
 
-	if cfg.Endpoint == "" {
+	if cfg.Enabled && cfg.Endpoint == "" {
 		return nil, errors.New("ACCOUNTING_OTEL_EXPORTER_OTLP_ENDPOINT is required when ACCOUNTING_OTEL_ENABLED is true")
 	}
 
@@ -40,48 +48,80 @@ func Init(ctx context.Context, cfg config.TelemetryConfig) (*ProviderBundle, err
 		return nil, errors.Wrap(err, "build OpenTelemetry resource")
 	}
 
-	traceExporter, err := otlptracehttp.New(ctx, buildTraceExporterOptions(cfg)...)
-	if err != nil {
-		return nil, errors.Wrap(err, "create OTLP trace exporter")
+	bundle := &ProviderBundle{}
+
+	if cfg.Enabled {
+		traceExporter, err := otlptracehttp.New(ctx, buildTraceExporterOptions(cfg)...)
+		if err != nil {
+			return nil, errors.Wrap(err, "create OTLP trace exporter")
+		}
+		tracerProvider := sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(traceExporter),
+			sdktrace.WithResource(resource),
+		)
+		otel.SetTracerProvider(tracerProvider)
+		otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+			propagation.TraceContext{},
+			propagation.Baggage{},
+		))
+		bundle.tracerProvider = tracerProvider
 	}
 
-	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(traceExporter),
-		sdktrace.WithResource(resource),
-	)
-	otel.SetTracerProvider(tracerProvider)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-		propagation.TraceContext{},
-		propagation.Baggage{},
-	))
-
-	metricExporter, err := otlpmetrichttp.New(ctx, buildMetricExporterOptions(cfg)...)
-	if err != nil {
-		return nil, errors.Wrap(err, "create OTLP metric exporter")
+	// A single MeterProvider feeds every enabled reader: the OTLP push PeriodicReader and/or the
+	// Prometheus pull exporter, both reading the same instruments.
+	meterOptions := []sdkmetric.Option{sdkmetric.WithResource(resource)}
+	if cfg.Enabled {
+		metricExporter, err := otlpmetrichttp.New(ctx, buildMetricExporterOptions(cfg)...)
+		if err != nil {
+			return nil, errors.Wrap(err, "create OTLP metric exporter")
+		}
+		meterOptions = append(meterOptions, sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)))
 	}
-	meterProvider := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
-		sdkmetric.WithResource(resource),
-	)
+	if cfg.MetricsEnabled {
+		// A dedicated registry (rather than the process-wide default) keeps repeated Init calls,
+		// e.g. across tests, from colliding on duplicate collector registration.
+		registry := prometheus.NewRegistry()
+		promReader, err := otelprom.New(otelprom.WithRegisterer(registry))
+		if err != nil {
+			return nil, errors.Wrap(err, "create Prometheus metric exporter")
+		}
+		meterOptions = append(meterOptions, sdkmetric.WithReader(promReader))
+		bundle.metricsHandler = promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+	}
+	meterProvider := sdkmetric.NewMeterProvider(meterOptions...)
 	otel.SetMeterProvider(meterProvider)
+	bundle.meterProvider = meterProvider
 
-	logger.Logger.Info("OpenTelemetry tracing and metrics initialized",
+	logger.Logger.Info("OpenTelemetry initialized",
+		zap.Bool("otlp_push", cfg.Enabled),
+		zap.Bool("prometheus_metrics", cfg.MetricsEnabled),
 		zap.String("endpoint", cfg.Endpoint),
 		zap.Bool("insecure", cfg.Insecure),
 		zap.String("service", cfg.ServiceName),
 		zap.String("environment", cfg.Environment))
 
-	return &ProviderBundle{tracerProvider: tracerProvider, meterProvider: meterProvider}, nil
+	return bundle, nil
+}
+
+// MetricsHandler returns the Prometheus /metrics HTTP handler, or nil when the Prometheus
+// reader is disabled. It is nil-safe so callers can pass Init's result straight through.
+func (p *ProviderBundle) MetricsHandler() http.Handler {
+	if p == nil {
+		return nil
+	}
+	return p.metricsHandler
 }
 
 // Shutdown receives a context, flushes telemetry providers, and returns shutdown errors.
 func (p *ProviderBundle) Shutdown(ctx context.Context) error {
-	if p == nil || p.tracerProvider == nil {
+	if p == nil {
 		return nil
 	}
 
-	if err := p.tracerProvider.Shutdown(ctx); err != nil {
-		return errors.Wrap(err, "shutdown tracer provider")
+	if p.tracerProvider != nil {
+		if err := p.tracerProvider.Shutdown(ctx); err != nil {
+			return errors.Wrap(err, "shutdown tracer provider")
+		}
 	}
 
 	if p.meterProvider != nil {

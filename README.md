@@ -31,8 +31,8 @@ Most personal finance tools are either polished but closed, powerful but account
 | --- | --- |
 | Backend | Go 1.26.10, Gin, Zap-style structured logging, OpenTelemetry hooks |
 | Frontend | React 19, TypeScript 6, Vite 8, i18next, lucide-react |
-| Auth | HttpOnly sessions, PBKDF2-SHA256, TOTP, WebAuthn passkeys, optional SSO |
-| Storage | In-memory and JSON-file stores for local development; direct SQLite/PostgreSQL stores under `backend/internal/persistence` |
+| Auth | HttpOnly sessions, Argon2id (legacy PBKDF2-SHA256 verified and rehashed), TOTP, WebAuthn passkeys, optional SSO |
+| Storage | In-memory store for local development; relational SQLite/PostgreSQL repositories on `backend/internal/storage` with embedded goose migrations |
 | Testing | Go race tests with coverage, Vitest, Testing Library, Playwright E2E |
 
 ## Quick Start
@@ -104,7 +104,10 @@ Production is intentionally simple:
 
 ```text
 Browser -> Go backend
-           ├── /api/*    JSON API
+           ├── /api/v1/* JSON API (RFC 9457 problem+json errors)
+           ├── /healthz  liveness probe
+           ├── /readyz   readiness probe
+           ├── /metrics  Prometheus metrics (restrict at the ingress)
            ├── /assets/* built frontend assets
            └── /*        SPA fallback
 ```
@@ -129,8 +132,8 @@ The backend is environment-configured. Important local and deployment settings i
 | --- | --- |
 | `ACCOUNTING_ADDR` | Backend listen address. Defaults to `:8080`. |
 | `ACCOUNTING_WEB_DIST_DIR` | Built frontend directory served by the Go server. |
-| `ACCOUNTING_PERSISTENCE_DRIVER` | Storage driver: `memory`, `file`, `sqlite`, `postgres`, or `postgresql`. Defaults to `memory`. |
-| `ACCOUNTING_PERSISTENCE_DIR` | JSON-file persistence directory and default SQLite database directory. |
+| `ACCOUNTING_PERSISTENCE_DRIVER` | Storage driver: `memory`, `sqlite`, `postgres`, or `postgresql`. Defaults to `memory`. The former `file` driver was removed. |
+| `ACCOUNTING_PERSISTENCE_DIR` | Default SQLite database directory. |
 | `ACCOUNTING_DATABASE_URL` | PostgreSQL URL or optional SQLite path/`sqlite://` URL. Falls back to `DATABASE_URL`. |
 | `ACCOUNTING_AUTH_SESSION_COOKIE_SECURE` | Must be `true` behind HTTPS in production. |
 | `ACCOUNTING_AUTH_EMAIL_VERIFICATION_REQUIRED` | Require verified email before active use. |

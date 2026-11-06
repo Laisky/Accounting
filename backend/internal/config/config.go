@@ -25,6 +25,7 @@ type Config struct {
 	Auth        AuthConfig
 	Debug       bool
 	Frontend    FrontendConfig
+	Ledger      LedgerConfig
 	Persistence PersistenceConfig
 	Pprof       PprofConfig
 	Secret      SecretConfig
@@ -57,6 +58,12 @@ type PersistenceConfig struct {
 type FrontendConfig struct {
 	DistDir string
 	DevURL  string
+}
+
+// LedgerConfig contains double-entry ledger background-task settings.
+type LedgerConfig struct {
+	// ReconcileInterval is how often the periodic journal-imbalance reconciliation sweep runs.
+	ReconcileInterval time.Duration
 }
 
 // AlertPusherConfig contains optional settings for pushing error-level logs to an alert backend.
@@ -146,11 +153,14 @@ type ShutdownConfig struct {
 
 // TelemetryConfig contains OpenTelemetry tracing exporter settings.
 type TelemetryConfig struct {
-	Enabled     bool
-	Endpoint    string
-	Environment string
-	Insecure    bool
-	ServiceName string
+	Enabled bool
+	// MetricsEnabled gates the Prometheus /metrics reader and endpoint independently of the
+	// OTLP push (Enabled), so metrics can be scraped even when OTLP push is off. Default true.
+	MetricsEnabled bool
+	Endpoint       string
+	Environment    string
+	Insecure       bool
+	ServiceName    string
 }
 
 // TOTPConfig contains time-based one-time password settings.
@@ -242,6 +252,9 @@ func LoadFromEnv() (Config, error) {
 			DistDir: loader.readString("ACCOUNTING_WEB_DIST_DIR", "../web/dist"),
 			DevURL:  loader.readString("ACCOUNTING_WEB_DEV_URL", ""),
 		},
+		Ledger: LedgerConfig{
+			ReconcileInterval: loader.readDuration("ACCOUNTING_LEDGER_RECONCILE_INTERVAL", time.Hour),
+		},
 		Persistence: PersistenceConfig{
 			Driver:      loader.readString("ACCOUNTING_PERSISTENCE_DRIVER", "memory"),
 			Dir:         loader.readString("ACCOUNTING_PERSISTENCE_DIR", "./var/accounting"),
@@ -259,11 +272,12 @@ func LoadFromEnv() (Config, error) {
 			Timeout: loader.readDuration("ACCOUNTING_SHUTDOWN_TIMEOUT", 10*time.Second),
 		},
 		Telemetry: TelemetryConfig{
-			Enabled:     loader.readBool("ACCOUNTING_OTEL_ENABLED", false),
-			Endpoint:    normalizeOTLPEndpoint(loader.readString("ACCOUNTING_OTEL_EXPORTER_OTLP_ENDPOINT", "")),
-			Environment: loader.readString("ACCOUNTING_OTEL_ENVIRONMENT", "debug"),
-			Insecure:    loader.readBool("ACCOUNTING_OTEL_EXPORTER_OTLP_INSECURE", true),
-			ServiceName: loader.readString("ACCOUNTING_OTEL_SERVICE_NAME", "accounting"),
+			Enabled:        loader.readBool("ACCOUNTING_OTEL_ENABLED", false),
+			MetricsEnabled: loader.readBool("ACCOUNTING_OTEL_METRICS_ENABLED", true),
+			Endpoint:       normalizeOTLPEndpoint(loader.readString("ACCOUNTING_OTEL_EXPORTER_OTLP_ENDPOINT", "")),
+			Environment:    loader.readString("ACCOUNTING_OTEL_ENVIRONMENT", "debug"),
+			Insecure:       loader.readBool("ACCOUNTING_OTEL_EXPORTER_OTLP_INSECURE", true),
+			ServiceName:    loader.readString("ACCOUNTING_OTEL_SERVICE_NAME", "accounting"),
 		},
 		TrustedProxies: loader.readCSV("ACCOUNTING_TRUSTED_PROXIES"),
 	}
@@ -279,7 +293,7 @@ func (cfg Config) Validate() error {
 	var errs []error
 	driver := strings.ToLower(strings.TrimSpace(cfg.Persistence.Driver))
 	switch driver {
-	case "", "memory", "file", "postgres", "postgresql", "sqlite":
+	case "", "memory", "postgres", "postgresql", "sqlite":
 	default:
 		errs = append(errs, errors.Errorf("ACCOUNTING_PERSISTENCE_DRIVER has unsupported value %q", cfg.Persistence.Driver))
 	}
@@ -327,6 +341,7 @@ func (cfg Config) Validate() error {
 	validatePositiveDuration(&errs, "ACCOUNTING_AUTH_SESSION_TTL", cfg.Auth.Session.TTL)
 	validatePositiveDuration(&errs, "ACCOUNTING_AUTH_TOTP_REPLAY_CACHE_DURATION", cfg.Auth.TOTP.ReplayCacheDuration)
 	validatePositiveDuration(&errs, "ACCOUNTING_SHUTDOWN_TIMEOUT", cfg.Shutdown.Timeout)
+	validatePositiveDuration(&errs, "ACCOUNTING_LEDGER_RECONCILE_INTERVAL", cfg.Ledger.ReconcileInterval)
 
 	if err := errors.Join(errs...); err != nil {
 		return errors.Wrap(err, "validate config")

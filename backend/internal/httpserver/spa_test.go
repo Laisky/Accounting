@@ -46,7 +46,7 @@ func TestRegisterStaticSPADoesNotFallbackForAPIRoutes(t *testing.T) {
 	router := gin.New()
 	require.NoError(t, registerStaticSPA(router, distDir))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/missing", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/missing", nil)
 	req.Header.Set("Accept", "text/html")
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, req)

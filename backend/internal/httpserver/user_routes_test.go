@@ -26,7 +26,7 @@ func TestRegisterRoutesUserProfileSupportsBaseCurrency(t *testing.T) {
 	RegisterRoutes(router, cfg, ledger.NewService(), authService)
 
 	sessionCookie := registerAndLogin(t, router, cfg)
-	getReq := httptest.NewRequest(http.MethodGet, "/api/users/me", nil)
+	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil)
 	getReq.AddCookie(sessionCookie)
 	getRec := httptest.NewRecorder()
 	router.ServeHTTP(getRec, getReq)
@@ -38,7 +38,7 @@ func TestRegisterRoutesUserProfileSupportsBaseCurrency(t *testing.T) {
 	require.NoError(t, json.Unmarshal(getRec.Body.Bytes(), &getResponse))
 	require.Equal(t, auth.DefaultBaseCurrency, getResponse.User.BaseCurrency)
 
-	patchReq := httptest.NewRequest(http.MethodPatch, "/api/users/me", bytes.NewBufferString(`{"baseCurrency":"eur"}`))
+	patchReq := httptest.NewRequest(http.MethodPatch, "/api/v1/users/me", bytes.NewBufferString(`{"baseCurrency":"eur"}`))
 	patchReq.Header.Set("Content-Type", "application/json")
 	patchReq.AddCookie(sessionCookie)
 	patchRec := httptest.NewRecorder()
@@ -63,7 +63,7 @@ func TestRegisterRoutesUserProfileRejectsInvalidPatch(t *testing.T) {
 
 	sessionCookie := registerAndLogin(t, router, cfg)
 	for _, body := range []string{`{"baseCurrency":"JPY"}`, `{"baseCurrency":"USD","unknown":true}`, `{}`} {
-		req := httptest.NewRequest(http.MethodPatch, "/api/users/me", bytes.NewBufferString(body))
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/users/me", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.AddCookie(sessionCookie)
 		rec := httptest.NewRecorder()

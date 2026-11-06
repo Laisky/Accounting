@@ -121,8 +121,24 @@ func (s *Service) Batch(ctx context.Context, request BatchRequest) (Batch, error
 	return batch, nil
 }
 
-// MarkApplied receives commit metadata, verifies ownership, and stores an applied import batch.
-func (s *Service) MarkApplied(ctx context.Context, request MarkAppliedRequest) (Batch, error) {
+// ClaimForApply verifies ownership and atomically transitions a batch from preview to applying,
+// returning the claimed batch. It returns ErrConflict when the batch is already applying or applied,
+// which the apply handler uses to serialize concurrent applies and to route replays.
+func (s *Service) ClaimForApply(ctx context.Context, request BatchRequest) (Batch, error) {
+	if request.Actor.UserID == "" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "actor user id is required")
+	}
+	if strings.TrimSpace(request.BatchID) == "" {
+		return Batch{}, errors.Wrap(ErrInvalidInput, "batch id is required")
+	}
+
+	return s.store.ClaimForApply(ctx, request.Actor.UserID, strings.TrimSpace(request.BatchID))
+}
+
+// FinalizeApplied verifies commit metadata and atomically transitions a claimed (applying) batch
+// to applied. It replaces the previous blind MarkApplied write with a state-checked CAS so a
+// finalize can only follow a successful claim.
+func (s *Service) FinalizeApplied(ctx context.Context, request MarkAppliedRequest) (Batch, error) {
 	if request.Actor.UserID == "" {
 		return Batch{}, errors.Wrap(ErrInvalidInput, "actor user id is required")
 	}
@@ -132,38 +148,28 @@ func (s *Service) MarkApplied(ctx context.Context, request MarkAppliedRequest) (
 	if strings.TrimSpace(request.BookID) == "" {
 		return Batch{}, errors.Wrap(ErrInvalidInput, "book id is required")
 	}
-
 	entryIDs := normalizeAppliedEntryIDs(request.EntryIDs)
 	if len(entryIDs) == 0 {
 		return Batch{}, errors.Wrap(ErrInvalidInput, "applied entry ids are required")
 	}
+	request.BatchID = strings.TrimSpace(request.BatchID)
+	request.BookID = strings.TrimSpace(request.BookID)
+	request.EntryIDs = entryIDs
 
-	batch, err := s.store.Batch(ctx, request.Actor.UserID, strings.TrimSpace(request.BatchID))
-	if err != nil {
-		return Batch{}, errors.Wrap(err, "load import batch")
+	return s.store.FinalizeApplied(ctx, request)
+}
+
+// RevertToPreview verifies ownership and returns an applying batch to preview as the
+// compensating action for a failed apply. It is idempotent.
+func (s *Service) RevertToPreview(ctx context.Context, request BatchRequest) error {
+	if request.Actor.UserID == "" {
+		return errors.Wrap(ErrInvalidInput, "actor user id is required")
 	}
-	if batch.Status == BatchStatusApplied {
-		if batch.AppliedBookID != strings.TrimSpace(request.BookID) {
-			return Batch{}, errors.Wrap(ErrInvalidInput, "import batch already applied to another book")
-		}
-
-		return batch, nil
-	}
-
-	now := time.Now().UTC()
-	batch.Status = BatchStatusApplied
-	batch.AppliedBookID = strings.TrimSpace(request.BookID)
-	batch.AppliedEntryIDs = entryIDs
-	batch.AppliedSkippedRows = cloneAppliedSkippedRows(request.SkippedRows)
-	batch.AppliedAt = &now
-	batch.UpdatedAt = now
-
-	updated, err := s.store.SaveBatch(ctx, batch)
-	if err != nil {
-		return Batch{}, errors.Wrap(err, "save applied import batch")
+	if strings.TrimSpace(request.BatchID) == "" {
+		return errors.Wrap(ErrInvalidInput, "batch id is required")
 	}
 
-	return updated, nil
+	return s.store.RevertToPreview(ctx, request.Actor.UserID, strings.TrimSpace(request.BatchID))
 }
 
 // sourceHash receives source bytes and returns a SHA-256 hex digest.

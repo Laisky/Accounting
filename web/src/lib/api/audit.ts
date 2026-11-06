@@ -8,5 +8,5 @@ export type AuditEventList = Schemas['AuditEventList'];
 
 // fetchAuditEvents receives no parameters, loads recent sanitized audit events, and returns a paginated list.
 export async function fetchAuditEvents(): Promise<AuditEventList> {
-  return apiRequest<AuditEventList>('/api/audit?page=1&page_size=20');
+  return apiRequest<AuditEventList>('/api/v1/audit?page=1&page_size=20');
 }

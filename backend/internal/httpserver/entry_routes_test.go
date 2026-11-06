@@ -22,7 +22,7 @@ func TestRegisterRoutesBookEntriesListAllowsBookRoles(t *testing.T) {
 		t.Run(userID, func(t *testing.T) {
 			router, cfg := testEntryRouter(t, ledger.NewService(), userID)
 
-			req := httptest.NewRequest(http.MethodGet, "/api/books/book-household/entries?page=1&page_size=1", nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/entries?page=1&page_size=1", nil)
 			req.AddCookie(loginSeededUser(t, router, cfg, userID))
 			rec := httptest.NewRecorder()
 			router.ServeHTTP(rec, req)
@@ -44,7 +44,7 @@ func TestRegisterRoutesBookEntriesListAllowsBookRoles(t *testing.T) {
 func TestRegisterRoutesBookEntriesListRejectsNonMember(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-stranger")
 
-	req := httptest.NewRequest(http.MethodGet, "/api/books/book-household/entries", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/books/book-household/entries", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-stranger"))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -58,7 +58,7 @@ func TestRegisterRoutesBookEntriesCreateControlsServerFields(t *testing.T) {
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-member")
 
 	body := `{"type":"expense","accountId":"acct-shared-card","amountCents":2300,"transactionCurrency":"usd","occurredAt":"2026-07-01T20:00:00+08:00","note":"Dinner","tags":["food","food"]}`
-	req := httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec := httptest.NewRecorder()
@@ -85,14 +85,14 @@ func TestRegisterRoutesBookEntriesCreateRejectsViewerAndUnknownFields(t *testing
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-viewer")
 
 	body := `{"type":"expense","accountId":"acct-shared-card","amountCents":2300,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(`{"type":"expense","accountId":"acct-shared-card","amountCents":2300,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z","creatorUserId":"user-owner"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(`{"type":"expense","accountId":"acct-shared-card","amountCents":2300,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z","creatorUserId":"user-owner"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec = httptest.NewRecorder()
@@ -106,7 +106,7 @@ func TestRegisterRoutesBookEntriesCreateRejectsInvalidAndPrivateAccount(t *testi
 	router, cfg := testEntryRouter(t, ledger.NewService(), "user-member")
 
 	body := `{"type":"expense","accountId":"acct-shared-card","amountCents":0,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec := httptest.NewRecorder()
@@ -114,7 +114,7 @@ func TestRegisterRoutesBookEntriesCreateRejectsInvalidAndPrivateAccount(t *testi
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"type":"expense","accountId":"acct-shared-card","amountCents":1200,"transactionCurrency":"USD","occurredAt":"not-a-time"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
@@ -123,7 +123,7 @@ func TestRegisterRoutesBookEntriesCreateRejectsInvalidAndPrivateAccount(t *testi
 	require.Contains(t, rec.Body.String(), "invalid occurredAt")
 
 	body = `{"type":"expense","accountId":"acct-cash","amountCents":1200,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
@@ -131,7 +131,7 @@ func TestRegisterRoutesBookEntriesCreateRejectsInvalidAndPrivateAccount(t *testi
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
 	body = `{"type":"expense","accountId":"acct-shared-card","categoryId":"missing-category","amountCents":1200,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
@@ -139,7 +139,7 @@ func TestRegisterRoutesBookEntriesCreateRejectsInvalidAndPrivateAccount(t *testi
 	require.Equal(t, http.StatusNotFound, rec.Code)
 
 	body = `{"type":"expense","accountId":"acct-shared-card","categoryId":"cat-income-work-salary","amountCents":1200,"transactionCurrency":"USD","occurredAt":"2026-07-01T20:00:00Z"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
@@ -147,7 +147,7 @@ func TestRegisterRoutesBookEntriesCreateRejectsInvalidAndPrivateAccount(t *testi
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"type":"expense","accountId":"acct-shared-card","amountCents":1200,"transactionCurrency":"JPY","occurredAt":"2026-07-01T20:00:00Z"}`
-	req = httptest.NewRequest(http.MethodPost, "/api/books/book-household/entries", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/books/book-household/entries", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
@@ -160,7 +160,7 @@ func TestRegisterRoutesBookEntriesUpdateControlsServerFields(t *testing.T) {
 	router, cfg := testEntryRouter(t, testEntryPolicyLedgerService(), "user-member")
 
 	body := `{"amountCents":2300,"transactionCurrency":"usd","occurredAt":"2026-07-01T20:00:00+08:00","note":"Updated dinner","tags":["food","food","team"]}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec := httptest.NewRecorder()
@@ -187,7 +187,7 @@ func TestRegisterRoutesBookEntriesUpdateRejectsUnknownAndInvalidInput(t *testing
 	sessionCookie := loginSeededUser(t, router, cfg, "user-member")
 
 	body := `{"amountCents":2300,"creatorUserId":"user-owner"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec := httptest.NewRecorder()
@@ -196,7 +196,7 @@ func TestRegisterRoutesBookEntriesUpdateRejectsUnknownAndInvalidInput(t *testing
 	require.Contains(t, rec.Body.String(), "invalid request body")
 
 	body = `{}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -204,7 +204,7 @@ func TestRegisterRoutesBookEntriesUpdateRejectsUnknownAndInvalidInput(t *testing
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"amountCents":0}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -212,7 +212,7 @@ func TestRegisterRoutesBookEntriesUpdateRejectsUnknownAndInvalidInput(t *testing
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"occurredAt":"not-a-time"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -221,7 +221,7 @@ func TestRegisterRoutesBookEntriesUpdateRejectsUnknownAndInvalidInput(t *testing
 	require.Contains(t, rec.Body.String(), "invalid occurredAt")
 
 	body = `{"categoryId":"cat-salary"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -229,7 +229,7 @@ func TestRegisterRoutesBookEntriesUpdateRejectsUnknownAndInvalidInput(t *testing
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 
 	body = `{"transactionCurrency":"JPY"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookie)
 	rec = httptest.NewRecorder()
@@ -242,7 +242,7 @@ func TestRegisterRoutesBookEntriesUpdateEnforcesPolicy(t *testing.T) {
 	router, cfg := testEntryRouter(t, testEntryPolicyLedgerService(), "user-owner", "user-admin", "user-member", "user-viewer")
 
 	body := `{"note":"Member cannot edit owner"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-owner", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-owner", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec := httptest.NewRecorder()
@@ -250,7 +250,7 @@ func TestRegisterRoutesBookEntriesUpdateEnforcesPolicy(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
 	body = `{"note":"Viewer cannot edit"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-owner", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-owner", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec = httptest.NewRecorder()
@@ -258,7 +258,7 @@ func TestRegisterRoutesBookEntriesUpdateEnforcesPolicy(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
 	body = `{"note":"Admin can edit"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
 	rec = httptest.NewRecorder()
@@ -266,7 +266,7 @@ func TestRegisterRoutesBookEntriesUpdateEnforcesPolicy(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 
 	body = `{"note":"Missing"}`
-	req = httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/missing", bytes.NewBufferString(body))
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/missing", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec = httptest.NewRecorder()
@@ -279,7 +279,7 @@ func TestRegisterRoutesBookEntriesUpdateRejectsPrivateAccount(t *testing.T) {
 	router, cfg := testEntryRouter(t, testEntryPolicyLedgerService(), "user-member")
 
 	body := `{"accountId":"account-owner"}`
-	req := httptest.NewRequest(http.MethodPatch, "/api/books/book/entries/entry-member", bytes.NewBufferString(body))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/book/entries/entry-member", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec := httptest.NewRecorder()
@@ -292,31 +292,31 @@ func TestRegisterRoutesBookEntriesUpdateRejectsPrivateAccount(t *testing.T) {
 func TestRegisterRoutesBookEntriesDeleteEnforcesPolicy(t *testing.T) {
 	router, cfg := testEntryRouter(t, testEntryPolicyLedgerService(), "user-owner", "user-admin", "user-member", "user-viewer")
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/books/book/entries/entry-owner", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/books/book/entries/entry-owner", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
-	req = httptest.NewRequest(http.MethodDelete, "/api/books/book/entries/entry-member", nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/books/book/entries/entry-member", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-member"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 
-	req = httptest.NewRequest(http.MethodDelete, "/api/books/book/entries/entry-member-extra", nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/books/book/entries/entry-member-extra", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-admin"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 
-	req = httptest.NewRequest(http.MethodDelete, "/api/books/book/entries/entry-owner", nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/books/book/entries/entry-owner", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-viewer"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusForbidden, rec.Code)
 
-	req = httptest.NewRequest(http.MethodDelete, "/api/books/book/entries/entry-owner", nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/books/book/entries/entry-owner", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -327,7 +327,7 @@ func TestRegisterRoutesBookEntriesDeleteEnforcesPolicy(t *testing.T) {
 func TestRegisterRoutesBookEntriesDeleteMissingReturnsNotFound(t *testing.T) {
 	router, cfg := testEntryRouter(t, testEntryPolicyLedgerService(), "user-owner")
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/books/book/entries/missing", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/books/book/entries/missing", nil)
 	req.AddCookie(loginSeededUser(t, router, cfg, "user-owner"))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
