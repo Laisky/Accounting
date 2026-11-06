@@ -10,6 +10,7 @@ import (
 	gutils "github.com/Laisky/go-utils/v6"
 	glog "github.com/Laisky/go-utils/v6/log"
 	"github.com/Laisky/zap"
+	"github.com/Laisky/zap/zapcore"
 
 	"github.com/Laisky/Accounting/backend/internal/config"
 )
@@ -56,13 +57,16 @@ func SetupEnhanced(ctx context.Context, cfg config.Config) glog.Logger {
 			glog.WithAlertType(cfg.AlertPusher.Type),
 			glog.WithAlertToken(cfg.AlertPusher.Token),
 			glog.WithAlertHookLevel(zap.ErrorLevel),
+			glog.WithAlertFieldAllowlist(),
 			glog.WithRateLimiter(rateLimiter),
 		)
 		if err != nil {
 			Logger.Panic("create alert pusher", zap.Error(err))
 		}
 
-		options = append(options, zap.HooksWithFields(alertPusher.GetZapHook()))
+		options = append(options, zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+			return zapcore.NewTee(core, alertPusher.GetZapCore())
+		}))
 		Logger.Info("alert pusher configured",
 			zap.String("alert_api", cfg.AlertPusher.API),
 			zap.String("alert_type", cfg.AlertPusher.Type))

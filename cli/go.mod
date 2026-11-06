@@ -1,6 +1,6 @@
 module github.com/Laisky/Accounting/cli
 
-go 1.26.4
+go 1.26.10
 
 require (
 	github.com/Laisky/errors/v2 v2.0.1

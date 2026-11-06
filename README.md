@@ -29,7 +29,7 @@ Most personal finance tools are either polished but closed, powerful but account
 
 | Layer | Choice |
 | --- | --- |
-| Backend | Go 1.26.4, Gin, Zap-style structured logging, OpenTelemetry hooks |
+| Backend | Go 1.26.10, Gin, Zap-style structured logging, OpenTelemetry hooks |
 | Frontend | React 19, TypeScript 6, Vite 8, i18next, lucide-react |
 | Auth | HttpOnly sessions, PBKDF2-SHA256, TOTP, WebAuthn passkeys, optional SSO |
 | Storage | In-memory and JSON-file stores for local development; direct SQLite/PostgreSQL stores under `backend/internal/persistence` |
@@ -39,7 +39,7 @@ Most personal finance tools are either polished but closed, powerful but account
 
 Prerequisites:
 
-- Go 1.26.4
+- Go 1.26.10 or a newer patched toolchain (Go 1.27 requires 1.27.3 or later)
 - Node.js and pnpm compatible with the `web/package.json` toolchain
 - `make`
 
