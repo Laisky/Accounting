@@ -356,17 +356,13 @@ describe('App', () => {
 
     // Pressing on the dimmed backdrop dismisses it.
     fireEvent.mouseDown(sheet.parentElement as HTMLElement);
-    await waitFor(() =>
-      expect(screen.queryByRole('region', { name: 'Select category' })).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Select category' })).not.toBeInTheDocument());
 
     // Escape dismisses it.
     fireEvent.click(within(shortcuts).getByRole('button', { name: 'All' }));
     expect(await screen.findByRole('region', { name: 'Select category' })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
-    await waitFor(() =>
-      expect(screen.queryByRole('region', { name: 'Select category' })).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Select category' })).not.toBeInTheDocument());
   });
 
   it('creates, renames, and archives a category from the record tab', async () => {

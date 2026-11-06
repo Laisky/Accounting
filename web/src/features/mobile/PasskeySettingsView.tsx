@@ -11,7 +11,11 @@ import {
   type PasskeyList,
   type PasskeyListItem,
 } from '@/lib/api/auth';
-import { credentialCreationOptionsFromJSON, publicKeyCredentialToJSON, webAuthnUnavailableReason } from '@/lib/webauthn';
+import {
+  credentialCreationOptionsFromJSON,
+  publicKeyCredentialToJSON,
+  webAuthnUnavailableReason,
+} from '@/lib/webauthn';
 import './passkey-settings.css';
 
 type PasskeySettingsViewProps = {
@@ -71,9 +75,7 @@ export function PasskeySettingsView({ featureEnabled }: PasskeySettingsViewProps
       } else {
         const detail = registerError instanceof Error && registerError.message ? registerError.message : '';
         setError(
-          detail
-            ? t('mobile.error.passkeyRegisterFailedDetail', { detail })
-            : t('mobile.error.passkeyRegisterFailed'),
+          detail ? t('mobile.error.passkeyRegisterFailedDetail', { detail }) : t('mobile.error.passkeyRegisterFailed'),
         );
       }
     } finally {
