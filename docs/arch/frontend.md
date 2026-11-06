@@ -184,7 +184,7 @@ pageSize: 20 })`. Passkey registration, rename, and delete flows update that Que
 - Keyboard: `hooks/useGlobalShortcuts` (`n` new entry, `/` search, `?` help, Esc closes sheets).
 - Telemetry: `lib/telemetry.ts` is the only module besides `apiClient` allowed to touch the
   network; it sends a sanitized allowlist payload (hashed messages, no amounts/notes/emails) via
-  `sendBeacon` to `POST /api/telemetry/client`, plus sampled LCP/INP/CLS (`web-vitals`).
+  `sendBeacon` to `POST /api/v1/telemetry/client`, plus sampled LCP/INP/CLS (`web-vitals`).
 - Tests: web unit coverage thresholds in `vite.config.ts` (`test:coverage`); `e2e/a11y.spec.ts`
   runs axe over five authenticated views in light + dark; shared `e2e/helpers.ts` for auth setup.
 
