@@ -23,7 +23,7 @@ func registeredSSOURL(raw string) (*url.URL, error) {
 	if err != nil {
 		return nil, errors.New("invalid registered SSO URL")
 	}
-	if u.Host == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || (u.Scheme != "https" && !(u.Scheme == "http" && isLoopbackRequestHost(u.Host))) {
+	if u.Host == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || (u.Scheme != "https" && (u.Scheme != "http" || !isLoopbackRequestHost(u.Host))) {
 		return nil, errors.New("registered SSO URL requires HTTPS and no credentials, query or fragment")
 	}
 	return u, nil
@@ -105,7 +105,7 @@ func redeemSSOCode(c *gin.Context, cfg config.Config, code, legacyToken string) 
 	if err != nil {
 		return "", errors.New("SSO exchange unavailable")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return "", errors.New("SSO exchange rejected")
 	}

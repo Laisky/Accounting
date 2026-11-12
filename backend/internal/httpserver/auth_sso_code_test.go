@@ -5,16 +5,17 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/Laisky/Accounting/backend/internal/auth"
-	"github.com/Laisky/Accounting/backend/internal/ledger"
-	"github.com/Laisky/Accounting/backend/internal/logger"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/Laisky/Accounting/backend/internal/auth"
+	"github.com/Laisky/Accounting/backend/internal/ledger"
+	"github.com/Laisky/Accounting/backend/internal/logger"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRegisteredSSOStart(t *testing.T) {
