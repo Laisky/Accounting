@@ -205,6 +205,8 @@ Accounting maps `username` to the local user email and binds the first verified 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED` | `false` | Enables external SSO login. |
+| `ACCOUNTING_AUTH_EXTERNAL_SSO_CLIENT_ID` | empty | Registered issuer client ID; set to `accounting` to enable single-use authorization code + S256 PKCE. Empty retains legacy integration compatibility. |
+| `ACCOUNTING_AUTH_EXTERNAL_SSO_TOKEN_URL` | `https://sso.laisky.com/sso/token` | Fixed server-side code exchange endpoint. HTTPS required except loopback tests/development; no query, fragment, or URL credentials. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_LOGIN_URL` | `https://sso.laisky.com/` | SSO login entry page. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL` | empty | Backend callback URL. Required for non-loopback hosts. |
 | `ACCOUNTING_AUTH_EXTERNAL_SSO_PUBLIC_KEY_PEM` | empty | Static Ed25519 public key PEM for local JWT verification. Preferred for production. |
@@ -310,3 +312,14 @@ Before release:
 - Confirm `ACCOUNTING_AUTH_SESSION_COOKIE_SECURE=true` in HTTPS deployments.
 - Confirm SMTP delivery works before enabling verified registration or password recovery.
 - Run `make lint`, `make test`, and `make e2e` after auth configuration or auth flow changes.
+
+
+### Registered authorization-code migration
+
+For the Laisky issuer, prefer registered code + S256 PKCE rather than a JWT in the browser URL. Configure `ACCOUNTING_AUTH_EXTERNAL_SSO_CLIENT_ID=accounting` and register the **exact** callback `https://accounting.laisky.com/api/auth/sso/callback` under the issuer's `settings.web.sso.clients.accounting.redirect_uris`. Retain the current JWT public-key/trust configuration: exchanging a code does not bypass local signature, identity, or account checks.
+
+The backend creates a fresh state and verifier for every login, keeps the verifier in a short-lived HttpOnly SameSite=Lax cookie, and sends only its SHA-256 challenge to the issuer. The callback accepts `sso_code` and `sso_state`, checks the browser's state, and redeems the code server-side at the fixed token endpoint. It then validates the returned JWT and establishes the existing Accounting session. Code mode rejects legacy `sso_token` callbacks instead of silently downgrading. Token endpoint redirects, malformed responses, and failed exchanges fail closed; users can restart login. No user/database migration is required. Auth responses are non-cacheable and use a no-referrer policy.
+
+Roll out issuer registration before enabling this setting. Empty client ID intentionally preserves other existing legacy integrations during a staged rollout, but is not the recommended Laisky production setting. Registering/enabling a client does not require a new shared secret. Keep the current `latest` image tag; after approved merge/build, pull and recreate the service and verify a new login plus existing-session behavior. Do not disable issuer legacy compatibility until all consumers have migrated.
+
+**PR #18 coordination:** this change targets the current main branch's `/api/auth/sso/callback`. The pending architecture refactor changes the API prefix to `/api/v1`; before deploying that refactor, port the SSO routes/cookie paths, update the configured callback and issuer registration together, and rerun the SSO regressions. Do not register or deploy the `/api/v1` callback against the current main image.

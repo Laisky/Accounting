@@ -23,6 +23,7 @@ const testRouteExternalSSOUID = "0194d5f8-19f7-7f7b-a8d3-421a60f8d8ab"
 func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+	router.Use(sanitizeSSOCredentials)
 	log := logger.Setup(false)
 	router.Use(requestLoggerForTest(log))
 	cfg := testConfig()
@@ -86,6 +87,7 @@ func TestRegisterRoutesExternalSSOFlow(t *testing.T) {
 func TestRegisterRoutesExternalSSOCallbackRejectsBadState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+	router.Use(sanitizeSSOCredentials)
 	log := logger.Setup(false)
 	router.Use(requestLoggerForTest(log))
 	cfg := testConfig()

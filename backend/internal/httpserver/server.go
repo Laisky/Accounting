@@ -46,6 +46,7 @@ func NewServer(cfg config.Config, log glog.Logger) (*http.Server, error) {
 		return nil, errors.Wrap(err, "set trusted proxies")
 	}
 	middlewares := []gin.HandlerFunc{
+		sanitizeSSOCredentials,
 		gin.Recovery(),
 		requestIDMiddleware,
 	}
