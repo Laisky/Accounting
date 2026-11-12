@@ -24,6 +24,8 @@ const ssoStartPath = "/api/auth/sso/start"
 // registerExternalSSORoutes receives auth dependencies and registers external SSO entry and callback endpoints.
 func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authService *auth.Service, auditService *audit.Service, limiter *authRateLimiter) {
 	api.GET("/auth/sso/start", func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+		c.Header("Referrer-Policy", "no-referrer")
 		log := gmw.GetLogger(c)
 		if !cfg.Auth.External.Enabled {
 			respondAPIMessage(c, http.StatusNotFound, "external sso login is disabled")
@@ -40,6 +42,9 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 			return
 		}
 		callbackURL, err := buildSSOCallbackURL(c.Request, cfg, state)
+		if cfg.Auth.External.ClientID != "" {
+			callbackURL, err = registeredSSOStart(c, cfg, state)
+		}
 		if err != nil {
 			log.Debug("external sso callback url rejected", zap.Error(err))
 			respondAPIMessage(c, http.StatusBadRequest, "external sso start failed")
@@ -57,17 +62,41 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 	})
 
 	callbackHandler := func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+		c.Header("Referrer-Policy", "no-referrer")
 		token := externalSSOCallbackToken(c)
+		code := c.Query("sso_code")
+		if len(c.Request.URL.Query()["sso_code"]) != 1 {
+			code = ""
+		}
+		if c.Request.URL.Query().Has("sso_code") {
+			query := c.Request.URL.Query()
+			query.Set("sso_code", "redacted")
+			c.Request.URL.RawQuery = query.Encode()
+		}
 		log := gmw.GetLogger(c)
 		if !cfg.Auth.External.Enabled {
 			respondAPIMessage(c, http.StatusNotFound, "external sso login is disabled")
 			return
 		}
 		clearSSOStateCookie(c, cfg)
+		if cfg.Auth.External.ClientID != "" {
+			setSSOVerifierCookie(c, cfg, "", -1)
+		}
 		if !verifySSOState(c, cfg) {
 			log.Debug("external sso state rejected")
 			respondAPIMessage(c, http.StatusBadRequest, "external sso callback failed")
 			return
+		}
+
+		if cfg.Auth.External.ClientID != "" {
+			var err error
+			token, err = redeemSSOCode(c, cfg, code, token)
+			if err != nil {
+				log.Debug("external sso code rejected", zap.Error(err))
+				respondAPIMessage(c, http.StatusBadRequest, "external sso callback failed")
+				return
+			}
 		}
 
 		if token == "" {
@@ -246,6 +275,9 @@ func clearSSOStateCookie(c *gin.Context, cfg config.Config) {
 // verifySSOState receives callback request data and reports whether the state matches the state cookie.
 func verifySSOState(c *gin.Context, cfg config.Config) bool {
 	state := externalSSOCallbackState(c)
+	if cfg.Auth.External.ClientID != "" {
+		state = c.Query("sso_state")
+	}
 	if state == "" {
 		return false
 	}

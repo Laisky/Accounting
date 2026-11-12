@@ -107,6 +107,9 @@ type EmailAuthConfig struct {
 
 // ExternalSSOConfig contains settings for delegating login to an external SSO provider.
 type ExternalSSOConfig struct {
+	// ClientID enables registered code flow when nonempty; empty preserves legacy integrations.
+	ClientID             string
+	TokenURL             string
 	AutoProvisionEnabled bool
 	CallbackURL          string
 	Enabled              bool
@@ -199,6 +202,8 @@ func LoadFromEnv() (Config, error) {
 				VerificationTTL:            loader.readDuration("ACCOUNTING_AUTH_EMAIL_VERIFICATION_TTL", 10*time.Minute),
 			},
 			External: ExternalSSOConfig{
+				ClientID:             loader.readString("ACCOUNTING_AUTH_EXTERNAL_SSO_CLIENT_ID", ""),
+				TokenURL:             loader.readString("ACCOUNTING_AUTH_EXTERNAL_SSO_TOKEN_URL", "https://sso.laisky.com/sso/token"),
 				AutoProvisionEnabled: loader.readBool("ACCOUNTING_AUTH_EXTERNAL_SSO_AUTO_PROVISION_ENABLED", false),
 				CallbackURL:          loader.readString("ACCOUNTING_AUTH_EXTERNAL_SSO_CALLBACK_URL", ""),
 				Enabled:              loader.readBool("ACCOUNTING_AUTH_EXTERNAL_SSO_ENABLED", false),
