@@ -65,8 +65,8 @@ func registerExternalSSORoutes(api *gin.RouterGroup, cfg config.Config, authServ
 		c.Header("Cache-Control", "no-store")
 		c.Header("Referrer-Policy", "no-referrer")
 		token := externalSSOCallbackToken(c)
-		code := c.Query("sso_code")
-		if len(c.Request.URL.Query()["sso_code"]) != 1 {
+		code := ssoCallbackQuery(c).Get("sso_code")
+		if len(ssoCallbackQuery(c)["sso_code"]) != 1 {
 			code = ""
 		}
 		if c.Request.URL.Query().Has("sso_code") {
@@ -276,7 +276,7 @@ func clearSSOStateCookie(c *gin.Context, cfg config.Config) {
 func verifySSOState(c *gin.Context, cfg config.Config) bool {
 	state := externalSSOCallbackState(c)
 	if cfg.Auth.External.ClientID != "" {
-		state = c.Query("sso_state")
+		state = ssoCallbackQuery(c).Get("sso_state")
 	}
 	if state == "" {
 		return false
@@ -297,7 +297,7 @@ func externalSSOCallbackState(c *gin.Context) string {
 		}
 	}
 
-	return strings.TrimSpace(c.Query("state"))
+	return strings.TrimSpace(ssoCallbackQuery(c).Get("state"))
 }
 
 func externalSSOCallbackToken(c *gin.Context) string {
@@ -305,7 +305,7 @@ func externalSSOCallbackToken(c *gin.Context) string {
 		return strings.TrimSpace(c.PostForm("sso_token"))
 	}
 
-	token := strings.TrimSpace(c.Query("sso_token"))
+	token := strings.TrimSpace(ssoCallbackQuery(c).Get("sso_token"))
 	if token != "" {
 		query := c.Request.URL.Query()
 		query.Set("sso_token", "redacted")

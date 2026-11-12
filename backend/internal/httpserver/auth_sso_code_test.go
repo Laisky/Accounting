@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +15,9 @@ import (
 	"github.com/Laisky/Accounting/backend/internal/auth"
 	"github.com/Laisky/Accounting/backend/internal/ledger"
 	"github.com/Laisky/Accounting/backend/internal/logger"
+	"github.com/Laisky/zap"
+	"github.com/Laisky/zap/zapcore"
+	"github.com/Laisky/zap/zaptest/observer"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +31,10 @@ func TestRegisteredSSOStart(t *testing.T) {
 	cfg.Auth.External.CallbackURL = "https://accounting.laisky.com/api/auth/sso/callback"
 	cfg.Auth.External.LoginURL = "https://sso.laisky.com/"
 	router := gin.New()
-	router.Use(requestLoggerForTest(logger.Setup(false)))
+	router.Use(sanitizeSSOCredentials)
+	core, _ := observer.New(zapcore.DebugLevel)
+	log := logger.Setup(false).WithOptions(zap.WrapCore(func(zapcore.Core) zapcore.Core { return core }))
+	router.Use(requestLoggerForTest(log))
 	RegisterRoutes(router, cfg, ledger.NewService(), testAuthService(cfg))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/auth/sso/start", nil))
@@ -77,7 +84,10 @@ func TestRegisteredSSOCallback(t *testing.T) {
 			cfg.Auth.External.LoginURL = "https://sso.laisky.com/"
 			svc := testAuthService(cfg).WithExternalSSOValidator(registeredTokenValidator{t: t})
 			router := gin.New()
-			router.Use(requestLoggerForTest(logger.Setup(false)))
+			router.Use(sanitizeSSOCredentials)
+			core, logs := observer.New(zapcore.DebugLevel)
+			log := logger.Setup(false).WithOptions(zap.WrapCore(func(zapcore.Core) zapcore.Core { return core }))
+			router.Use(requestLoggerForTest(log))
 			RegisterRoutes(router, cfg, ledger.NewService(), svc)
 			start := httptest.NewRecorder()
 			router.ServeHTTP(start, httptest.NewRequest(http.MethodGet, ssoStartPath, nil))
@@ -115,6 +125,9 @@ func TestRegisteredSSOCallback(t *testing.T) {
 			require.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 			require.Equal(t, "no-referrer", rec.Header().Get("Referrer-Policy"))
 			require.NotContains(t, req.URL.RawQuery, "test-code")
+			require.NotEmpty(t, logs.All())
+			require.NotContains(t, fmt.Sprint(logs.All()), "test-code")
+			require.NotContains(t, fmt.Sprint(logs.All()), "opaque-token")
 			require.NotContains(t, rec.Body.String(), "opaque-token")
 			require.Equal(t, -1, firstCookieNamed(t, rec.Result().Cookies(), verifier.Name).MaxAge)
 			if scenario == "success" {

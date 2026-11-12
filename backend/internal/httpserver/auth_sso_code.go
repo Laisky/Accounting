@@ -73,7 +73,7 @@ func setSSOVerifierCookie(c *gin.Context, cfg config.Config, value string, maxAg
 
 // redeemSSOCode exchanges a bound code server-side; never follows redirects or falls back to URL JWTs.
 func redeemSSOCode(c *gin.Context, cfg config.Config, code, legacyToken string) (string, error) {
-	if c.Request.Method != http.MethodGet || code == "" || len(code) > 512 || legacyToken != "" || c.Request.URL.Query().Has("sso_token") || len(c.Request.URL.Query()["sso_state"]) != 1 {
+	if c.Request.Method != http.MethodGet || code == "" || len(code) > 512 || legacyToken != "" || ssoCallbackQuery(c).Has("sso_token") || len(ssoCallbackQuery(c)["sso_state"]) != 1 {
 		return "", errors.New("invalid registered SSO callback")
 	}
 	verifier, err := c.Request.Cookie(externalSSOStateCookieName(cfg) + "_pkce")
@@ -90,7 +90,7 @@ func redeemSSOCode(c *gin.Context, cfg config.Config, code, legacyToken string) 
 	}
 	payload, err := json.Marshal(map[string]string{
 		"client_id": cfg.Auth.External.ClientID, "redirect_uri": callback.String(),
-		"code": code, "state": c.Query("sso_state"), "code_verifier": verifier.Value,
+		"code": code, "state": ssoCallbackQuery(c).Get("sso_state"), "code_verifier": verifier.Value,
 	})
 	if err != nil {
 		return "", errors.Wrap(err, "encode SSO exchange")
